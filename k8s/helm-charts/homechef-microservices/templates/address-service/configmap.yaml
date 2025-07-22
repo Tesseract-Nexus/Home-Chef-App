@@ -1,0 +1,16 @@
+{{- if .Values.addressService.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "homechef.fullname" . }}-address-service-config
+  labels:
+    {{- include "homechef.labels" . | nindent 4 }}
+    app.kubernetes.io/component: address-service
+data:
+  PORT: {{ .Values.addressService.env.PORT | quote }}
+  HOST: {{ .Values.addressService.env.HOST | quote }}
+  ENVIRONMENT: {{ .Values.addressService.env.ENVIRONMENT | quote }}
+  SSL_CERT_PATH: "/root/certs/tls.crt"
+  SSL_KEY_PATH: "/root/certs/tls.key"
+  GEOCODING_SERVICE_URL: "https://api.geocoding.com/v1"
+{{- end }}

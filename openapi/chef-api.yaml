@@ -1,0 +1,857 @@
+openapi: 3.0.3
+info:
+  title: HomeChef Chef API
+  description: Chef-specific endpoints for menu management, orders, and analytics
+  version: 1.0.0
+
+servers:
+  - url: https://api.homechef.com/v1
+    description: Production server
+
+security:
+  - BearerAuth: []
+
+paths:
+  /chefs/apply:
+    post:
+      tags: [Chef Onboarding]
+      summary: Submit chef application
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChefApplication'
+      responses:
+        '201':
+          description: Application submitted successfully
+
+  /chefs/profile:
+    get:
+      tags: [Chef Profile]
+      summary: Get chef profile
+      responses:
+        '200':
+          description: Chef profile retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/ChefProfile'
+
+    put:
+      tags: [Chef Profile]
+      summary: Update chef profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChefProfileUpdate'
+      responses:
+        '200':
+          description: Profile updated successfully
+
+  /chefs/availability:
+    put:
+      tags: [Chef Profile]
+      summary: Update availability status
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [is_available]
+              properties:
+                is_available:
+                  type: boolean
+                  example: true
+                unavailable_reason:
+                  type: string
+                  nullable: true
+                  example: 'Taking a break'
+                estimated_return:
+                  type: string
+                  format: date-time
+                  nullable: true
+      responses:
+        '200':
+          description: Availability updated
+
+  /chefs/vacation:
+    post:
+      tags: [Chef Profile]
+      summary: Set vacation mode
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [start_date, end_date]
+              properties:
+                start_date:
+                  type: string
+                  format: date
+                  example: '2024-02-01'
+                end_date:
+                  type: string
+                  format: date
+                  example: '2024-02-07'
+                reason:
+                  type: string
+                  example: 'Family vacation'
+      responses:
+        '200':
+          description: Vacation mode set
+
+  /chefs/menu:
+    get:
+      tags: [Menu Management]
+      summary: Get chef's menu
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: available
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Menu retrieved successfully
+
+    post:
+      tags: [Menu Management]
+      summary: Add menu item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MenuItemCreate'
+      responses:
+        '201':
+          description: Menu item added
+
+  /chefs/menu/{dish_id}:
+    put:
+      tags: [Menu Management]
+      summary: Update menu item
+      parameters:
+        - name: dish_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MenuItemUpdate'
+      responses:
+        '200':
+          description: Menu item updated
+
+    delete:
+      tags: [Menu Management]
+      summary: Delete menu item
+      parameters:
+        - name: dish_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Menu item deleted
+
+  /chefs/menu/{dish_id}/images:
+    post:
+      tags: [Menu Management]
+      summary: Upload dish images
+      parameters:
+        - name: dish_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                images:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        '200':
+          description: Images uploaded successfully
+
+  /chefs/menu/{dish_id}/availability:
+    put:
+      tags: [Menu Management]
+      summary: Toggle item availability
+      parameters:
+        - name: dish_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [is_available]
+              properties:
+                is_available:
+                  type: boolean
+                reason:
+                  type: string
+                  example: 'Out of ingredients'
+      responses:
+        '200':
+          description: Availability updated
+
+  /chefs/orders:
+    get:
+      tags: [Order Management]
+      summary: Get chef orders
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, confirmed, preparing, ready, completed, cancelled]
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Orders retrieved successfully
+
+  /chefs/orders/{order_id}/status:
+    put:
+      tags: [Order Management]
+      summary: Update order status
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [confirmed, preparing, ready, cancelled]
+                notes:
+                  type: string
+                estimated_preparation_time:
+                  type: integer
+      responses:
+        '200':
+          description: Order status updated
+
+  /chefs/dashboard:
+    get:
+      tags: [Analytics]
+      summary: Get chef dashboard data
+      responses:
+        '200':
+          description: Dashboard data retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/ChefDashboard'
+
+  /chefs/analytics:
+    get:
+      tags: [Analytics]
+      summary: Get chef analytics
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [today, this_week, this_month, last_30_days]
+            default: this_month
+        - name: metrics
+          in: query
+          schema:
+            type: string
+            example: 'revenue,orders,rating'
+      responses:
+        '200':
+          description: Analytics data retrieved
+
+  /chefs/earnings:
+    get:
+      tags: [Earnings]
+      summary: Get earnings summary
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [today, this_week, this_month, last_30_days]
+      responses:
+        '200':
+          description: Earnings data retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/EarningsSummary'
+
+  /chefs/payouts:
+    get:
+      tags: [Earnings]
+      summary: Get payout history
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Payout history retrieved
+
+  /chefs/payouts/request:
+    post:
+      tags: [Earnings]
+      summary: Request instant payout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount]
+              properties:
+                amount:
+                  type: number
+                  format: float
+                  example: 5000.00
+                reason:
+                  type: string
+                  example: 'Emergency withdrawal'
+      responses:
+        '200':
+          description: Payout request submitted
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ChefApplication:
+      type: object
+      required: [personal_info, professional_info, business_info, documents]
+      properties:
+        personal_info:
+          type: object
+          required: [name, email, phone, address]
+          properties:
+            name:
+              type: string
+              example: 'Priya Sharma'
+            email:
+              type: string
+              format: email
+            phone:
+              type: string
+              pattern: '^\+91[6-9]\d{9}$'
+            date_of_birth:
+              type: string
+              format: date
+            address:
+              $ref: '#/components/schemas/Address'
+        professional_info:
+          type: object
+          required: [specialty, experience]
+          properties:
+            specialty:
+              type: string
+              example: 'North Indian Cuisine'
+            experience:
+              type: string
+              example: '8 years'
+            description:
+              type: string
+            cuisine_types:
+              type: array
+              items:
+                type: string
+            dietary_preferences:
+              type: array
+              items:
+                type: string
+            cooking_style:
+              type: string
+        business_info:
+          type: object
+          properties:
+            kitchen_type:
+              type: string
+              enum: [home, commercial]
+            capacity:
+              type: string
+            working_hours:
+              type: object
+              properties:
+                start:
+                  type: string
+                  example: '09:00'
+                end:
+                  type: string
+                  example: '21:00'
+            working_days:
+              type: array
+              items:
+                type: string
+            min_order_amount:
+              type: number
+              format: float
+            delivery_radius:
+              type: number
+              format: float
+        documents:
+          type: object
+          properties:
+            identity_proof:
+              type: string
+              description: 'Base64 encoded image'
+            address_proof:
+              type: string
+              description: 'Base64 encoded image'
+            fssai_license:
+              type: string
+              description: 'Base64 encoded image'
+            bank_details:
+              $ref: '#/components/schemas/BankDetails'
+
+    ChefProfile:
+      type: object
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        name:
+          type: string
+        specialty:
+          type: string
+        description:
+          type: string
+        avatar:
+          type: string
+          format: uri
+        cover_image:
+          type: string
+          format: uri
+        rating:
+          type: number
+          format: float
+        total_reviews:
+          type: integer
+        total_orders:
+          type: integer
+        location:
+          type: object
+          properties:
+            city:
+              type: string
+            state:
+              type: string
+            coordinates:
+              type: object
+              properties:
+                latitude:
+                  type: number
+                  format: float
+                longitude:
+                  type: number
+                  format: float
+        cuisine_types:
+          type: array
+          items:
+            type: string
+        dietary_preferences:
+          type: array
+          items:
+            type: string
+        business_info:
+          type: object
+          properties:
+            working_hours:
+              type: object
+              properties:
+                start:
+                  type: string
+                end:
+                  type: string
+            working_days:
+              type: array
+              items:
+                type: string
+            min_order_amount:
+              type: number
+              format: float
+            delivery_radius:
+              type: number
+              format: float
+            avg_preparation_time:
+              type: integer
+        status:
+          type: string
+          enum: [pending, approved, active, inactive, suspended]
+        verification_status:
+          type: string
+          enum: [pending, verified, rejected]
+        badges:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+
+    ChefProfileUpdate:
+      type: object
+      properties:
+        description:
+          type: string
+        cuisine_types:
+          type: array
+          items:
+            type: string
+        business_info:
+          type: object
+          properties:
+            working_hours:
+              type: object
+              properties:
+                start:
+                  type: string
+                end:
+                  type: string
+            min_order_amount:
+              type: number
+              format: float
+
+    MenuItemCreate:
+      type: object
+      required: [name, description, price, category]
+      properties:
+        name:
+          type: string
+          example: 'Butter Chicken'
+        description:
+          type: string
+          example: 'Rich and creamy tomato-based curry'
+        price:
+          type: number
+          format: float
+          example: 280.00
+        category:
+          type: string
+          example: 'main_course'
+        cuisine_type:
+          type: string
+          example: 'north_indian'
+        is_vegetarian:
+          type: boolean
+          default: false
+        is_vegan:
+          type: boolean
+          default: false
+        is_gluten_free:
+          type: boolean
+          default: false
+        spice_level:
+          type: string
+          enum: [mild, medium, hot]
+          default: medium
+        preparation_time:
+          type: integer
+          example: 25
+        serves:
+          type: integer
+          example: 2
+        ingredients:
+          type: array
+          items:
+            type: string
+        allergens:
+          type: array
+          items:
+            type: string
+        nutritional_info:
+          type: object
+          properties:
+            calories:
+              type: integer
+            protein:
+              type: number
+              format: float
+            carbs:
+              type: number
+              format: float
+            fat:
+              type: number
+              format: float
+        is_available:
+          type: boolean
+          default: true
+
+    MenuItemUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+          format: float
+        is_available:
+          type: boolean
+        preparation_time:
+          type: integer
+
+    ChefDashboard:
+      type: object
+      properties:
+        today:
+          type: object
+          properties:
+            orders:
+              type: integer
+              example: 12
+            revenue:
+              type: number
+              format: float
+              example: 2450.00
+            avg_order_value:
+              type: number
+              format: float
+              example: 204.17
+        this_week:
+          type: object
+          properties:
+            orders:
+              type: integer
+            revenue:
+              type: number
+              format: float
+            avg_order_value:
+              type: number
+              format: float
+        this_month:
+          type: object
+          properties:
+            orders:
+              type: integer
+            revenue:
+              type: number
+              format: float
+            avg_order_value:
+              type: number
+              format: float
+        rating:
+          type: object
+          properties:
+            current:
+              type: number
+              format: float
+            trend:
+              type: string
+            total_reviews:
+              type: integer
+        popular_dishes:
+          type: array
+          items:
+            type: object
+            properties:
+              dish_id:
+                type: string
+              name:
+                type: string
+              orders:
+                type: integer
+              revenue:
+                type: number
+                format: float
+        recent_reviews:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              customer_name:
+                type: string
+              rating:
+                type: integer
+              comment:
+                type: string
+              created_at:
+                type: string
+                format: date-time
+
+    EarningsSummary:
+      type: object
+      properties:
+        total_earnings:
+          type: number
+          format: float
+          example: 58900.00
+        platform_fee:
+          type: number
+          format: float
+          example: 8835.00
+        net_earnings:
+          type: number
+          format: float
+          example: 50065.00
+        pending_amount:
+          type: number
+          format: float
+          example: 2450.00
+        paid_amount:
+          type: number
+          format: float
+          example: 47615.00
+        breakdown:
+          type: object
+          properties:
+            order_revenue:
+              type: number
+              format: float
+            tips:
+              type: number
+              format: float
+            bonuses:
+              type: number
+              format: float
+            deductions:
+              type: number
+              format: float
+        payout_schedule:
+          type: string
+          enum: [weekly, bi-weekly, monthly]
+        next_payout_date:
+          type: string
+          format: date-time
+
+    Address:
+      type: object
+      required: [street, city, state, pincode]
+      properties:
+        street:
+          type: string
+          example: '123 Chef Street'
+        city:
+          type: string
+          example: 'Mumbai'
+        state:
+          type: string
+          example: 'Maharashtra'
+        pincode:
+          type: string
+          pattern: '^[1-9][0-9]{5}$'
+          example: '400001'
+        coordinates:
+          type: object
+          properties:
+            latitude:
+              type: number
+              format: float
+            longitude:
+              type: number
+              format: float
+
+    BankDetails:
+      type: object
+      required: [account_number, ifsc_code, account_holder_name, bank_name]
+      properties:
+        account_number:
+          type: string
+          example: '1234567890'
+        ifsc_code:
+          type: string
+          pattern: '^[A-Z]{4}0[A-Z0-9]{6}$'
+          example: 'SBIN0001234'
+        account_holder_name:
+          type: string
+          example: 'Priya Sharma'
+        bank_name:
+          type: string
+          example: 'State Bank of India'
+
+tags:
+  - name: Chef Onboarding
+    description: Chef application and onboarding process
+  - name: Chef Profile
+    description: Chef profile management
+  - name: Menu Management
+    description: Menu items and categories
+  - name: Order Management
+    description: Chef order handling
+  - name: Analytics
+    description: Chef performance analytics
+  - name: Earnings
+    description: Earnings and payout management

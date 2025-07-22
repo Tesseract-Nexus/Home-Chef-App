@@ -1,0 +1,701 @@
+openapi: 3.0.3
+info:
+  title: HomeChef Admin API
+  description: Administrative endpoints for platform management
+  version: 1.0.0
+
+servers:
+  - url: https://api.homechef.com/v1
+    description: Production server
+
+security:
+  - BearerAuth: []
+
+paths:
+  /admin/dashboard:
+    get:
+      tags: [Admin Dashboard]
+      summary: Get admin dashboard data
+      responses:
+        '200':
+          description: Dashboard data retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/AdminDashboard'
+
+  /admin/analytics:
+    get:
+      tags: [Analytics]
+      summary: Get platform analytics
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [today, this_week, this_month, this_quarter, this_year]
+            default: this_month
+        - name: metrics
+          in: query
+          schema:
+            type: string
+            example: 'revenue,orders,users'
+      responses:
+        '200':
+          description: Analytics data retrieved
+
+  /admin/users:
+    get:
+      tags: [User Management]
+      summary: Get all users
+      parameters:
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [customer, chef, delivery, admin]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, inactive, suspended]
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Users retrieved successfully
+
+  /admin/users/{user_id}:
+    get:
+      tags: [User Management]
+      summary: Get user details
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: User details retrieved
+
+    put:
+      tags: [User Management]
+      summary: Update user
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: User updated successfully
+
+  /admin/users/{user_id}/status:
+    put:
+      tags: [User Management]
+      summary: Update user status
+      parameters:
+        - name: user_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [active, inactive, suspended]
+                reason:
+                  type: string
+                  example: 'Violation of terms'
+      responses:
+        '200':
+          description: User status updated
+
+  /admin/chefs:
+    get:
+      tags: [Chef Management]
+      summary: Get all chefs
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, approved, rejected, active, inactive]
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Chefs retrieved successfully
+
+  /admin/chefs/{chef_id}/approve:
+    post:
+      tags: [Chef Management]
+      summary: Approve chef application
+      parameters:
+        - name: chef_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notes:
+                  type: string
+                  example: 'All documents verified'
+      responses:
+        '200':
+          description: Chef approved successfully
+
+  /admin/chefs/{chef_id}/reject:
+    post:
+      tags: [Chef Management]
+      summary: Reject chef application
+      parameters:
+        - name: chef_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  example: 'Incomplete documentation'
+                notes:
+                  type: string
+                  example: 'FSSAI license not provided'
+      responses:
+        '200':
+          description: Chef rejected successfully
+
+  /admin/chefs/{chef_id}/suspend:
+    post:
+      tags: [Chef Management]
+      summary: Suspend chef
+      parameters:
+        - name: chef_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  example: 'Quality issues'
+                duration:
+                  type: string
+                  example: '7 days'
+      responses:
+        '200':
+          description: Chef suspended successfully
+
+  /admin/orders:
+    get:
+      tags: [Order Management]
+      summary: Get all orders
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: chef_id
+          in: query
+          schema:
+            type: string
+        - name: customer_id
+          in: query
+          schema:
+            type: string
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Orders retrieved successfully
+
+  /admin/orders/{order_id}/refund:
+    post:
+      tags: [Order Management]
+      summary: Process order refund
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [amount, reason]
+              properties:
+                amount:
+                  type: number
+                  format: float
+                  example: 748.05
+                reason:
+                  type: string
+                  example: 'Order cancelled by customer'
+                refund_type:
+                  type: string
+                  enum: [full, partial]
+                  default: full
+      responses:
+        '200':
+          description: Refund processed successfully
+
+  /admin/delivery-partners:
+    get:
+      tags: [Delivery Management]
+      summary: Get all delivery partners
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, approved, rejected, active, inactive]
+        - name: location
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Delivery partners retrieved
+
+  /admin/delivery-partners/{partner_id}/approve:
+    post:
+      tags: [Delivery Management]
+      summary: Approve delivery partner
+      parameters:
+        - name: partner_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Delivery partner approved
+
+  /admin/payouts:
+    get:
+      tags: [Payout Management]
+      summary: Get all payouts
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, processing, completed, failed]
+        - name: recipient_type
+          in: query
+          schema:
+            type: string
+            enum: [chef, delivery]
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Payouts retrieved successfully
+
+    post:
+      tags: [Payout Management]
+      summary: Process bulk payouts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [payout_ids]
+              properties:
+                payout_ids:
+                  type: array
+                  items:
+                    type: string
+                notes:
+                  type: string
+      responses:
+        '200':
+          description: Bulk payouts processed
+
+  /admin/payouts/{payout_id}/process:
+    post:
+      tags: [Payout Management]
+      summary: Process individual payout
+      parameters:
+        - name: payout_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Payout processed successfully
+
+  /admin/support/tickets:
+    get:
+      tags: [Customer Support]
+      summary: Get support tickets
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, in_progress, resolved, closed]
+        - name: priority
+          in: query
+          schema:
+            type: string
+            enum: [low, medium, high, urgent]
+        - name: assigned_to
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Support tickets retrieved
+
+  /admin/support/tickets/{ticket_id}/assign:
+    put:
+      tags: [Customer Support]
+      summary: Assign ticket to agent
+      parameters:
+        - name: ticket_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [agent_id]
+              properties:
+                agent_id:
+                  type: string
+                  example: 'agent_123'
+      responses:
+        '200':
+          description: Ticket assigned successfully
+
+  /admin/reports/revenue:
+    get:
+      tags: [Reports]
+      summary: Get revenue report
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [daily, weekly, monthly, yearly]
+            default: monthly
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: group_by
+          in: query
+          schema:
+            type: string
+            enum: [day, week, month]
+      responses:
+        '200':
+          description: Revenue report generated
+
+  /admin/reports/orders:
+    get:
+      tags: [Reports]
+      summary: Get orders report
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [daily, weekly, monthly]
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: chef_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Orders report generated
+
+  /admin/settings/platform:
+    get:
+      tags: [Platform Settings]
+      summary: Get platform settings
+      responses:
+        '200':
+          description: Platform settings retrieved
+
+    put:
+      tags: [Platform Settings]
+      summary: Update platform settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlatformSettings'
+      responses:
+        '200':
+          description: Settings updated successfully
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    AdminDashboard:
+      type: object
+      properties:
+        overview:
+          type: object
+          properties:
+            total_revenue:
+              type: number
+              format: float
+            total_orders:
+              type: integer
+            active_users:
+              type: integer
+            active_chefs:
+              type: integer
+            active_delivery_partners:
+              type: integer
+        today:
+          type: object
+          properties:
+            revenue:
+              type: number
+              format: float
+            orders:
+              type: integer
+            new_users:
+              type: integer
+        pending_approvals:
+          type: object
+          properties:
+            chefs:
+              type: integer
+            delivery_partners:
+              type: integer
+            payouts:
+              type: integer
+        recent_activities:
+          type: array
+          items:
+            type: object
+            properties:
+              type:
+                type: string
+              message:
+                type: string
+              timestamp:
+                type: string
+                format: date-time
+
+    UserUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        status:
+          type: string
+          enum: [active, inactive, suspended]
+
+    PlatformSettings:
+      type: object
+      properties:
+        commission:
+          type: object
+          properties:
+            chef_commission_rate:
+              type: number
+              format: float
+              example: 0.15
+            delivery_commission_rate:
+              type: number
+              format: float
+              example: 0.10
+        delivery:
+          type: object
+          properties:
+            base_delivery_fee:
+              type: number
+              format: float
+              example: 25.00
+            per_km_rate:
+              type: number
+              format: float
+              example: 5.00
+            max_delivery_distance:
+              type: number
+              format: float
+              example: 10.0
+        orders:
+          type: object
+          properties:
+            min_order_amount:
+              type: number
+              format: float
+              example: 100.00
+            max_order_amount:
+              type: number
+              format: float
+              example: 5000.00
+            auto_accept_timeout:
+              type: integer
+              example: 300
+        payments:
+          type: object
+          properties:
+            payment_processing_fee:
+              type: number
+              format: float
+              example: 0.025
+            payout_schedule:
+              type: string
+              enum: [daily, weekly, bi-weekly, monthly]
+              example: weekly
+            min_payout_amount:
+              type: number
+              format: float
+              example: 500.00
+
+tags:
+  - name: Admin Dashboard
+    description: Administrative dashboard and overview
+  - name: Analytics
+    description: Platform analytics and insights
+  - name: User Management
+    description: User account management
+  - name: Chef Management
+    description: Chef approval and management
+  - name: Order Management
+    description: Order oversight and management
+  - name: Delivery Management
+    description: Delivery partner management
+  - name: Payout Management
+    description: Payout processing and management
+  - name: Customer Support
+    description: Support ticket management
+  - name: Reports
+    description: Business reports and analytics
+  - name: Platform Settings
+    description: Platform configuration and settings

@@ -1,0 +1,1421 @@
+openapi: 3.0.3
+info:
+  title: HomeChef API
+  description: |
+    Comprehensive API for HomeChef - A platform connecting home chefs with customers for authentic homemade meals.
+    
+    ## Features
+    - Multi-role authentication (Customer, Chef, Delivery Partner, Admin)
+    - Complete order management lifecycle
+    - Real-time order tracking
+    - Payment processing with multiple methods
+    - Review and rating system
+    - Analytics and reporting
+    - Push notifications
+    
+    ## Authentication
+    All authenticated endpoints require a Bearer token in the Authorization header.
+    
+    ## Rate Limiting
+    - Authenticated users: 1000 requests/hour
+    - Unauthenticated: 100 requests/hour
+    - Admin users: 5000 requests/hour
+    
+  version: 1.0.0
+  contact:
+    name: HomeChef API Support
+    email: api-support@homechef.com
+    url: https://docs.homechef.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.homechef.com/v1
+    description: Production server
+  - url: https://staging-api.homechef.com/v1
+    description: Staging server
+  - url: http://localhost:8080/v1
+    description: Development server
+
+security:
+  - BearerAuth: []
+
+paths:
+  # Authentication Endpoints
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: User login
+      description: Authenticate user with email/password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, role]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                password:
+                  type: string
+                  minLength: 6
+                  example: password123
+                role:
+                  type: string
+                  enum: [customer, chef, delivery, admin]
+                  example: customer
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/register:
+    post:
+      tags: [Authentication]
+      summary: User registration
+      description: Register new user account
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegistration'
+      responses:
+        '201':
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/send-otp:
+    post:
+      tags: [Authentication]
+      summary: Send OTP
+      description: Send OTP to phone number for verification
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, role]
+              properties:
+                phone:
+                  type: string
+                  pattern: '^\+91[6-9]\d{9}$'
+                  example: '+919876543210'
+                role:
+                  type: string
+                  enum: [customer, chef, delivery]
+                  example: customer
+      responses:
+        '200':
+          description: OTP sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OTPResponse'
+        '429':
+          $ref: '#/components/responses/RateLimit'
+
+  /auth/verify-otp:
+    post:
+      tags: [Authentication]
+      summary: Verify OTP
+      description: Verify OTP and complete authentication
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, otp, role]
+              properties:
+                phone:
+                  type: string
+                  example: '+919876543210'
+                otp:
+                  type: string
+                  pattern: '^\d{6}$'
+                  example: '123456'
+                role:
+                  type: string
+                  enum: [customer, chef, delivery]
+      responses:
+        '200':
+          description: OTP verified successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  # User Management
+  /users/profile:
+    get:
+      tags: [User Management]
+      summary: Get user profile
+      description: Retrieve current user's profile information
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserProfile'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [User Management]
+      summary: Update user profile
+      description: Update current user's profile information
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserProfileUpdate'
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserProfile'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  # Chef Management
+  /chefs/search:
+    get:
+      tags: [Chef Management]
+      summary: Search chefs
+      description: Search for chefs based on various criteria
+      security: []
+      parameters:
+        - name: q
+          in: query
+          description: Search query
+          schema:
+            type: string
+            example: 'north indian'
+        - name: location
+          in: query
+          description: Location filter
+          schema:
+            type: string
+            example: 'mumbai'
+        - name: cuisine
+          in: query
+          description: Cuisine type filter
+          schema:
+            type: string
+            example: 'north_indian'
+        - name: rating_min
+          in: query
+          description: Minimum rating filter
+          schema:
+            type: number
+            minimum: 0
+            maximum: 5
+            example: 4.0
+        - name: available_now
+          in: query
+          description: Filter for currently available chefs
+          schema:
+            type: boolean
+            example: true
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/Sort'
+      responses:
+        '200':
+          description: Chefs retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Chef'
+                      pagination:
+                        $ref: '#/components/schemas/Pagination'
+
+  /chefs/{chef_id}:
+    get:
+      tags: [Chef Management]
+      summary: Get chef details
+      description: Retrieve detailed information about a specific chef
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/ChefId'
+      responses:
+        '200':
+          description: Chef details retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/ChefDetails'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /chefs/{chef_id}/menu:
+    get:
+      tags: [Menu Management]
+      summary: Get chef menu
+      description: Retrieve menu items for a specific chef
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/ChefId'
+        - name: category
+          in: query
+          description: Filter by category
+          schema:
+            type: string
+            example: 'main_course'
+        - name: available
+          in: query
+          description: Filter by availability
+          schema:
+            type: boolean
+            example: true
+      responses:
+        '200':
+          description: Menu retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/MenuItem'
+
+  # Order Management
+  /orders:
+    post:
+      tags: [Order Management]
+      summary: Create order
+      description: Place a new order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderCreate'
+      responses:
+        '201':
+          description: Order created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Order'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+    get:
+      tags: [Order Management]
+      summary: Get user orders
+      description: Retrieve orders for the current user
+      parameters:
+        - name: status
+          in: query
+          description: Filter by order status
+          schema:
+            type: string
+            enum: [pending, confirmed, preparing, ready, delivering, delivered, cancelled]
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Orders retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Order'
+                      pagination:
+                        $ref: '#/components/schemas/Pagination'
+
+  /orders/{order_id}:
+    get:
+      tags: [Order Management]
+      summary: Get order details
+      description: Retrieve detailed information about a specific order
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      responses:
+        '200':
+          description: Order details retrieved successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/OrderDetails'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /orders/{order_id}/status:
+    put:
+      tags: [Order Management]
+      summary: Update order status
+      description: Update the status of an order (Chef/Admin only)
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [confirmed, preparing, ready, cancelled]
+                  example: confirmed
+                notes:
+                  type: string
+                  example: 'Order confirmed, starting preparation'
+                estimated_preparation_time:
+                  type: integer
+                  example: 25
+      responses:
+        '200':
+          description: Order status updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # Payment Processing
+  /payments/orders/{order_id}/pay:
+    post:
+      tags: [Payment Processing]
+      summary: Process order payment
+      description: Process payment for an order
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+      responses:
+        '200':
+          description: Payment processed successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Payment'
+        '402':
+          $ref: '#/components/responses/PaymentRequired'
+
+  /payments/{payment_id}/verify:
+    post:
+      tags: [Payment Processing]
+      summary: Verify payment
+      description: Verify payment with gateway response
+      parameters:
+        - $ref: '#/components/parameters/PaymentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [gateway_transaction_id, signature]
+              properties:
+                gateway_transaction_id:
+                  type: string
+                  example: 'txn_gateway_123'
+                signature:
+                  type: string
+                  example: 'payment_signature_hash'
+      responses:
+        '200':
+          description: Payment verified successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    ChefId:
+      name: chef_id
+      in: path
+      required: true
+      description: Chef ID
+      schema:
+        type: string
+        example: 'chef_123'
+
+    OrderId:
+      name: order_id
+      in: path
+      required: true
+      description: Order ID
+      schema:
+        type: string
+        example: 'order_123'
+
+    PaymentId:
+      name: payment_id
+      in: path
+      required: true
+      description: Payment ID
+      schema:
+        type: string
+        example: 'pay_123'
+
+    Page:
+      name: page
+      in: query
+      description: Page number
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+        example: 1
+
+    Limit:
+      name: limit
+      in: query
+      description: Number of items per page
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+        example: 20
+
+    Sort:
+      name: sort
+      in: query
+      description: Sort field
+      schema:
+        type: string
+        example: 'created_at'
+
+  schemas:
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: 'Operation successful'
+        timestamp:
+          type: string
+          format: date-time
+          example: '2024-01-15T10:30:00Z'
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              example: 'VALIDATION_ERROR'
+            message:
+              type: string
+              example: 'Validation failed'
+            details:
+              type: object
+        timestamp:
+          type: string
+          format: date-time
+          example: '2024-01-15T10:30:00Z'
+
+    AuthResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                user:
+                  $ref: '#/components/schemas/User'
+                token:
+                  type: string
+                  example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+                refresh_token:
+                  type: string
+                  example: 'refresh_token_here'
+                expires_in:
+                  type: integer
+                  example: 3600
+
+    OTPResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                otp_id:
+                  type: string
+                  example: 'otp_123'
+                expires_in:
+                  type: integer
+                  example: 300
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 'user_123'
+        email:
+          type: string
+          format: email
+          example: 'user@example.com'
+        name:
+          type: string
+          example: 'John Doe'
+        phone:
+          type: string
+          example: '+919876543210'
+        role:
+          type: string
+          enum: [customer, chef, delivery, admin]
+          example: 'customer'
+        status:
+          type: string
+          enum: [active, inactive, suspended]
+          example: 'active'
+        email_verified:
+          type: boolean
+          example: true
+        phone_verified:
+          type: boolean
+          example: true
+        created_at:
+          type: string
+          format: date-time
+          example: '2024-01-01T00:00:00Z'
+
+    UserRegistration:
+      type: object
+      required: [email, password, name, phone, role]
+      properties:
+        email:
+          type: string
+          format: email
+          example: 'user@example.com'
+        password:
+          type: string
+          minLength: 6
+          example: 'password123'
+        name:
+          type: string
+          example: 'John Doe'
+        phone:
+          type: string
+          pattern: '^\+91[6-9]\d{9}$'
+          example: '+919876543210'
+        role:
+          type: string
+          enum: [customer, chef, delivery]
+          example: 'customer'
+
+    UserProfile:
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - type: object
+          properties:
+            avatar:
+              type: string
+              format: uri
+              example: 'https://cdn.homechef.com/avatars/user_123.jpg'
+            preferences:
+              type: object
+              properties:
+                notifications:
+                  type: object
+                  properties:
+                    email:
+                      type: boolean
+                      example: true
+                    push:
+                      type: boolean
+                      example: true
+                    sms:
+                      type: boolean
+                      example: false
+                dietary:
+                  type: array
+                  items:
+                    type: string
+                  example: ['vegetarian']
+                cuisine_preferences:
+                  type: array
+                  items:
+                    type: string
+                  example: ['north_indian', 'south_indian']
+
+    UserProfileUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          example: 'John Smith'
+        phone:
+          type: string
+          example: '+919876543211'
+        avatar:
+          type: string
+          description: 'Base64 encoded image data'
+        preferences:
+          type: object
+          properties:
+            notifications:
+              type: object
+              properties:
+                email:
+                  type: boolean
+                push:
+                  type: boolean
+                sms:
+                  type: boolean
+            dietary:
+              type: array
+              items:
+                type: string
+            cuisine_preferences:
+              type: array
+              items:
+                type: string
+
+    Chef:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 'chef_123'
+        name:
+          type: string
+          example: 'Priya Sharma'
+        specialty:
+          type: string
+          example: 'North Indian Cuisine'
+        avatar:
+          type: string
+          format: uri
+          example: 'https://cdn.homechef.com/chefs/chef_123.jpg'
+        rating:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 5
+          example: 4.8
+        total_reviews:
+          type: integer
+          example: 234
+        location:
+          type: object
+          properties:
+            city:
+              type: string
+              example: 'Mumbai'
+            state:
+              type: string
+              example: 'Maharashtra'
+            distance:
+              type: string
+              example: '2.3 km'
+        cuisine_types:
+          type: array
+          items:
+            type: string
+          example: ['north_indian', 'punjabi']
+        is_open:
+          type: boolean
+          example: true
+        delivery_time:
+          type: string
+          example: '45-60 min'
+        min_order_amount:
+          type: number
+          format: float
+          example: 200.00
+
+    ChefDetails:
+      allOf:
+        - $ref: '#/components/schemas/Chef'
+        - type: object
+          properties:
+            description:
+              type: string
+              example: 'Passionate home chef specializing in authentic North Indian cuisine'
+            cover_image:
+              type: string
+              format: uri
+              example: 'https://cdn.homechef.com/covers/chef_123.jpg'
+            total_orders:
+              type: integer
+              example: 1250
+            badges:
+              type: array
+              items:
+                type: string
+              example: ['top_rated', 'fast_delivery']
+            working_hours:
+              type: object
+              properties:
+                start:
+                  type: string
+                  example: '09:00'
+                end:
+                  type: string
+                  example: '21:00'
+            working_days:
+              type: array
+              items:
+                type: string
+              example: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+            delivery_fee:
+              type: number
+              format: float
+              example: 25.00
+            popular_dishes:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: 'dish_123'
+                  name:
+                    type: string
+                    example: 'Butter Chicken'
+                  price:
+                    type: number
+                    format: float
+                    example: 280.00
+                  image:
+                    type: string
+                    format: uri
+
+    MenuItem:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 'dish_123'
+        name:
+          type: string
+          example: 'Butter Chicken'
+        description:
+          type: string
+          example: 'Rich and creamy tomato-based curry with tender chicken pieces'
+        price:
+          type: number
+          format: float
+          example: 280.00
+        category:
+          type: string
+          example: 'main_course'
+        cuisine_type:
+          type: string
+          example: 'north_indian'
+        images:
+          type: array
+          items:
+            type: string
+            format: uri
+          example: ['https://cdn.homechef.com/dishes/dish_123_1.jpg']
+        is_vegetarian:
+          type: boolean
+          example: false
+        is_vegan:
+          type: boolean
+          example: false
+        spice_level:
+          type: string
+          enum: [mild, medium, hot]
+          example: 'medium'
+        preparation_time:
+          type: integer
+          description: 'Preparation time in minutes'
+          example: 25
+        serves:
+          type: integer
+          example: 2
+        ingredients:
+          type: array
+          items:
+            type: string
+          example: ['chicken', 'tomatoes', 'cream', 'spices']
+        allergens:
+          type: array
+          items:
+            type: string
+          example: ['dairy']
+        nutritional_info:
+          type: object
+          properties:
+            calories:
+              type: integer
+              example: 420
+            protein:
+              type: number
+              format: float
+              example: 28.0
+            carbs:
+              type: number
+              format: float
+              example: 12.0
+            fat:
+              type: number
+              format: float
+              example: 32.0
+        is_available:
+          type: boolean
+          example: true
+        rating:
+          type: number
+          format: float
+          example: 4.8
+        total_orders:
+          type: integer
+          example: 156
+
+    OrderCreate:
+      type: object
+      required: [chef_id, items, delivery_address_id, payment_method_id]
+      properties:
+        chef_id:
+          type: string
+          example: 'chef_123'
+        items:
+          type: array
+          items:
+            type: object
+            required: [dish_id, quantity]
+            properties:
+              dish_id:
+                type: string
+                example: 'dish_123'
+              quantity:
+                type: integer
+                minimum: 1
+                example: 2
+              modifiers:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    modifier_id:
+                      type: string
+                      example: 'mod_123'
+                    option_id:
+                      type: string
+                      example: 'medium'
+              special_instructions:
+                type: string
+                example: 'Less spicy please'
+        delivery_address_id:
+          type: string
+          example: 'addr_123'
+        payment_method_id:
+          type: string
+          example: 'pm_123'
+        delivery_instructions:
+          type: string
+          example: 'Ring the bell twice'
+        scheduled_delivery:
+          type: string
+          format: date-time
+          nullable: true
+        promo_code:
+          type: string
+          example: 'FIRST10'
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 'order_123'
+        order_number:
+          type: string
+          example: 'HC240115001'
+        status:
+          type: string
+          enum: [pending, confirmed, preparing, ready, delivering, delivered, cancelled]
+          example: 'pending'
+        chef:
+          type: object
+          properties:
+            id:
+              type: string
+              example: 'chef_123'
+            name:
+              type: string
+              example: 'Priya Sharma'
+            phone:
+              type: string
+              example: '+919876543210'
+        customer:
+          type: object
+          properties:
+            id:
+              type: string
+              example: 'customer_123'
+            name:
+              type: string
+              example: 'John Doe'
+            phone:
+              type: string
+              example: '+919876543211'
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              dish_id:
+                type: string
+                example: 'dish_123'
+              name:
+                type: string
+                example: 'Butter Chicken'
+              quantity:
+                type: integer
+                example: 2
+              unit_price:
+                type: number
+                format: float
+                example: 280.00
+              total_price:
+                type: number
+                format: float
+                example: 560.00
+        pricing:
+          type: object
+          properties:
+            subtotal:
+              type: number
+              format: float
+              example: 720.00
+            delivery_fee:
+              type: number
+              format: float
+              example: 25.00
+            platform_fee:
+              type: number
+              format: float
+              example: 36.00
+            taxes:
+              type: number
+              format: float
+              example: 39.05
+            discount:
+              type: number
+              format: float
+              example: 72.00
+            total:
+              type: number
+              format: float
+              example: 748.05
+        delivery_address:
+          type: object
+          properties:
+            full_address:
+              type: string
+              example: '123 Main Street, Apartment 4B'
+            city:
+              type: string
+              example: 'Mumbai'
+            pincode:
+              type: string
+              example: '400001'
+        estimated_delivery_time:
+          type: string
+          format: date-time
+          example: '2024-01-15T13:30:00Z'
+        created_at:
+          type: string
+          format: date-time
+          example: '2024-01-15T12:00:00Z'
+
+    OrderDetails:
+      allOf:
+        - $ref: '#/components/schemas/Order'
+        - type: object
+          properties:
+            tracking:
+              type: object
+              properties:
+                current_status:
+                  type: string
+                  example: 'preparing'
+                estimated_delivery:
+                  type: string
+                  format: date-time
+                preparation_time:
+                  type: integer
+                  example: 25
+                delivery_time:
+                  type: integer
+                  example: 20
+                timeline:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                        example: 'placed'
+                      timestamp:
+                        type: string
+                        format: date-time
+                      message:
+                        type: string
+                        example: 'Order placed successfully'
+            delivery_partner:
+              type: object
+              nullable: true
+              properties:
+                id:
+                  type: string
+                  example: 'dp_123'
+                name:
+                  type: string
+                  example: 'Rajesh Kumar'
+                phone:
+                  type: string
+                  example: '+919876543212'
+                vehicle:
+                  type: string
+                  example: 'Motorcycle - MH12AB1234'
+                rating:
+                  type: number
+                  format: float
+                  example: 4.7
+                current_location:
+                  type: object
+                  properties:
+                    latitude:
+                      type: number
+                      format: float
+                    longitude:
+                      type: number
+                      format: float
+            payment:
+              type: object
+              properties:
+                method:
+                  type: string
+                  example: 'card'
+                status:
+                  type: string
+                  example: 'paid'
+                transaction_id:
+                  type: string
+                  example: 'txn_123'
+
+    PaymentRequest:
+      type: object
+      required: [payment_method_id, amount]
+      properties:
+        payment_method_id:
+          type: string
+          example: 'pm_123'
+        amount:
+          type: number
+          format: float
+          example: 748.05
+        currency:
+          type: string
+          default: 'INR'
+          example: 'INR'
+        save_payment_method:
+          type: boolean
+          default: false
+          example: false
+
+    Payment:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 'pay_123'
+        status:
+          type: string
+          enum: [processing, completed, failed, refunded]
+          example: 'processing'
+        amount:
+          type: number
+          format: float
+          example: 748.05
+        currency:
+          type: string
+          example: 'INR'
+        payment_method:
+          type: object
+          properties:
+            type:
+              type: string
+              example: 'card'
+            last4:
+              type: string
+              example: '1111'
+            brand:
+              type: string
+              example: 'visa'
+        gateway_response:
+          type: object
+          properties:
+            transaction_id:
+              type: string
+              example: 'txn_gateway_123'
+            status:
+              type: string
+              example: 'success'
+            reference:
+              type: string
+              example: 'REF123456'
+        created_at:
+          type: string
+          format: date-time
+          example: '2024-01-15T12:00:00Z'
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 150
+        pages:
+          type: integer
+          example: 8
+        has_next:
+          type: boolean
+          example: true
+        has_prev:
+          type: boolean
+          example: false
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: 'BAD_REQUEST'
+              message: 'Invalid request format'
+            timestamp: '2024-01-15T10:30:00Z'
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: 'UNAUTHORIZED'
+              message: 'Authentication required'
+            timestamp: '2024-01-15T10:30:00Z'
+
+    Forbidden:
+      description: Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: 'FORBIDDEN'
+              message: 'Insufficient permissions'
+            timestamp: '2024-01-15T10:30:00Z'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: 'NOT_FOUND'
+              message: 'Resource not found'
+            timestamp: '2024-01-15T10:30:00Z'
+
+    Conflict:
+      description: Conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: 'CONFLICT'
+              message: 'Resource already exists'
+            timestamp: '2024-01-15T10:30:00Z'
+
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: 'VALIDATION_ERROR'
+              message: 'Validation failed'
+              details:
+                email: 'Invalid email format'
+                password: 'Password must be at least 6 characters'
+            timestamp: '2024-01-15T10:30:00Z'
+
+    RateLimit:
+      description: Rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: 'RATE_LIMIT_EXCEEDED'
+              message: 'Too many requests'
+            timestamp: '2024-01-15T10:30:00Z'
+
+    PaymentRequired:
+      description: Payment required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            success: false
+            error:
+              code: 'PAYMENT_REQUIRED'
+              message: 'Payment processing failed'
+            timestamp: '2024-01-15T10:30:00Z'
+
+tags:
+  - name: Authentication
+    description: User authentication and authorization
+  - name: User Management
+    description: User profile and account management
+  - name: Chef Management
+    description: Chef profiles and discovery
+  - name: Menu Management
+    description: Menu items and categories
+  - name: Order Management
+    description: Order placement and tracking
+  - name: Payment Processing
+    description: Payment methods and transactions
+  - name: Delivery Management
+    description: Delivery partner and logistics
+  - name: Reviews & Ratings
+    description: Review and rating system
+  - name: Notifications
+    description: Push notifications and messaging
+  - name: Analytics
+    description: Business intelligence and reporting
+  - name: Admin
+    description: Administrative functions

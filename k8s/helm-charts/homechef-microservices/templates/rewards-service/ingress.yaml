@@ -1,0 +1,38 @@
+{{- if and .Values.rewardsService.enabled .Values.rewardsService.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "homechef.fullname" . }}-rewards-service
+  labels:
+    {{- include "homechef.labels" . | nindent 4 }}
+    app.kubernetes.io/component: rewards-service
+spec:
+  {{- if .Values.rewardsService.ingress.className }}
+  ingressClassName: {{ .Values.rewardsService.ingress.className }}
+  {{- end }}
+  {{- if .Values.rewardsService.ingress.tls }}
+  tls:
+    {{- range .Values.rewardsService.ingress.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      secretName: {{ .secretName }}
+    {{- end }}
+  {{- end }}
+  rules:
+    {{- range .Values.rewardsService.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ include "homechef.fullname" $ }}-rewards-service
+                port:
+                  number: {{ $.Values.rewardsService.service.port }}
+          {{- end }}
+    {{- end }}
+{{- end }}

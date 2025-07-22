@@ -1,0 +1,676 @@
+# Global configuration
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  storageClass: ""
+
+# Common configuration for all services
+# Common configuration for all services
+common:
+  image:
+    registry: docker.io
+    pullPolicy: IfNotPresent
+    tag: "latest"
+  
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+  
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  
+  podSecurityContext:
+    fsGroup: 2000
+  
+  securityContext:
+    capabilities:
+      drop:
+      - ALL
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 1000
+
+# Chef Service Configuration
+chefService:
+  enabled: true
+  name: chef-service
+  replicaCount: 2
+  
+  image:
+    repository: homechef/chef-service
+    tag: "latest"
+  
+  service:
+    type: ClusterIP
+    port: 8080
+    targetPort: 8080
+  
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/ssl-redirect: "true"
+      nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    hosts:
+      - host: api.homechef.com
+        paths:
+          - path: /v1/chefs
+            pathType: Prefix
+    tls:
+      - secretName: homechef-tls
+        hosts:
+          - api.homechef.com
+  
+  env:
+    PORT: "8080"
+    HOST: "0.0.0.0"
+    ENVIRONMENT: "production"
+  
+  secrets:
+    JWT_SECRET: ""
+    DATABASE_URL: ""
+    REDIS_URL: ""
+
+# Database Service Configuration
+databaseService:
+  enabled: true
+  name: database-service
+  replicaCount: 2
+  
+  image:
+    repository: homechef/database-service
+    tag: "latest"
+  
+  service:
+    type: ClusterIP
+    port: 8081
+    targetPort: 8081
+  
+  ingress:
+    enabled: true
+    className: "nginx"
+    hosts:
+      - host: api.homechef.com
+        paths:
+          - path: /v1/database
+            pathType: Prefix
+          - path: /v1/cache
+            pathType: Prefix
+          - path: /v1/ws
+            pathType: Prefix
+          - path: /ws
+            pathType: Prefix
+    tls:
+      - secretName: homechef-tls
+        hosts:
+          - api.homechef.com
+  
+  env:
+    PORT: "8081"
+    HOST: "0.0.0.0"
+    ENVIRONMENT: "production"
+
+# Address Service Configuration
+addressService:
+  enabled: true
+  name: address-service
+  replicaCount: 2
+  
+  image:
+    repository: homechef/address-service
+    tag: "latest"
+  
+  service:
+    type: ClusterIP
+    port: 8082
+    targetPort: 8082
+  
+  ingress:
+    enabled: true
+    className: "nginx"
+    hosts:
+      - host: api.homechef.com
+        paths:
+          - path: /v1/addresses
+            pathType: Prefix
+    tls:
+      - secretName: homechef-tls
+        hosts:
+          - api.homechef.com
+  
+  env:
+    PORT: "8082"
+    HOST: "0.0.0.0"
+    ENVIRONMENT: "production"
+  
+  secrets:
+    GOOGLE_MAPS_API_KEY: ""
+
+# Admin Service Configuration
+adminService:
+  enabled: true
+  name: admin-service
+  replicaCount: 2
+  
+  image:
+    repository: homechef/admin-service
+    tag: "latest"
+  
+  service:
+    type: ClusterIP
+    port: 8083
+    targetPort: 8083
+  
+  ingress:
+    enabled: true
+    className: "nginx"
+    hosts:
+      - host: admin.homechef.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: homechef-admin-tls
+        hosts:
+          - admin.homechef.com
+  
+  env:
+    PORT: "8083"
+    HOST: "0.0.0.0"
+    ENVIRONMENT: "production"
+
+# Ads Service Configuration
+adsService:
+  enabled: true
+  name: ads-service
+  replicaCount: 2
+  
+  image:
+    repository: homechef/ads-service
+    tag: "latest"
+  
+  service:
+    type: ClusterIP
+    port: 8084
+    targetPort: 8084
+  
+  ingress:
+    enabled: true
+    className: "nginx"
+    hosts:
+      - host: api.homechef.com
+        paths:
+          - path: /v1/ads
+            pathType: Prefix
+    tls:
+      - secretName: homechef-tls
+        hosts:
+          - api.homechef.com
+  
+  env:
+    PORT: "8084"
+    HOST: "0.0.0.0"
+    ENVIRONMENT: "production"
+
+# Analytics Service Configuration
+analyticsService:
+  enabled: true
+  name: analytics-service
+  replicaCount: 2
+  
+  image:
+    repository: homechef/analytics-service
+    tag: "latest"
+  
+  service:
+    type: ClusterIP
+    port: 8085
+    targetPort: 8085
+  
+  ingress:
+    enabled: true
+    className: "nginx"
+    hosts:
+      - host: api.homechef.com
+        paths:
+          - path: /v1/analytics
+            pathType: Prefix
+    tls:
+      - secretName: homechef-tls
+        hosts:
+          - api.homechef.com
+  
+  env:
+    PORT: "8085"
+    HOST: "0.0.0.0"
+    ENVIRONMENT: "production"
+
+# Financial Service Configuration
+financialService:
+  enabled: true
+  name: financial-service
+  replicaCount: 2
+  
+  image:
+    repository: homechef/financial-service
+    tag: "latest"
+  
+  service:
+    type: ClusterIP
+    port: 8086
+    targetPort: 8086
+  
+  ingress:
+    enabled: true
+    className: "nginx"
+    hosts:
+      - host: api.homechef.com
+        paths:
+          - path: /v1/financial
+            pathType: Prefix
+    tls:
+      - secretName: homechef-tls
+        hosts:
+          - api.homechef.com
+  
+  env:
+    PORT: "8086"
+    HOST: "0.0.0.0"
+    ENVIRONMENT: "production"
+    CRON_ENABLED: "true"
+
+# Customer Service Configuration
+customerService:
+  enabled: true
+  name: customer-service
+  replicaCount: 2
+  
+  image:
+    repository: homechef/customer-service
+    tag: "latest"
+  
+  service:
+    type: ClusterIP
+    port: 8087
+    targetPort: 8087
+  
+  ingress:
+    enabled: true
+    className: "nginx"
+    hosts:
+      - host: api.homechef.com
+        paths:
+          - path: /v1/customers
+            pathType: Prefix
+    tls:
+      - secretName: homechef-tls
+        hosts:
+          - api.homechef.com
+  
+  env:
+    PORT: "8087"
+    HOST: "0.0.0.0"
+    ENVIRONMENT: "production"
+
+# Delivery Service Configuration
+deliveryService:
+  enabled: true
+  name: delivery-service
+  replicaCount: 2
+  
+  image:
+    repository: homechef/delivery-service
+    tag: "latest"
+  
+  service:
+    type: ClusterIP
+    port: 8088
+    targetPort: 8088
+  
+  ingress:
+    enabled: true
+    className: "nginx"
+    hosts:
+      - host: api.homechef.com
+        paths:
+          - path: /v1/delivery
+            pathType: Prefix
+    tls:
+      - secretName: homechef-tls
+        hosts:
+          - api.homechef.com
+  
+  env:
+    PORT: "8088"
+    HOST: "0.0.0.0"
+    ENVIRONMENT: "production"
+
+# Inventory Service Configuration
+inventoryService:
+  enabled: true
+  name: inventory-service
+  replicaCount: 2
+  
+  image:
+    repository: homechef/inventory-service
+    tag: "latest"
+  
+  service:
+    type: ClusterIP
+    port: 8089
+    targetPort: 8089
+  
+  ingress:
+    enabled: true
+    className: "nginx"
+    hosts:
+      - host: api.homechef.com
+        paths:
+          - path: /v1/inventory
+            pathType: Prefix
+    tls:
+      - secretName: homechef-tls
+        hosts:
+          - api.homechef.com
+  
+  env:
+    PORT: "8089"
+    HOST: "0.0.0.0"
+    ENVIRONMENT: "production"
+    CRON_ENABLED: "true"
+
+# Location Service Configuration
+locationService:
+  enabled: true
+  name: location-service
+  replicaCount: 2
+  
+  image:
+    repository: homechef/location-service
+    tag: "latest"
+  
+  service:
+    type: ClusterIP
+    port: 8090
+    targetPort: 8090
+  
+  ingress:
+    enabled: true
+    className: "nginx"
+    hosts:
+      - host: api.homechef.com
+        paths:
+          - path: /v1/locations
+            pathType: Prefix
+    tls:
+      - secretName: homechef-tls
+        hosts:
+          - api.homechef.com
+  
+  env:
+    PORT: "8090"
+    HOST: "0.0.0.0"
+    ENVIRONMENT: "production"
+  
+  secrets:
+    GOOGLE_MAPS_API_KEY: ""
+
+# Messaging Service Configuration
+messagingService:
+  enabled: true
+  name: messaging-service
+  replicaCount: 2
+  
+  image:
+    repository: homechef/messaging-service
+    tag: "latest"
+  
+  service:
+    type: ClusterIP
+    port: 8091
+    targetPort: 8091
+  
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+      nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+      nginx.ingress.kubernetes.io/websocket-services: homechef-messaging-service
+    hosts:
+      - host: api.homechef.com
+        paths:
+          - path: /v1/messages
+            pathType: Prefix
+    tls:
+      - secretName: homechef-tls
+        hosts:
+          - api.homechef.com
+  
+  env:
+    PORT: "8091"
+    HOST: "0.0.0.0"
+    ENVIRONMENT: "production"
+
+# Order Service Configuration
+orderService:
+  enabled: true
+  name: order-service
+  replicaCount: 2
+  
+  image:
+    repository: homechef/order-service
+    tag: "latest"
+  
+  service:
+    type: ClusterIP
+    port: 8092
+    targetPort: 8092
+  
+  ingress:
+    enabled: true
+    className: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+      nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+      nginx.ingress.kubernetes.io/websocket-services: homechef-order-service
+    hosts:
+      - host: api.homechef.com
+        paths:
+          - path: /v1/orders
+            pathType: Prefix
+    tls:
+      - secretName: homechef-tls
+        hosts:
+          - api.homechef.com
+  
+  env:
+    PORT: "8092"
+    HOST: "0.0.0.0"
+    ENVIRONMENT: "production"
+    CRON_ENABLED: "true"
+
+# Reviews Service Configuration
+reviewsService:
+  enabled: true
+  name: reviews-service
+  replicaCount: 2
+  
+  image:
+    repository: homechef/reviews-service
+    tag: "latest"
+  
+  service:
+    type: ClusterIP
+    port: 8093
+    targetPort: 8093
+  
+  ingress:
+    enabled: true
+    className: "nginx"
+    hosts:
+      - host: api.homechef.com
+        paths:
+          - path: /v1/reviews
+            pathType: Prefix
+          - path: /v1/chefs
+            pathType: Prefix
+          - path: /v1/dishes
+            pathType: Prefix
+    tls:
+      - secretName: homechef-tls
+        hosts:
+          - api.homechef.com
+  
+  env:
+    PORT: "8093"
+    HOST: "0.0.0.0"
+    ENVIRONMENT: "production"
+
+# Rewards Service Configuration
+rewardsService:
+  enabled: true
+  name: rewards-service
+  replicaCount: 2
+  
+  image:
+    repository: homechef/rewards-service
+    tag: "latest"
+  
+  service:
+    type: ClusterIP
+    port: 8094
+    targetPort: 8094
+  
+  ingress:
+    enabled: true
+    className: "nginx"
+    hosts:
+      - host: api.homechef.com
+        paths:
+          - path: /v1/rewards
+            pathType: Prefix
+          - path: /v1/subscriptions
+            pathType: Prefix
+    tls:
+      - secretName: homechef-tls
+        hosts:
+          - api.homechef.com
+  
+  env:
+    PORT: "8094"
+    HOST: "0.0.0.0"
+    ENVIRONMENT: "production"
+    CRON_ENABLED: "true"
+
+# Search Service Configuration
+searchService:
+  enabled: true
+  name: search-service
+  replicaCount: 2
+  
+  image:
+    repository: homechef/search-service
+    tag: "latest"
+  
+  service:
+    type: ClusterIP
+    port: 8095
+    targetPort: 8095
+  
+  ingress:
+    enabled: true
+    className: "nginx"
+    hosts:
+      - host: api.homechef.com
+        paths:
+          - path: /v1/search
+            pathType: Prefix
+    tls:
+      - secretName: homechef-tls
+        hosts:
+          - api.homechef.com
+  
+  env:
+    PORT: "8095"
+    HOST: "0.0.0.0"
+    ENVIRONMENT: "production"
+    CRON_ENABLED: "true"
+
+# PostgreSQL Configuration
+postgresql:
+  enabled: true
+  auth:
+    postgresPassword: "homechef-postgres-password"
+    username: "homechef"
+    password: "homechef-password"
+    database: "homechef_db"
+  
+  primary:
+    persistence:
+      enabled: true
+      size: 20Gi
+      storageClass: ""
+    
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+      requests:
+        cpu: 500m
+        memory: 512Mi
+
+# Redis Configuration
+redis:
+  enabled: true
+  auth:
+    enabled: false
+  
+  master:
+    persistence:
+      enabled: true
+      size: 8Gi
+      storageClass: ""
+    
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 250m
+        memory: 256Mi
+
+# Monitoring Configuration
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+  grafana:
+    enabled: true
+
+# Autoscaling Configuration
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+# Network Policies
+networkPolicy:
+  enabled: true
+  ingress:
+    enabled: true
+  egress:
+    enabled: true
+
+# Service Mesh (Istio)
+serviceMesh:
+  enabled: false
+  istio:
+    enabled: false

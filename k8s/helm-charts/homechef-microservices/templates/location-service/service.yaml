@@ -1,0 +1,19 @@
+{{- if .Values.locationService.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "homechef.fullname" . }}-location-service
+  labels:
+    {{- include "homechef.labels" . | nindent 4 }}
+    app.kubernetes.io/component: location-service
+spec:
+  type: {{ .Values.locationService.service.type }}
+  ports:
+    - port: {{ .Values.locationService.service.port }}
+      targetPort: {{ .Values.locationService.service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "homechef.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: location-service
+{{- end }}

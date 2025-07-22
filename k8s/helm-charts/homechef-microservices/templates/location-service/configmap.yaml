@@ -1,0 +1,15 @@
+{{- if .Values.locationService.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "homechef.fullname" . }}-location-service-config
+  labels:
+    {{- include "homechef.labels" . | nindent 4 }}
+    app.kubernetes.io/component: location-service
+data:
+  PORT: {{ .Values.locationService.env.PORT | quote }}
+  HOST: {{ .Values.locationService.env.HOST | quote }}
+  ENVIRONMENT: {{ .Values.locationService.env.ENVIRONMENT | quote }}
+  SSL_CERT_PATH: "/root/certs/tls.crt"
+  SSL_KEY_PATH: "/root/certs/tls.key"
+{{- end }}

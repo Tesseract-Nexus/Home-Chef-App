@@ -1,0 +1,19 @@
+{{- if .Values.adsService.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "homechef.fullname" . }}-ads-service
+  labels:
+    {{- include "homechef.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ads-service
+spec:
+  type: {{ .Values.adsService.service.type }}
+  ports:
+    - port: {{ .Values.adsService.service.port }}
+      targetPort: {{ .Values.adsService.service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "homechef.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: ads-service
+{{- end }}

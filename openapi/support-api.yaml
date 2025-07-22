@@ -1,0 +1,384 @@
+openapi: 3.0.3
+info:
+  title: HomeChef Support API
+  description: Customer support and ticketing system endpoints
+  version: 1.0.0
+
+servers:
+  - url: https://api.homechef.com/v1
+    description: Production server
+
+security:
+  - BearerAuth: []
+
+paths:
+  /support/tickets:
+    get:
+      tags: [Support Tickets]
+      summary: Get support tickets
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, in_progress, waiting_customer, escalated, resolved, closed]
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: priority
+          in: query
+          schema:
+            type: string
+            enum: [low, medium, high, urgent, critical]
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Support tickets retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SupportTicket'
+
+    post:
+      tags: [Support Tickets]
+      summary: Create support ticket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketCreate'
+      responses:
+        '201':
+          description: Ticket created successfully
+
+  /support/tickets/{ticket_id}:
+    get:
+      tags: [Support Tickets]
+      summary: Get ticket details
+      parameters:
+        - name: ticket_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Ticket details retrieved
+
+    put:
+      tags: [Support Tickets]
+      summary: Update ticket
+      parameters:
+        - name: ticket_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketUpdate'
+      responses:
+        '200':
+          description: Ticket updated
+
+  /support/tickets/{ticket_id}/messages:
+    get:
+      tags: [Support Messages]
+      summary: Get ticket messages
+      parameters:
+        - name: ticket_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Messages retrieved
+
+    post:
+      tags: [Support Messages]
+      summary: Send message
+      parameters:
+        - name: ticket_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message:
+                  type: string
+                  maxLength: 2000
+                attachments:
+                  type: array
+                  items:
+                    type: string
+                    description: 'Base64 encoded files'
+                is_internal:
+                  type: boolean
+                  default: false
+      responses:
+        '201':
+          description: Message sent
+
+  /support/tickets/{ticket_id}/assign:
+    put:
+      tags: [Support Management]
+      summary: Assign ticket to agent
+      parameters:
+        - name: ticket_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [agent_id]
+              properties:
+                agent_id:
+                  type: string
+                priority:
+                  type: string
+                  enum: [low, medium, high, urgent, critical]
+                notes:
+                  type: string
+      responses:
+        '200':
+          description: Ticket assigned
+
+  /support/tickets/{ticket_id}/resolve:
+    put:
+      tags: [Support Management]
+      summary: Resolve ticket
+      parameters:
+        - name: ticket_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [resolution]
+              properties:
+                resolution:
+                  type: string
+                resolution_type:
+                  type: string
+                  enum: [solved, workaround, duplicate, wont_fix]
+                customer_satisfaction:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                follow_up_required:
+                  type: boolean
+      responses:
+        '200':
+          description: Ticket resolved
+
+  /support/categories:
+    get:
+      tags: [Support Categories]
+      summary: Get support categories
+      parameters:
+        - name: user_role
+          in: query
+          schema:
+            type: string
+            enum: [customer, chef, delivery, admin]
+      responses:
+        '200':
+          description: Categories retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SupportCategory'
+
+  /support/faq:
+    get:
+      tags: [Support FAQ]
+      summary: Get frequently asked questions
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: user_role
+          in: query
+          schema:
+            type: string
+            enum: [customer, chef, delivery, admin]
+      responses:
+        '200':
+          description: FAQ retrieved
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    SupportTicket:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 'ticket_123'
+        title:
+          type: string
+          example: 'Order not delivered'
+        description:
+          type: string
+        category:
+          type: string
+          example: 'delivery_issue'
+        priority:
+          type: string
+          enum: [low, medium, high, urgent, critical]
+        status:
+          type: string
+          enum: [open, in_progress, waiting_customer, escalated, resolved, closed]
+        created_by:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            role:
+              type: string
+        assigned_to:
+          type: object
+          nullable: true
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+        order_id:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    TicketCreate:
+      type: object
+      required: [title, description, category, priority]
+      properties:
+        title:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 2000
+        category:
+          type: string
+        priority:
+          type: string
+          enum: [low, medium, high, urgent, critical]
+        order_id:
+          type: string
+          nullable: true
+        attachments:
+          type: array
+          items:
+            type: string
+            description: 'Base64 encoded files'
+
+    TicketUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        priority:
+          type: string
+          enum: [low, medium, high, urgent, critical]
+        status:
+          type: string
+          enum: [open, in_progress, waiting_customer, escalated, resolved, closed]
+
+    SupportCategory:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 'order_issue'
+        label:
+          type: string
+          example: 'Order Issues'
+        description:
+          type: string
+        icon:
+          type: string
+          example: '🍽️'
+        user_roles:
+          type: array
+          items:
+            type: string
+
+tags:
+  - name: Support Tickets
+    description: Support ticket management
+  - name: Support Messages
+    description: Ticket messaging system
+  - name: Support Management
+    description: Admin support operations
+  - name: Support Categories
+    description: Support category management
+  - name: Support FAQ
+    description: Frequently asked questions

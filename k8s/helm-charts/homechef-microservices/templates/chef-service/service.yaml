@@ -1,0 +1,19 @@
+{{- if .Values.chefService.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "homechef.fullname" . }}-chef-service
+  labels:
+    {{- include "homechef.labels" . | nindent 4 }}
+    app.kubernetes.io/component: chef-service
+spec:
+  type: {{ .Values.chefService.service.type }}
+  ports:
+    - port: {{ .Values.chefService.service.port }}
+      targetPort: {{ .Values.chefService.service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "homechef.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: chef-service
+{{- end }}

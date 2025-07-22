@@ -1,0 +1,19 @@
+{{- if .Values.adminService.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "homechef.fullname" . }}-admin-service
+  labels:
+    {{- include "homechef.labels" . | nindent 4 }}
+    app.kubernetes.io/component: admin-service
+spec:
+  type: {{ .Values.adminService.service.type }}
+  ports:
+    - port: {{ .Values.adminService.service.port }}
+      targetPort: {{ .Values.adminService.service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "homechef.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: admin-service
+{{- end }}

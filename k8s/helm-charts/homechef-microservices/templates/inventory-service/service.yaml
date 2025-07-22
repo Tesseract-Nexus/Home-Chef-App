@@ -1,0 +1,19 @@
+{{- if .Values.inventoryService.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "homechef.fullname" . }}-inventory-service
+  labels:
+    {{- include "homechef.labels" . | nindent 4 }}
+    app.kubernetes.io/component: inventory-service
+spec:
+  type: {{ .Values.inventoryService.service.type }}
+  ports:
+    - port: {{ .Values.inventoryService.service.port }}
+      targetPort: {{ .Values.inventoryService.service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "homechef.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: inventory-service
+{{- end }}

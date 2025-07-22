@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # Development service
+  homechef-dev:
+    build:
+      context: .
+      target: test
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8081"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - EXPO_DEVTOOLS_LISTEN_ADDRESS=0.0.0.0
+    command: npm run web
+    networks:
+      - homechef-network
+
+  # Production service
+  homechef-prod:
+    build:
+      context: .
+      target: production
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    networks:
+      - homechef-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Testing service
+  homechef-test:
+    build:
+      context: .
+      target: test
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=test
+    command: npm test
+    networks:
+      - homechef-network
+
+networks:
+  homechef-network:
+    driver: bridge
+
+volumes:
+  node_modules:

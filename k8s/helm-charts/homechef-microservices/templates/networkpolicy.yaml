@@ -1,0 +1,103 @@
+{{- if .Values.networkPolicy.enabled }}
+{{- range $service := list "chefService" "databaseService" "addressService" "adminService" "adsService" "analyticsService" "financialService" "customerService" "deliveryService" "inventoryService" "locationService" "messagingService" "orderService" "reviewsService" "rewardsService" "searchService" }}
+{{- $serviceConfig := index $.Values $service }}
+{{- if $serviceConfig.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "homechef.fullname" $ }}-{{ $serviceConfig.name }}
+  labels:
+    {{- include "homechef.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: {{ $serviceConfig.name }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "homechef.selectorLabels" $ | nindent 6 }}
+      app.kubernetes.io/component: {{ $serviceConfig.name }}
+  policyTypes:
+    - Ingress
+    - Egress
+  {{- if $.Values.networkPolicy.ingress.enabled }}
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              name: {{ $.Release.Namespace }}
+        - namespaceSelector:
+            matchLabels:
+              name: ingress-nginx
+      ports:
+        - protocol: TCP
+          port: {{ $serviceConfig.service.targetPort }}
+  {{- end }}
+  {{- if $.Values.networkPolicy.egress.enabled }}
+  egress:
+    # Allow DNS resolution
+    - to: []
+      ports:
+        - protocol: UDP
+          port: 53
+    # Allow access to PostgreSQL
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: postgresql
+      ports:
+        - protocol: TCP
+          port: 5432
+    # Allow access to Redis
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: redis
+      ports:
+        - protocol: TCP
+          port: 6379
+    # Allow inter-service communication
+    - to:
+        - podSelector:
+            matchLabels:
+              {{- include "homechef.selectorLabels" $ | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: 8080
+        - protocol: TCP
+          port: 8081
+        - protocol: TCP
+          port: 8082
+        - protocol: TCP
+          port: 8083
+        - protocol: TCP
+          port: 8084
+        - protocol: TCP
+          port: 8085
+        - protocol: TCP
+          port: 8086
+        - protocol: TCP
+          port: 8087
+        - protocol: TCP
+          port: 8088
+        - protocol: TCP
+          port: 8089
+        - protocol: TCP
+          port: 8090
+        - protocol: TCP
+          port: 8091
+        - protocol: TCP
+          port: 8092
+        - protocol: TCP
+          port: 8093
+        - protocol: TCP
+          port: 8094
+        - protocol: TCP
+          port: 8095
+    # Allow HTTPS outbound (for external APIs)
+    - to: []
+      ports:
+        - protocol: TCP
+          port: 443
+  {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

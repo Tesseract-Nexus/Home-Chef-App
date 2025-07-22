@@ -1,0 +1,806 @@
+openapi: 3.0.3
+info:
+  title: HomeChef Delivery API
+  description: Delivery partner endpoints for order management and earnings
+  version: 1.0.0
+
+servers:
+  - url: https://api.homechef.com/v1
+    description: Production server
+
+security:
+  - BearerAuth: []
+
+paths:
+  /delivery/profile:
+    get:
+      tags: [Delivery Profile]
+      summary: Get delivery partner profile
+      responses:
+        '200':
+          description: Profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/DeliveryPartnerProfile'
+
+    put:
+      tags: [Delivery Profile]
+      summary: Update delivery partner profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeliveryPartnerUpdate'
+      responses:
+        '200':
+          description: Profile updated successfully
+
+  /delivery/status:
+    put:
+      tags: [Delivery Profile]
+      summary: Update availability status
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [is_available]
+              properties:
+                is_available:
+                  type: boolean
+                  example: true
+                location:
+                  type: object
+                  properties:
+                    latitude:
+                      type: number
+                      format: float
+                    longitude:
+                      type: number
+                      format: float
+      responses:
+        '200':
+          description: Status updated successfully
+
+  /delivery/orders/available:
+    get:
+      tags: [Order Management]
+      summary: Get available delivery orders
+      parameters:
+        - name: radius
+          in: query
+          schema:
+            type: number
+            format: float
+            default: 5.0
+            description: Search radius in kilometers
+        - name: priority
+          in: query
+          schema:
+            type: string
+            enum: [low, medium, high]
+        - name: min_earnings
+          in: query
+          schema:
+            type: number
+            format: float
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Available orders retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AvailableDeliveryOrder'
+
+  /delivery/orders/{order_id}/accept:
+    post:
+      tags: [Order Management]
+      summary: Accept delivery order
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Order accepted successfully
+
+  /delivery/orders/{order_id}/pickup:
+    put:
+      tags: [Order Management]
+      summary: Mark order as picked up
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                pickup_time:
+                  type: string
+                  format: date-time
+                location:
+                  type: object
+                  properties:
+                    latitude:
+                      type: number
+                      format: float
+                    longitude:
+                      type: number
+                      format: float
+                notes:
+                  type: string
+                  example: 'Order picked up from chef'
+      responses:
+        '200':
+          description: Pickup status updated
+
+  /delivery/orders/{order_id}/deliver:
+    put:
+      tags: [Order Management]
+      summary: Mark order as delivered
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [delivery_time, location]
+              properties:
+                delivery_time:
+                  type: string
+                  format: date-time
+                location:
+                  type: object
+                  properties:
+                    latitude:
+                      type: number
+                      format: float
+                    longitude:
+                      type: number
+                      format: float
+                delivery_proof:
+                  type: string
+                  description: 'Base64 encoded image'
+                customer_signature:
+                  type: string
+                  description: 'Base64 encoded signature'
+                notes:
+                  type: string
+                  example: 'Order delivered successfully'
+      responses:
+        '200':
+          description: Delivery status updated
+
+  /delivery/orders/{order_id}/location:
+    put:
+      tags: [Order Management]
+      summary: Update current location during delivery
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [location]
+              properties:
+                location:
+                  type: object
+                  properties:
+                    latitude:
+                      type: number
+                      format: float
+                    longitude:
+                      type: number
+                      format: float
+                estimated_arrival:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Location updated successfully
+
+  /delivery/orders/active:
+    get:
+      tags: [Order Management]
+      summary: Get active delivery orders
+      responses:
+        '200':
+          description: Active orders retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ActiveDeliveryOrder'
+
+  /delivery/orders/history:
+    get:
+      tags: [Order Management]
+      summary: Get delivery history
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [completed, cancelled]
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Delivery history retrieved
+
+  /delivery/earnings:
+    get:
+      tags: [Earnings]
+      summary: Get earnings summary
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [today, this_week, this_month, last_30_days]
+            default: this_month
+      responses:
+        '200':
+          description: Earnings summary retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/DeliveryEarnings'
+
+  /delivery/earnings/breakdown:
+    get:
+      tags: [Earnings]
+      summary: Get detailed earnings breakdown
+      parameters:
+        - name: date_from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: date_to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Earnings breakdown retrieved
+
+  /delivery/analytics:
+    get:
+      tags: [Analytics]
+      summary: Get delivery analytics
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [today, this_week, this_month]
+      responses:
+        '200':
+          description: Analytics data retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/DeliveryAnalytics'
+
+  /delivery/vehicle:
+    put:
+      tags: [Vehicle Management]
+      summary: Update vehicle information
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VehicleUpdate'
+      responses:
+        '200':
+          description: Vehicle information updated
+
+  /delivery/documents:
+    post:
+      tags: [Document Management]
+      summary: Upload documents
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                document_type:
+                  type: string
+                  enum: [driving_license, vehicle_registration, insurance, identity_proof]
+                document:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Document uploaded successfully
+
+  /delivery/emergency:
+    post:
+      tags: [Emergency]
+      summary: Report emergency
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, description, location]
+              properties:
+                type:
+                  type: string
+                  enum: [accident, vehicle_breakdown, safety_concern, medical]
+                description:
+                  type: string
+                  example: 'Vehicle breakdown on highway'
+                location:
+                  type: object
+                  properties:
+                    latitude:
+                      type: number
+                      format: float
+                    longitude:
+                      type: number
+                      format: float
+                order_id:
+                  type: string
+                  nullable: true
+      responses:
+        '200':
+          description: Emergency reported successfully
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    DeliveryPartnerProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 'dp_123'
+        user_id:
+          type: string
+        name:
+          type: string
+          example: 'Rajesh Kumar'
+        phone:
+          type: string
+          example: '+919876543210'
+        email:
+          type: string
+          format: email
+        avatar:
+          type: string
+          format: uri
+        rating:
+          type: number
+          format: float
+          example: 4.7
+        total_deliveries:
+          type: integer
+          example: 1250
+        status:
+          type: string
+          enum: [active, inactive, suspended]
+        is_available:
+          type: boolean
+          example: true
+        vehicle:
+          type: object
+          properties:
+            type:
+              type: string
+              enum: [motorcycle, scooter, bicycle, car]
+            brand:
+              type: string
+              example: 'Honda'
+            model:
+              type: string
+              example: 'Activa'
+            registration_number:
+              type: string
+              example: 'MH12AB1234'
+            color:
+              type: string
+              example: 'Black'
+        documents:
+          type: object
+          properties:
+            driving_license:
+              type: object
+              properties:
+                number:
+                  type: string
+                expiry_date:
+                  type: string
+                  format: date
+                verified:
+                  type: boolean
+            vehicle_registration:
+              type: object
+              properties:
+                verified:
+                  type: boolean
+            insurance:
+              type: object
+              properties:
+                expiry_date:
+                  type: string
+                  format: date
+                verified:
+                  type: boolean
+        bank_details:
+          type: object
+          properties:
+            account_number:
+              type: string
+            ifsc_code:
+              type: string
+            account_holder_name:
+              type: string
+        emergency_contact:
+          type: object
+          properties:
+            name:
+              type: string
+            phone:
+              type: string
+            relation:
+              type: string
+        created_at:
+          type: string
+          format: date-time
+
+    DeliveryPartnerUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        avatar:
+          type: string
+          description: 'Base64 encoded image'
+        emergency_contact:
+          type: object
+          properties:
+            name:
+              type: string
+            phone:
+              type: string
+            relation:
+              type: string
+
+    AvailableDeliveryOrder:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 'order_123'
+        order_number:
+          type: string
+          example: 'HC240115001'
+        customer:
+          type: object
+          properties:
+            name:
+              type: string
+              example: 'John Doe'
+            phone:
+              type: string
+              example: '+919876543211'
+        chef:
+          type: object
+          properties:
+            name:
+              type: string
+              example: 'Priya Sharma'
+            address:
+              type: string
+              example: '123 Chef Street, Mumbai'
+            phone:
+              type: string
+              example: '+919876543210'
+        pickup_location:
+          type: object
+          properties:
+            address:
+              type: string
+            coordinates:
+              type: object
+              properties:
+                latitude:
+                  type: number
+                  format: float
+                longitude:
+                  type: number
+                  format: float
+        delivery_location:
+          type: object
+          properties:
+            address:
+              type: string
+            coordinates:
+              type: object
+              properties:
+                latitude:
+                  type: number
+                  format: float
+                longitude:
+                  type: number
+                  format: float
+        distance:
+          type: number
+          format: float
+          example: 2.3
+          description: 'Distance in kilometers'
+        estimated_time:
+          type: integer
+          example: 25
+          description: 'Estimated delivery time in minutes'
+        earnings:
+          type: number
+          format: float
+          example: 85.00
+        priority:
+          type: string
+          enum: [low, medium, high]
+        order_value:
+          type: number
+          format: float
+          example: 748.05
+        payment_method:
+          type: string
+          enum: [online, cod]
+        special_instructions:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    ActiveDeliveryOrder:
+      allOf:
+        - $ref: '#/components/schemas/AvailableDeliveryOrder'
+        - type: object
+          properties:
+            status:
+              type: string
+              enum: [accepted, picked_up, delivering]
+            accepted_at:
+              type: string
+              format: date-time
+            pickup_time:
+              type: string
+              format: date-time
+              nullable: true
+            estimated_delivery:
+              type: string
+              format: date-time
+
+    DeliveryEarnings:
+      type: object
+      properties:
+        total_earnings:
+          type: number
+          format: float
+          example: 8650.00
+        base_earnings:
+          type: number
+          format: float
+          example: 7800.00
+        tips:
+          type: number
+          format: float
+          example: 650.00
+        bonuses:
+          type: number
+          format: float
+          example: 200.00
+        deductions:
+          type: number
+          format: float
+          example: 0.00
+        total_deliveries:
+          type: integer
+          example: 47
+        avg_earnings_per_delivery:
+          type: number
+          format: float
+          example: 184.04
+        payout_status:
+          type: object
+          properties:
+            pending_amount:
+              type: number
+              format: float
+            last_payout_date:
+              type: string
+              format: date-time
+            next_payout_date:
+              type: string
+              format: date-time
+
+    DeliveryAnalytics:
+      type: object
+      properties:
+        performance:
+          type: object
+          properties:
+            total_deliveries:
+              type: integer
+            completed_deliveries:
+              type: integer
+            cancelled_deliveries:
+              type: integer
+            completion_rate:
+              type: number
+              format: float
+            avg_delivery_time:
+              type: number
+              format: float
+            on_time_percentage:
+              type: number
+              format: float
+        ratings:
+          type: object
+          properties:
+            avg_rating:
+              type: number
+              format: float
+            total_ratings:
+              type: integer
+            rating_distribution:
+              type: object
+              properties:
+                '5':
+                  type: integer
+                '4':
+                  type: integer
+                '3':
+                  type: integer
+                '2':
+                  type: integer
+                '1':
+                  type: integer
+        earnings:
+          type: object
+          properties:
+            total_earnings:
+              type: number
+              format: float
+            avg_earnings_per_hour:
+              type: number
+              format: float
+            peak_hours_earnings:
+              type: number
+              format: float
+        distance:
+          type: object
+          properties:
+            total_distance:
+              type: number
+              format: float
+            avg_distance_per_delivery:
+              type: number
+              format: float
+
+    VehicleUpdate:
+      type: object
+      properties:
+        type:
+          type: string
+          enum: [motorcycle, scooter, bicycle, car]
+        brand:
+          type: string
+        model:
+          type: string
+        registration_number:
+          type: string
+        color:
+          type: string
+        insurance_expiry:
+          type: string
+          format: date
+
+tags:
+  - name: Delivery Profile
+    description: Delivery partner profile management
+  - name: Order Management
+    description: Delivery order handling
+  - name: Earnings
+    description: Earnings and payout information
+  - name: Analytics
+    description: Delivery performance analytics
+  - name: Vehicle Management
+    description: Vehicle information management
+  - name: Document Management
+    description: Document upload and verification
+  - name: Emergency
+    description: Emergency reporting and assistance

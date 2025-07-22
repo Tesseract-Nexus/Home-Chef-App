@@ -1,0 +1,16 @@
+{{- if .Values.searchService.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "homechef.fullname" . }}-search-service-config
+  labels:
+    {{- include "homechef.labels" . | nindent 4 }}
+    app.kubernetes.io/component: search-service
+data:
+  PORT: {{ .Values.searchService.env.PORT | quote }}
+  HOST: {{ .Values.searchService.env.HOST | quote }}
+  ENVIRONMENT: {{ .Values.searchService.env.ENVIRONMENT | quote }}
+  CRON_ENABLED: {{ .Values.searchService.env.CRON_ENABLED | quote }}
+  SSL_CERT_PATH: "/root/certs/tls.crt"
+  SSL_KEY_PATH: "/root/certs/tls.key"
+{{- end }}

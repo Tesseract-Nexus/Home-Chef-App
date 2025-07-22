@@ -1,0 +1,209 @@
+openapi: 3.0.3
+info:
+  title: HomeChef Tipping API
+  description: Tipping system for chefs and delivery partners
+  version: 1.0.0
+
+servers:
+  - url: https://api.homechef.com/v1
+    description: Production server
+
+security:
+  - BearerAuth: []
+
+paths:
+  /tips/send:
+    post:
+      tags: [Tipping]
+      summary: Send tip to chef or delivery partner
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [recipient_id, recipient_type, amount, order_id]
+              properties:
+                recipient_id:
+                  type: string
+                  example: 'chef_123'
+                recipient_type:
+                  type: string
+                  enum: [chef, delivery]
+                amount:
+                  type: number
+                  format: float
+                  minimum: 10
+                  maximum: 500
+                  example: 50.00
+                message:
+                  type: string
+                  maxLength: 200
+                  example: 'Great food!'
+                order_id:
+                  type: string
+                  example: 'order_123'
+                payment_method_id:
+                  type: string
+                  example: 'pm_123'
+      responses:
+        '200':
+          description: Tip sent successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/TipTransaction'
+
+  /tips/history:
+    get:
+      tags: [Tipping]
+      summary: Get tip history
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [sent, received]
+        - name: recipient_type
+          in: query
+          schema:
+            type: string
+            enum: [chef, delivery]
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Tip history retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/TipTransaction'
+
+  /tips/received:
+    get:
+      tags: [Tipping]
+      summary: Get tips received (Chef/Delivery only)
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [today, week, month, all]
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Tips received retrieved
+
+  /tips/analytics:
+    get:
+      tags: [Tipping]
+      summary: Get tipping analytics (Chef/Delivery only)
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [today, week, month, year]
+      responses:
+        '200':
+          description: Tipping analytics retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      total_tips:
+                        type: number
+                        format: float
+                      tip_count:
+                        type: integer
+                      avg_tip:
+                        type: number
+                        format: float
+                      top_tippers:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            customer_name:
+                              type: string
+                            total_tips:
+                              type: number
+                              format: float
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    TipTransaction:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 'tip_123'
+        from_user_id:
+          type: string
+        from_user_name:
+          type: string
+        to_user_id:
+          type: string
+        to_user_name:
+          type: string
+        to_user_type:
+          type: string
+          enum: [chef, delivery]
+        amount:
+          type: number
+          format: float
+          example: 50.00
+        message:
+          type: string
+          example: 'Great food!'
+        order_id:
+          type: string
+        status:
+          type: string
+          enum: [pending, completed, failed]
+        transaction_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+tags:
+  - name: Tipping
+    description: Tipping system operations

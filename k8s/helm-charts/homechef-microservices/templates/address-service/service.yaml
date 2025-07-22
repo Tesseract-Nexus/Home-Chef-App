@@ -1,0 +1,19 @@
+{{- if .Values.addressService.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "homechef.fullname" . }}-address-service
+  labels:
+    {{- include "homechef.labels" . | nindent 4 }}
+    app.kubernetes.io/component: address-service
+spec:
+  type: {{ .Values.addressService.service.type }}
+  ports:
+    - port: {{ .Values.addressService.service.port }}
+      targetPort: {{ .Values.addressService.service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "homechef.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: address-service
+{{- end }}

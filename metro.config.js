@@ -1,0 +1,12 @@
+const { getDefaultConfig } = require('expo/metro-config');
+const path = require('path');
+
+const config = getDefaultConfig(__dirname);
+
+// Ensure proper resolver configuration
+config.resolver.platforms = ['ios', 'android', 'native', 'web'];
+config.resolver.alias = {
+  '@': path.resolve(__dirname, './'),
+};
+
+module.exports = config;

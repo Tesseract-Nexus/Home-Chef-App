@@ -1,0 +1,15 @@
+{{- if .Values.customerService.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "homechef.fullname" . }}-customer-service-config
+  labels:
+    {{- include "homechef.labels" . | nindent 4 }}
+    app.kubernetes.io/component: customer-service
+data:
+  PORT: {{ .Values.customerService.env.PORT | quote }}
+  HOST: {{ .Values.customerService.env.HOST | quote }}
+  ENVIRONMENT: {{ .Values.customerService.env.ENVIRONMENT | quote }}
+  SSL_CERT_PATH: "/root/certs/tls.crt"
+  SSL_KEY_PATH: "/root/certs/tls.key"
+{{- end }}

@@ -1,0 +1,19 @@
+{{- if .Values.deliveryService.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "homechef.fullname" . }}-delivery-service
+  labels:
+    {{- include "homechef.labels" . | nindent 4 }}
+    app.kubernetes.io/component: delivery-service
+spec:
+  type: {{ .Values.deliveryService.service.type }}
+  ports:
+    - port: {{ .Values.deliveryService.service.port }}
+      targetPort: {{ .Values.deliveryService.service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "homechef.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: delivery-service
+{{- end }}

@@ -1,0 +1,529 @@
+openapi: 3.0.3
+info:
+  title: HomeChef Authentication API
+  description: Authentication and authorization endpoints for HomeChef platform
+  version: 1.0.0
+
+servers:
+  - url: https://api.homechef.com/v1
+    description: Production server
+
+paths:
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: User login with email/password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, role]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                password:
+                  type: string
+                  minLength: 6
+                  example: password123
+                role:
+                  type: string
+                  enum: [customer, chef, delivery, admin]
+                  example: customer
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register new user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRegistration'
+      responses:
+        '201':
+          description: Registration successful
+
+  /auth/send-otp:
+    post:
+      tags: [OTP Authentication]
+      summary: Send OTP to phone
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, role]
+              properties:
+                phone:
+                  type: string
+                  pattern: '^\+91[6-9]\d{9}$'
+                  example: '+919876543210'
+                role:
+                  type: string
+                  enum: [customer, chef, delivery]
+      responses:
+        '200':
+          description: OTP sent successfully
+
+  /auth/verify-otp:
+    post:
+      tags: [OTP Authentication]
+      summary: Verify OTP and login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, otp, role]
+              properties:
+                phone:
+                  type: string
+                  example: '+919876543210'
+                otp:
+                  type: string
+                  pattern: '^\d{6}$'
+                  example: '123456'
+                role:
+                  type: string
+                  enum: [customer, chef, delivery]
+      responses:
+        '200':
+          description: OTP verified successfully
+
+  /auth/google:
+    post:
+      tags: [Social Authentication]
+      summary: Google OAuth login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id_token, role]
+              properties:
+                id_token:
+                  type: string
+                  description: Google ID token
+                role:
+                  type: string
+                  enum: [customer, chef, delivery]
+      responses:
+        '200':
+          description: Google login successful
+
+  /auth/facebook:
+    post:
+      tags: [Social Authentication]
+      summary: Facebook OAuth login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [access_token, role]
+              properties:
+                access_token:
+                  type: string
+                  description: Facebook access token
+                role:
+                  type: string
+                  enum: [customer, chef, delivery]
+      responses:
+        '200':
+          description: Facebook login successful
+
+  /auth/refresh:
+    post:
+      tags: [Token Management]
+      summary: Refresh access token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token:
+                  type: string
+                  example: refresh_token_here
+      responses:
+        '200':
+          description: Token refreshed successfully
+
+  /auth/logout:
+    post:
+      tags: [Token Management]
+      summary: Logout current session
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Logout successful
+
+  /auth/logout-all:
+    post:
+      tags: [Token Management]
+      summary: Logout all sessions
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: All sessions logged out
+
+  /auth/forgot-password:
+    post:
+      tags: [Password Management]
+      summary: Request password reset
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+      responses:
+        '200':
+          description: Password reset email sent
+
+  /auth/reset-password:
+    post:
+      tags: [Password Management]
+      summary: Reset password with token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, new_password]
+              properties:
+                token:
+                  type: string
+                  description: Password reset token
+                new_password:
+                  type: string
+                  minLength: 6
+                  example: newpassword123
+      responses:
+        '200':
+          description: Password reset successful
+
+  /auth/change-password:
+    put:
+      tags: [Password Management]
+      summary: Change password
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [current_password, new_password]
+              properties:
+                current_password:
+                  type: string
+                  example: oldpassword123
+                new_password:
+                  type: string
+                  minLength: 6
+                  example: newpassword123
+      responses:
+        '200':
+          description: Password changed successfully
+
+  /auth/verify-email:
+    post:
+      tags: [Account Verification]
+      summary: Verify email address
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+                  description: Email verification token
+      responses:
+        '200':
+          description: Email verified successfully
+
+  /auth/send-verification:
+    post:
+      tags: [Account Verification]
+      summary: Send email verification
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Verification email sent
+
+  /auth/2fa/enable:
+    post:
+      tags: [Two-Factor Authentication]
+      summary: Enable 2FA
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone]
+              properties:
+                phone:
+                  type: string
+                  example: '+919876543210'
+      responses:
+        '200':
+          description: 2FA setup initiated
+
+  /auth/2fa/verify-setup:
+    post:
+      tags: [Two-Factor Authentication]
+      summary: Verify 2FA setup
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [otp]
+              properties:
+                otp:
+                  type: string
+                  pattern: '^\d{6}$'
+                  example: '123456'
+      responses:
+        '200':
+          description: 2FA enabled successfully
+
+  /auth/2fa/verify:
+    post:
+      tags: [Two-Factor Authentication]
+      summary: Verify 2FA during login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [login_token, otp]
+              properties:
+                login_token:
+                  type: string
+                  description: Temporary login token
+                otp:
+                  type: string
+                  pattern: '^\d{6}$'
+                  example: '123456'
+      responses:
+        '200':
+          description: 2FA verification successful
+
+  /auth/sessions:
+    get:
+      tags: [Session Management]
+      summary: Get active sessions
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Active sessions retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                        device:
+                          type: string
+                        ip_address:
+                          type: string
+                        location:
+                          type: string
+                        last_active:
+                          type: string
+                          format: date-time
+                        is_current:
+                          type: boolean
+
+  /auth/sessions/{session_id}:
+    delete:
+      tags: [Session Management]
+      summary: Revoke specific session
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: session_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Session revoked successfully
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    AuthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            user:
+              $ref: '#/components/schemas/User'
+            token:
+              type: string
+              example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
+            refresh_token:
+              type: string
+              example: 'refresh_token_here'
+            expires_in:
+              type: integer
+              example: 3600
+        timestamp:
+          type: string
+          format: date-time
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 'user_123'
+        email:
+          type: string
+          format: email
+          example: 'user@example.com'
+        name:
+          type: string
+          example: 'John Doe'
+        phone:
+          type: string
+          example: '+919876543210'
+        role:
+          type: string
+          enum: [customer, chef, delivery, admin]
+          example: 'customer'
+        status:
+          type: string
+          enum: [active, inactive, suspended]
+          example: 'active'
+        email_verified:
+          type: boolean
+          example: true
+        phone_verified:
+          type: boolean
+          example: true
+
+    UserRegistration:
+      type: object
+      required: [email, password, name, phone, role]
+      properties:
+        email:
+          type: string
+          format: email
+          example: 'user@example.com'
+        password:
+          type: string
+          minLength: 6
+          example: 'password123'
+        name:
+          type: string
+          example: 'John Doe'
+        phone:
+          type: string
+          pattern: '^\+91[6-9]\d{9}$'
+          example: '+919876543210'
+        role:
+          type: string
+          enum: [customer, chef, delivery]
+          example: 'customer'
+        address:
+          type: object
+          properties:
+            street:
+              type: string
+            city:
+              type: string
+            state:
+              type: string
+            pincode:
+              type: string
+
+tags:
+  - name: Authentication
+    description: Basic authentication endpoints
+  - name: OTP Authentication
+    description: Phone-based OTP authentication
+  - name: Social Authentication
+    description: OAuth with Google, Facebook, etc.
+  - name: Token Management
+    description: JWT token operations
+  - name: Password Management
+    description: Password reset and change
+  - name: Account Verification
+    description: Email and phone verification
+  - name: Two-Factor Authentication
+    description: 2FA setup and verification
+  - name: Session Management
+    description: User session management

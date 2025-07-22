@@ -1,0 +1,38 @@
+{{- if and .Values.inventoryService.enabled .Values.inventoryService.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "homechef.fullname" . }}-inventory-service
+  labels:
+    {{- include "homechef.labels" . | nindent 4 }}
+    app.kubernetes.io/component: inventory-service
+spec:
+  {{- if .Values.inventoryService.ingress.className }}
+  ingressClassName: {{ .Values.inventoryService.ingress.className }}
+  {{- end }}
+  {{- if .Values.inventoryService.ingress.tls }}
+  tls:
+    {{- range .Values.inventoryService.ingress.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      secretName: {{ .secretName }}
+    {{- end }}
+  {{- end }}
+  rules:
+    {{- range .Values.inventoryService.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ include "homechef.fullname" $ }}-inventory-service
+                port:
+                  number: {{ $.Values.inventoryService.service.port }}
+          {{- end }}
+    {{- end }}
+{{- end }}

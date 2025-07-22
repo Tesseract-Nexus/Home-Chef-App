@@ -1,0 +1,15 @@
+{{- if .Values.messagingService.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "homechef.fullname" . }}-messaging-service-config
+  labels:
+    {{- include "homechef.labels" . | nindent 4 }}
+    app.kubernetes.io/component: messaging-service
+data:
+  PORT: {{ .Values.messagingService.env.PORT | quote }}
+  HOST: {{ .Values.messagingService.env.HOST | quote }}
+  ENVIRONMENT: {{ .Values.messagingService.env.ENVIRONMENT | quote }}
+  SSL_CERT_PATH: "/root/certs/tls.crt"
+  SSL_KEY_PATH: "/root/certs/tls.key"
+{{- end }}

@@ -1,0 +1,480 @@
+openapi: 3.0.3
+info:
+  title: HomeChef Inventory API
+  description: Inventory management for chefs and ingredients
+  version: 1.0.0
+
+servers:
+  - url: https://api.homechef.com/v1
+    description: Production server
+
+security:
+  - BearerAuth: []
+
+paths:
+  /inventory/ingredients:
+    get:
+      tags: [Ingredients]
+      summary: Get chef's ingredient inventory
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [vegetables, spices, dairy, meat, grains, others]
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [in_stock, low_stock, out_of_stock]
+        - name: expiry_within_days
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Ingredients retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Ingredient'
+
+    post:
+      tags: [Ingredients]
+      summary: Add ingredient to inventory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IngredientCreate'
+      responses:
+        '201':
+          description: Ingredient added
+
+  /inventory/ingredients/{ingredient_id}:
+    get:
+      tags: [Ingredients]
+      summary: Get ingredient details
+      parameters:
+        - name: ingredient_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Ingredient details retrieved
+
+    put:
+      tags: [Ingredients]
+      summary: Update ingredient
+      parameters:
+        - name: ingredient_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IngredientUpdate'
+      responses:
+        '200':
+          description: Ingredient updated
+
+    delete:
+      tags: [Ingredients]
+      summary: Remove ingredient from inventory
+      parameters:
+        - name: ingredient_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Ingredient removed
+
+  /inventory/ingredients/{ingredient_id}/stock:
+    put:
+      tags: [Stock Management]
+      summary: Update ingredient stock
+      parameters:
+        - name: ingredient_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [quantity, unit]
+              properties:
+                quantity:
+                  type: number
+                  format: float
+                unit:
+                  type: string
+                  enum: [kg, grams, liters, ml, pieces, packets]
+                operation:
+                  type: string
+                  enum: [add, subtract, set]
+                  default: set
+                reason:
+                  type: string
+                  example: 'Weekly grocery shopping'
+      responses:
+        '200':
+          description: Stock updated
+
+  /inventory/recipes/{dish_id}/ingredients:
+    get:
+      tags: [Recipe Management]
+      summary: Get ingredients required for dish
+      parameters:
+        - name: dish_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: servings
+          in: query
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: Recipe ingredients retrieved
+
+    put:
+      tags: [Recipe Management]
+      summary: Update recipe ingredients
+      parameters:
+        - name: dish_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ingredients]
+              properties:
+                ingredients:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/RecipeIngredient'
+      responses:
+        '200':
+          description: Recipe ingredients updated
+
+  /inventory/availability/check:
+    post:
+      tags: [Availability Check]
+      summary: Check ingredient availability for orders
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [orders]
+              properties:
+                orders:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      dish_id:
+                        type: string
+                      quantity:
+                        type: integer
+      responses:
+        '200':
+          description: Availability check result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      can_fulfill:
+                        type: boolean
+                      missing_ingredients:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            ingredient_name:
+                              type: string
+                            required_quantity:
+                              type: number
+                            available_quantity:
+                              type: number
+                            shortage:
+                              type: number
+
+  /inventory/alerts:
+    get:
+      tags: [Inventory Alerts]
+      summary: Get inventory alerts
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [low_stock, expiry, out_of_stock]
+        - name: priority
+          in: query
+          schema:
+            type: string
+            enum: [low, medium, high, critical]
+      responses:
+        '200':
+          description: Inventory alerts retrieved
+
+  /inventory/alerts/settings:
+    get:
+      tags: [Inventory Alerts]
+      summary: Get alert settings
+      responses:
+        '200':
+          description: Alert settings retrieved
+
+    put:
+      tags: [Inventory Alerts]
+      summary: Update alert settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                low_stock_threshold:
+                  type: number
+                  format: float
+                  example: 10.0
+                expiry_warning_days:
+                  type: integer
+                  example: 3
+                notifications:
+                  type: object
+                  properties:
+                    email:
+                      type: boolean
+                    push:
+                      type: boolean
+                    sms:
+                      type: boolean
+      responses:
+        '200':
+          description: Alert settings updated
+
+  /inventory/suppliers:
+    get:
+      tags: [Suppliers]
+      summary: Get supplier information
+      parameters:
+        - name: location
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Suppliers retrieved
+
+  /inventory/reports/usage:
+    get:
+      tags: [Inventory Reports]
+      summary: Get ingredient usage report
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [week, month, quarter]
+        - name: ingredient_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Usage report retrieved
+
+  /inventory/reports/waste:
+    get:
+      tags: [Inventory Reports]
+      summary: Get food waste report
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [week, month, quarter]
+      responses:
+        '200':
+          description: Waste report retrieved
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Ingredient:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 'ing_123'
+        name:
+          type: string
+          example: 'Basmati Rice'
+        category:
+          type: string
+          enum: [vegetables, spices, dairy, meat, grains, others]
+        current_stock:
+          type: object
+          properties:
+            quantity:
+              type: number
+              format: float
+            unit:
+              type: string
+              enum: [kg, grams, liters, ml, pieces, packets]
+        minimum_stock:
+          type: number
+          format: float
+        cost_per_unit:
+          type: number
+          format: float
+        supplier:
+          type: string
+        expiry_date:
+          type: string
+          format: date
+          nullable: true
+        storage_location:
+          type: string
+          example: 'Pantry Shelf 2'
+        status:
+          type: string
+          enum: [in_stock, low_stock, out_of_stock, expired]
+        last_updated:
+          type: string
+          format: date-time
+
+    IngredientCreate:
+      type: object
+      required: [name, category, current_stock, minimum_stock]
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+          enum: [vegetables, spices, dairy, meat, grains, others]
+        current_stock:
+          type: object
+          required: [quantity, unit]
+          properties:
+            quantity:
+              type: number
+              format: float
+            unit:
+              type: string
+        minimum_stock:
+          type: number
+          format: float
+        cost_per_unit:
+          type: number
+          format: float
+        supplier:
+          type: string
+        expiry_date:
+          type: string
+          format: date
+        storage_location:
+          type: string
+
+    IngredientUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        minimum_stock:
+          type: number
+          format: float
+        cost_per_unit:
+          type: number
+          format: float
+        supplier:
+          type: string
+        expiry_date:
+          type: string
+          format: date
+        storage_location:
+          type: string
+
+    RecipeIngredient:
+      type: object
+      required: [ingredient_id, quantity, unit]
+      properties:
+        ingredient_id:
+          type: string
+        ingredient_name:
+          type: string
+        quantity:
+          type: number
+          format: float
+        unit:
+          type: string
+        is_optional:
+          type: boolean
+          default: false
+        substitutes:
+          type: array
+          items:
+            type: string
+
+tags:
+  - name: Ingredients
+    description: Ingredient inventory management
+  - name: Stock Management
+    description: Stock level management
+  - name: Recipe Management
+    description: Recipe ingredient management
+  - name: Availability Check
+    description: Ingredient availability checking
+  - name: Inventory Alerts
+    description: Low stock and expiry alerts
+  - name: Suppliers
+    description: Supplier information
+  - name: Inventory Reports
+    description: Usage and waste reporting

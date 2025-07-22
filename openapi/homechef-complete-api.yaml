@@ -1,0 +1,862 @@
+openapi: 3.0.3
+info:
+  title: HomeChef Complete API
+  description: |
+    Complete API specification for HomeChef platform including all features:
+    - Multi-role authentication (Customer, Chef, Delivery Partner, Admin)
+    - Order management with 30-second cancellation window
+    - Real-time order tracking and status updates
+    - Tipping system with direct bank transfers
+    - Rewards and subscription system
+    - Review and rating system
+    - Address and payment management
+    - Analytics and reporting
+    - Advertisement system
+    - Support ticketing system
+    
+  version: 2.0.0
+  contact:
+    name: HomeChef API Support
+    email: api-support@homechef.com
+    url: https://docs.homechef.com
+
+servers:
+  - url: https://api.homechef.com/v1
+    description: Production server
+  - url: https://staging-api.homechef.com/v1
+    description: Staging server
+  - url: http://localhost:8080/v1
+    description: Development server
+
+security:
+  - BearerAuth: []
+
+paths:
+  # Authentication Endpoints
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: User login with email/password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, role]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                password:
+                  type: string
+                  minLength: 6
+                  example: password123
+                role:
+                  type: string
+                  enum: [customer, chef, delivery, admin]
+                  example: customer
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /auth/send-otp:
+    post:
+      tags: [Authentication]
+      summary: Send OTP for phone verification
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, role]
+              properties:
+                phone:
+                  type: string
+                  pattern: '^\+91[6-9]\d{9}$'
+                  example: '+919876543210'
+                role:
+                  type: string
+                  enum: [customer, chef, delivery]
+      responses:
+        '200':
+          description: OTP sent successfully
+
+  /auth/verify-otp:
+    post:
+      tags: [Authentication]
+      summary: Verify OTP and complete login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phone, otp, role]
+              properties:
+                phone:
+                  type: string
+                otp:
+                  type: string
+                  pattern: '^\d{6}$'
+                role:
+                  type: string
+                  enum: [customer, chef, delivery]
+      responses:
+        '200':
+          description: OTP verified successfully
+
+  # Order Management with Countdown Timer
+  /orders:
+    post:
+      tags: [Order Management]
+      summary: Place order with 30-second cancellation window
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderCreate'
+      responses:
+        '201':
+          description: Order placed with countdown timer
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          order_id:
+                            type: string
+                          status:
+                            type: string
+                            example: 'payment_confirmed'
+                          countdown_timer:
+                            $ref: '#/components/schemas/CountdownTimer'
+
+    get:
+      tags: [Order Management]
+      summary: Get user orders
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, completed, cancelled]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: Orders retrieved successfully
+
+  /orders/{order_id}/cancel:
+    post:
+      tags: [Order Cancellation]
+      summary: Cancel order with penalty calculation
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  enum: [customer_request, chef_unavailable, payment_failed]
+                notes:
+                  type: string
+      responses:
+        '200':
+          description: Order cancelled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/CancellationResult'
+
+  /orders/{order_id}/countdown-status:
+    get:
+      tags: [Order Countdown]
+      summary: Get countdown timer status
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Countdown status retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/CountdownStatus'
+
+  /orders/{order_id}/confirm-after-timer:
+    post:
+      tags: [Order Countdown]
+      summary: Confirm order after countdown expires
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Order confirmed and sent to chef
+
+  # Chef Management
+  /chefs/search:
+    get:
+      tags: [Chef Discovery]
+      summary: Search chefs with filtering
+      security: []
+      parameters:
+        - name: q
+          in: query
+          description: Search query
+          schema:
+            type: string
+        - name: cuisine_type
+          in: query
+          description: Filter by cuisine type
+          schema:
+            type: array
+            items:
+              type: string
+              enum: [north_indian, south_indian, gujarati, bengali, punjabi, street_food]
+        - name: rating_min
+          in: query
+          schema:
+            type: number
+            minimum: 0
+            maximum: 5
+        - name: delivery_time_max
+          in: query
+          schema:
+            type: integer
+        - name: has_offers
+          in: query
+          schema:
+            type: boolean
+        - name: distance_max
+          in: query
+          schema:
+            type: number
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [rating, distance, delivery_time, popularity]
+      responses:
+        '200':
+          description: Chefs retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Chef'
+
+  /chefs/{chef_id}/menu:
+    get:
+      tags: [Menu Management]
+      summary: Get chef menu with filtering
+      security: []
+      parameters:
+        - name: chef_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: is_vegetarian
+          in: query
+          schema:
+            type: boolean
+        - name: available_only
+          in: query
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Menu retrieved successfully
+
+  # Tipping System
+  /orders/{order_id}/tip:
+    post:
+      tags: [Tipping System]
+      summary: Add tip with direct bank transfer
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [recipient_type, amount]
+              properties:
+                recipient_type:
+                  type: string
+                  enum: [chef, delivery]
+                amount:
+                  type: number
+                  format: float
+                  minimum: 10
+                  maximum: 500
+                message:
+                  type: string
+                  maxLength: 200
+      responses:
+        '200':
+          description: Tip processed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      tip_id:
+                        type: string
+                      direct_transfer_initiated:
+                        type: boolean
+                      recipient_notified:
+                        type: boolean
+
+  # Rewards System
+  /rewards/profile:
+    get:
+      tags: [Rewards]
+      summary: Get user rewards profile
+      responses:
+        '200':
+          description: Rewards profile retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/RewardsProfile'
+
+  /rewards/redeem:
+    post:
+      tags: [Rewards]
+      summary: Redeem reward tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tokens, reward_type]
+              properties:
+                tokens:
+                  type: integer
+                  minimum: 50
+                  maximum: 1000
+                reward_type:
+                  type: string
+                  enum: [discount, cashback, free_delivery]
+                order_id:
+                  type: string
+      responses:
+        '200':
+          description: Tokens redeemed successfully
+
+  # Address Management
+  /addresses:
+    get:
+      tags: [Address Management]
+      summary: Get user addresses
+      responses:
+        '200':
+          description: Addresses retrieved successfully
+
+    post:
+      tags: [Address Management]
+      summary: Add new address
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddressCreate'
+      responses:
+        '201':
+          description: Address added successfully
+
+  /addresses/{address_id}/default:
+    put:
+      tags: [Address Management]
+      summary: Set default address
+      parameters:
+        - name: address_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Default address set
+
+  # Review System
+  /reviews:
+    post:
+      tags: [Reviews]
+      summary: Submit review for chef or order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewCreate'
+      responses:
+        '201':
+          description: Review submitted successfully
+
+  /chefs/{chef_id}/reviews:
+    get:
+      tags: [Reviews]
+      summary: Get chef reviews with filtering
+      parameters:
+        - name: chef_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: rating
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [newest, oldest, helpful, rating_high, rating_low]
+      responses:
+        '200':
+          description: Reviews retrieved successfully
+
+  # Admin Analytics
+  /admin/analytics/platform:
+    get:
+      tags: [Admin Analytics]
+      summary: Get platform analytics
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [today, week, month, quarter, year]
+      responses:
+        '200':
+          description: Analytics retrieved successfully
+
+  /admin/cancellation-policy:
+    get:
+      tags: [Admin Policy]
+      summary: Get cancellation policy settings
+      responses:
+        '200':
+          description: Policy retrieved successfully
+
+    put:
+      tags: [Admin Policy]
+      summary: Update cancellation policy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancellationPolicyUpdate'
+      responses:
+        '200':
+          description: Policy updated successfully
+
+  # Support System
+  /support/tickets:
+    get:
+      tags: [Support]
+      summary: Get support tickets
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [open, in_progress, resolved, closed]
+      responses:
+        '200':
+          description: Tickets retrieved successfully
+
+    post:
+      tags: [Support]
+      summary: Create support ticket
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TicketCreate'
+      responses:
+        '201':
+          description: Ticket created successfully
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: 'Operation successful'
+        timestamp:
+          type: string
+          format: date-time
+
+    AuthResponse:
+      allOf:
+        - $ref: '#/components/schemas/SuccessResponse'
+        - type: object
+          properties:
+            data:
+              type: object
+              properties:
+                user:
+                  $ref: '#/components/schemas/User'
+                token:
+                  type: string
+                refresh_token:
+                  type: string
+                expires_in:
+                  type: integer
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        email:
+          type: string
+        name:
+          type: string
+        phone:
+          type: string
+        role:
+          type: string
+          enum: [customer, chef, delivery, admin]
+        status:
+          type: string
+          enum: [active, inactive, suspended]
+
+    OrderCreate:
+      type: object
+      required: [chef_id, items, delivery_address_id]
+      properties:
+        chef_id:
+          type: string
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              dish_id:
+                type: string
+              quantity:
+                type: integer
+              special_instructions:
+                type: string
+        delivery_address_id:
+          type: string
+        delivery_instructions:
+          type: string
+        promo_code:
+          type: string
+
+    CountdownTimer:
+      type: object
+      properties:
+        free_cancellation_window:
+          type: integer
+          example: 30
+        time_remaining:
+          type: integer
+          example: 30
+        can_cancel_free:
+          type: boolean
+          example: true
+        penalty_after_expiry:
+          type: number
+          format: float
+          example: 120.00
+
+    CountdownStatus:
+      type: object
+      properties:
+        order_id:
+          type: string
+        is_active:
+          type: boolean
+        time_remaining:
+          type: integer
+        progress_percentage:
+          type: number
+          format: float
+        can_cancel_free:
+          type: boolean
+        penalty_amount:
+          type: number
+          format: float
+
+    CancellationResult:
+      type: object
+      properties:
+        order_id:
+          type: string
+        cancellation_type:
+          type: string
+          enum: [free, penalty]
+        penalty_amount:
+          type: number
+          format: float
+        refund_amount:
+          type: number
+          format: float
+        refund_timeline:
+          type: string
+
+    Chef:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        specialty:
+          type: string
+        cuisine_types:
+          type: array
+          items:
+            type: string
+        rating:
+          type: number
+          format: float
+        review_count:
+          type: integer
+        location:
+          type: string
+        distance:
+          type: string
+        delivery_time:
+          type: string
+        delivery_fee:
+          type: number
+          format: float
+        min_order:
+          type: number
+          format: float
+        is_open:
+          type: boolean
+        has_offers:
+          type: boolean
+        discount:
+          type: string
+          nullable: true
+        badges:
+          type: array
+          items:
+            type: string
+        image:
+          type: string
+          format: uri
+
+    RewardsProfile:
+      type: object
+      properties:
+        total_tokens:
+          type: integer
+        lifetime_earned:
+          type: integer
+        lifetime_redeemed:
+          type: integer
+        current_streak:
+          type: integer
+        tier:
+          type: string
+          enum: [bronze, silver, gold, platinum]
+
+    AddressCreate:
+      type: object
+      required: [type, full_address, city, state, pincode]
+      properties:
+        type:
+          type: string
+          enum: [home, work, holiday, temporary]
+        label:
+          type: string
+        full_address:
+          type: string
+        landmark:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        pincode:
+          type: string
+          pattern: '^[1-9][0-9]{5}$'
+        is_default:
+          type: boolean
+        delivery_instructions:
+          type: string
+
+    ReviewCreate:
+      type: object
+      required: [chef_id, order_id, rating, review_text]
+      properties:
+        chef_id:
+          type: string
+        order_id:
+          type: string
+        dish_id:
+          type: string
+          nullable: true
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        review_text:
+          type: string
+          maxLength: 1000
+        images:
+          type: array
+          items:
+            type: string
+
+    CancellationPolicyUpdate:
+      type: object
+      properties:
+        free_cancellation_window_seconds:
+          type: integer
+          minimum: 0
+          maximum: 300
+        penalty_rate:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        min_penalty_amount:
+          type: number
+          format: float
+        max_penalty_amount:
+          type: number
+          format: float
+
+    TicketCreate:
+      type: object
+      required: [title, description, category, priority]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        priority:
+          type: string
+          enum: [low, medium, high, urgent, critical]
+        order_id:
+          type: string
+          nullable: true
+
+tags:
+  - name: Authentication
+    description: User authentication and authorization
+  - name: Order Management
+    description: Complete order lifecycle management
+  - name: Order Cancellation
+    description: Order cancellation with penalty system
+  - name: Order Countdown
+    description: 30-second countdown timer management
+  - name: Chef Discovery
+    description: Chef search and filtering
+  - name: Menu Management
+    description: Menu items and categories
+  - name: Tipping System
+    description: Direct tip transfers to recipients
+  - name: Rewards
+    description: Token-based rewards system
+  - name: Address Management
+    description: Delivery address management
+  - name: Reviews
+    description: Review and rating system
+  - name: Admin Analytics
+    description: Platform analytics and insights
+  - name: Admin Policy
+    description: Policy management and configuration
+  - name: Support
+    description: Customer support system

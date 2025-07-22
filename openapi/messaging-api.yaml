@@ -1,0 +1,385 @@
+openapi: 3.0.3
+info:
+  title: HomeChef Messaging API
+  description: Real-time messaging and communication endpoints
+  version: 1.0.0
+
+servers:
+  - url: https://api.homechef.com/v1
+    description: Production server
+
+security:
+  - BearerAuth: []
+
+paths:
+  /messages/conversations:
+    get:
+      tags: [Conversations]
+      summary: Get user conversations
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, archived, all]
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Conversations retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Conversation'
+
+    post:
+      tags: [Conversations]
+      summary: Create conversation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [participant_id, order_id]
+              properties:
+                participant_id:
+                  type: string
+                  example: 'chef_123'
+                order_id:
+                  type: string
+                  example: 'order_123'
+                initial_message:
+                  type: string
+                  example: 'Hi, I have a question about my order'
+      responses:
+        '201':
+          description: Conversation created
+
+  /messages/conversations/{conversation_id}:
+    get:
+      tags: [Conversations]
+      summary: Get conversation details
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Conversation details retrieved
+
+  /messages/conversations/{conversation_id}/messages:
+    get:
+      tags: [Messages]
+      summary: Get conversation messages
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: before
+          in: query
+          schema:
+            type: string
+            description: 'Message ID to paginate before'
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Messages retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Message'
+
+    post:
+      tags: [Messages]
+      summary: Send message
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageCreate'
+      responses:
+        '201':
+          description: Message sent
+
+  /messages/conversations/{conversation_id}/read:
+    put:
+      tags: [Messages]
+      summary: Mark messages as read
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                last_read_message_id:
+                  type: string
+                  example: 'msg_123'
+      responses:
+        '200':
+          description: Messages marked as read
+
+  /messages/conversations/{conversation_id}/archive:
+    put:
+      tags: [Conversations]
+      summary: Archive conversation
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Conversation archived
+
+  /messages/conversations/{conversation_id}/block:
+    put:
+      tags: [Conversations]
+      summary: Block conversation
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  example: 'Inappropriate behavior'
+      responses:
+        '200':
+          description: Conversation blocked
+
+  /messages/templates:
+    get:
+      tags: [Message Templates]
+      summary: Get message templates
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [order_update, delivery_update, general]
+        - name: user_role
+          in: query
+          schema:
+            type: string
+            enum: [customer, chef, delivery]
+      responses:
+        '200':
+          description: Templates retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MessageTemplate'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 'conv_123'
+        participants:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              role:
+                type: string
+              avatar:
+                type: string
+        last_message:
+          type: object
+          properties:
+            content:
+              type: string
+            sender_id:
+              type: string
+            timestamp:
+              type: string
+              format: date-time
+        unread_count:
+          type: integer
+        order_id:
+          type: string
+        status:
+          type: string
+          enum: [active, archived, blocked]
+        created_at:
+          type: string
+          format: date-time
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 'msg_123'
+        conversation_id:
+          type: string
+        sender_id:
+          type: string
+        sender_name:
+          type: string
+        sender_role:
+          type: string
+        content:
+          type: object
+          properties:
+            type:
+              type: string
+              enum: [text, image, location, order_update]
+            text:
+              type: string
+            image_url:
+              type: string
+            location:
+              type: object
+              properties:
+                latitude:
+                  type: number
+                  format: float
+                longitude:
+                  type: number
+                  format: float
+                address:
+                  type: string
+        metadata:
+          type: object
+        is_read:
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+
+    MessageCreate:
+      type: object
+      required: [content]
+      properties:
+        content:
+          type: object
+          required: [type]
+          properties:
+            type:
+              type: string
+              enum: [text, image, location, order_update]
+            text:
+              type: string
+              maxLength: 1000
+            image:
+              type: string
+              description: 'Base64 encoded image'
+            location:
+              type: object
+              properties:
+                latitude:
+                  type: number
+                  format: float
+                longitude:
+                  type: number
+                  format: float
+                address:
+                  type: string
+        metadata:
+          type: object
+          properties:
+            order_id:
+              type: string
+            urgent:
+              type: boolean
+
+    MessageTemplate:
+      type: object
+      properties:
+        id:
+          type: string
+        category:
+          type: string
+        title:
+          type: string
+        content:
+          type: string
+        variables:
+          type: array
+          items:
+            type: string
+        user_roles:
+          type: array
+          items:
+            type: string
+
+tags:
+  - name: Conversations
+    description: Conversation management
+  - name: Messages
+    description: Message operations
+  - name: Message Templates
+    description: Pre-defined message templates

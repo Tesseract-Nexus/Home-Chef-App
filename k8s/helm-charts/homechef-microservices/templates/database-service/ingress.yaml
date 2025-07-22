@@ -1,0 +1,42 @@
+{{- if and .Values.databaseService.enabled .Values.databaseService.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "homechef.fullname" . }}-database-service
+  labels:
+    {{- include "homechef.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database-service
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/websocket-services: {{ include "homechef.fullname" . }}-database-service
+spec:
+  {{- if .Values.databaseService.ingress.className }}
+  ingressClassName: {{ .Values.databaseService.ingress.className }}
+  {{- end }}
+  {{- if .Values.databaseService.ingress.tls }}
+  tls:
+    {{- range .Values.databaseService.ingress.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      secretName: {{ .secretName }}
+    {{- end }}
+  {{- end }}
+  rules:
+    {{- range .Values.databaseService.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ include "homechef.fullname" $ }}-database-service
+                port:
+                  number: {{ $.Values.databaseService.service.port }}
+          {{- end }}
+    {{- end }}
+{{- end }}

@@ -1,0 +1,479 @@
+openapi: 3.0.3
+info:
+  title: HomeChef Search API
+  description: Search and discovery endpoints
+  version: 1.0.0
+
+servers:
+  - url: https://api.homechef.com/v1
+    description: Production server
+
+security:
+  - BearerAuth: []
+
+paths:
+  /search:
+    get:
+      tags: [Global Search]
+      summary: Global search across platform
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            example: 'butter chicken'
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [all, chefs, dishes, cuisines]
+            default: all
+        - name: location
+          in: query
+          schema:
+            type: string
+            example: 'mumbai'
+        - name: radius
+          in: query
+          schema:
+            type: number
+            format: float
+            default: 10.0
+        - name: filters
+          in: query
+          schema:
+            type: object
+            properties:
+              cuisine_type:
+                type: array
+                items:
+                  type: string
+              price_range:
+                type: object
+                properties:
+                  min:
+                    type: number
+                  max:
+                    type: number
+              rating_min:
+                type: number
+                format: float
+              is_vegetarian:
+                type: boolean
+              delivery_time_max:
+                type: integer
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [relevance, rating, distance, price_low, price_high, delivery_time]
+            default: relevance
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Search results retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/SearchResults'
+
+  /search/suggestions:
+    get:
+      tags: [Search Suggestions]
+      summary: Get search suggestions
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [chefs, dishes, cuisines, locations]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Search suggestions retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SearchSuggestion'
+
+  /search/trending:
+    get:
+      tags: [Trending Search]
+      summary: Get trending searches
+      parameters:
+        - name: location
+          in: query
+          schema:
+            type: string
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [today, week, month]
+            default: week
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Trending searches retrieved
+
+  /search/popular:
+    get:
+      tags: [Popular Search]
+      summary: Get popular items
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [chefs, dishes, cuisines]
+        - name: location
+          in: query
+          schema:
+            type: string
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [today, week, month]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Popular items retrieved
+
+  /search/filters:
+    get:
+      tags: [Search Filters]
+      summary: Get available search filters
+      parameters:
+        - name: location
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Available filters retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/SearchFilters'
+
+  /search/history:
+    get:
+      tags: [Search History]
+      summary: Get user search history
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Search history retrieved
+
+    delete:
+      tags: [Search History]
+      summary: Clear search history
+      responses:
+        '200':
+          description: Search history cleared
+
+  /search/save:
+    post:
+      tags: [Saved Searches]
+      summary: Save search query
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [query, filters]
+              properties:
+                query:
+                  type: string
+                filters:
+                  type: object
+                name:
+                  type: string
+                  example: 'North Indian near me'
+                notify_new_results:
+                  type: boolean
+                  default: false
+      responses:
+        '201':
+          description: Search saved
+
+  /search/saved:
+    get:
+      tags: [Saved Searches]
+      summary: Get saved searches
+      responses:
+        '200':
+          description: Saved searches retrieved
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    SearchResults:
+      type: object
+      properties:
+        query:
+          type: string
+        total_results:
+          type: integer
+        results:
+          type: object
+          properties:
+            chefs:
+              type: array
+              items:
+                $ref: '#/components/schemas/ChefSearchResult'
+            dishes:
+              type: array
+              items:
+                $ref: '#/components/schemas/DishSearchResult'
+            cuisines:
+              type: array
+              items:
+                $ref: '#/components/schemas/CuisineSearchResult'
+        facets:
+          type: object
+          properties:
+            cuisine_types:
+              type: array
+              items:
+                type: object
+                properties:
+                  name:
+                    type: string
+                  count:
+                    type: integer
+            price_ranges:
+              type: array
+              items:
+                type: object
+                properties:
+                  range:
+                    type: string
+                  count:
+                    type: integer
+        pagination:
+          type: object
+          properties:
+            page:
+              type: integer
+            limit:
+              type: integer
+            total:
+              type: integer
+            has_next:
+              type: boolean
+
+    ChefSearchResult:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        specialty:
+          type: string
+        rating:
+          type: number
+          format: float
+        review_count:
+          type: integer
+        location:
+          type: string
+        distance:
+          type: number
+          format: float
+        delivery_time:
+          type: string
+        min_order:
+          type: number
+          format: float
+        is_open:
+          type: boolean
+        image:
+          type: string
+        popular_dishes:
+          type: array
+          items:
+            type: string
+
+    DishSearchResult:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+          format: float
+        chef_id:
+          type: string
+        chef_name:
+          type: string
+        cuisine_type:
+          type: string
+        is_vegetarian:
+          type: boolean
+        rating:
+          type: number
+          format: float
+        image:
+          type: string
+
+    CuisineSearchResult:
+      type: object
+      properties:
+        name:
+          type: string
+        chef_count:
+          type: integer
+        dish_count:
+          type: integer
+        avg_price:
+          type: number
+          format: float
+        popular_dishes:
+          type: array
+          items:
+            type: string
+
+    SearchSuggestion:
+      type: object
+      properties:
+        text:
+          type: string
+        type:
+          type: string
+          enum: [chef, dish, cuisine, location]
+        metadata:
+          type: object
+          properties:
+            id:
+              type: string
+            image:
+              type: string
+            subtitle:
+              type: string
+
+    SearchFilters:
+      type: object
+      properties:
+        cuisine_types:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              count:
+                type: integer
+        price_ranges:
+          type: array
+          items:
+            type: object
+            properties:
+              min:
+                type: number
+              max:
+                type: number
+              label:
+                type: string
+        dietary_options:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              count:
+                type: integer
+        delivery_times:
+          type: array
+          items:
+            type: object
+            properties:
+              max_time:
+                type: integer
+              label:
+                type: string
+              count:
+                type: integer
+
+tags:
+  - name: Global Search
+    description: Platform-wide search functionality
+  - name: Search Suggestions
+    description: Auto-complete and suggestions
+  - name: Trending Search
+    description: Trending search queries
+  - name: Popular Search
+    description: Popular items and searches
+  - name: Search Filters
+    description: Available search filters
+  - name: Search History
+    description: User search history
+  - name: Saved Searches
+    description: Saved search queries

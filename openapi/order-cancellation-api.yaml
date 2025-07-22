@@ -1,0 +1,520 @@
+openapi: 3.0.3
+info:
+  title: HomeChef Order Cancellation API
+  description: Order cancellation policy and countdown timer management
+  version: 1.0.0
+
+servers:
+  - url: https://api.homechef.com/v1
+    description: Production server
+
+security:
+  - BearerAuth: []
+
+paths:
+  /orders/{order_id}/cancel:
+    post:
+      tags: [Order Cancellation]
+      summary: Cancel order with penalty calculation
+      description: Cancel an order with automatic penalty calculation based on timing
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: string
+            example: 'order_123'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  enum: [customer_request, chef_unavailable, payment_failed, system_error]
+                  example: 'customer_request'
+                notes:
+                  type: string
+                  maxLength: 500
+                  example: 'Changed mind about the order'
+      responses:
+        '200':
+          description: Order cancelled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      order_id:
+                        type: string
+                      cancellation_type:
+                        type: string
+                        enum: [free, penalty]
+                      penalty_amount:
+                        type: number
+                        format: float
+                        example: 120.00
+                      refund_amount:
+                        type: number
+                        format: float
+                        example: 180.00
+                      refund_timeline:
+                        type: string
+                        example: '3-5 business days'
+                      cancelled_at:
+                        type: string
+                        format: date-time
+        '400':
+          description: Cannot cancel order
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  error:
+                    type: object
+                    properties:
+                      code:
+                        type: string
+                        example: 'ORDER_CANNOT_CANCEL'
+                      message:
+                        type: string
+                        example: 'Order cannot be cancelled at this stage'
+
+  /orders/{order_id}/cancellation-info:
+    get:
+      tags: [Order Cancellation]
+      summary: Get cancellation information
+      description: Get current cancellation policy and penalty for an order
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Cancellation information retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/CancellationInfo'
+
+  /orders/{order_id}/countdown-status:
+    get:
+      tags: [Order Countdown]
+      summary: Get countdown timer status
+      description: Get current countdown timer status for free cancellation window
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Countdown status retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/CountdownStatus'
+
+  /orders/{order_id}/confirm-after-timer:
+    post:
+      tags: [Order Countdown]
+      summary: Confirm order after countdown expires
+      description: Automatically confirm order and send to chef after countdown expires
+      parameters:
+        - name: order_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Order confirmed and sent to chef
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      order_id:
+                        type: string
+                      status:
+                        type: string
+                        example: 'sent_to_chef'
+                      chef_notified:
+                        type: boolean
+                      customer_notified:
+                        type: boolean
+
+  /admin/cancellation-policy:
+    get:
+      tags: [Admin Policy Management]
+      summary: Get current cancellation policy
+      description: Get current platform cancellation policy settings
+      responses:
+        '200':
+          description: Policy retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/CancellationPolicy'
+
+    put:
+      tags: [Admin Policy Management]
+      summary: Update cancellation policy
+      description: Update platform cancellation policy settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CancellationPolicyUpdate'
+      responses:
+        '200':
+          description: Policy updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/CancellationPolicy'
+
+  /admin/cancellation-analytics:
+    get:
+      tags: [Admin Analytics]
+      summary: Get cancellation analytics
+      description: Get analytics data for order cancellations
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [today, week, month, quarter, year]
+            default: month
+        - name: group_by
+          in: query
+          schema:
+            type: string
+            enum: [day, week, month]
+            default: day
+      responses:
+        '200':
+          description: Analytics data retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/CancellationAnalytics'
+
+  /notifications/order-cancellation:
+    post:
+      tags: [Notifications]
+      summary: Send order cancellation notifications
+      description: Send notifications to relevant parties about order cancellation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [order_id, cancellation_type, recipients]
+              properties:
+                order_id:
+                  type: string
+                cancellation_type:
+                  type: string
+                  enum: [free, penalty]
+                recipients:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      user_id:
+                        type: string
+                      user_type:
+                        type: string
+                        enum: [customer, chef, delivery]
+                      notification_type:
+                        type: string
+                        enum: [push, sms, email]
+                penalty_amount:
+                  type: number
+                  format: float
+                refund_amount:
+                  type: number
+                  format: float
+      responses:
+        '200':
+          description: Notifications sent successfully
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    CancellationInfo:
+      type: object
+      properties:
+        order_id:
+          type: string
+          example: 'order_123'
+        can_cancel:
+          type: boolean
+          example: true
+        is_free_cancellation:
+          type: boolean
+          example: false
+        time_since_placed:
+          type: integer
+          description: 'Seconds since order was placed'
+          example: 45
+        free_cancellation_window:
+          type: integer
+          description: 'Free cancellation window in seconds'
+          example: 30
+        penalty_info:
+          type: object
+          properties:
+            penalty_rate:
+              type: number
+              format: float
+              example: 0.40
+            penalty_amount:
+              type: number
+              format: float
+              example: 120.00
+            refund_amount:
+              type: number
+              format: float
+              example: 180.00
+            min_penalty:
+              type: number
+              format: float
+              example: 20.00
+            max_penalty:
+              type: number
+              format: float
+              example: 500.00
+
+    CountdownStatus:
+      type: object
+      properties:
+        order_id:
+          type: string
+        is_active:
+          type: boolean
+          example: true
+        time_remaining:
+          type: integer
+          description: 'Seconds remaining for free cancellation'
+          example: 15
+        total_window:
+          type: integer
+          example: 30
+        progress_percentage:
+          type: number
+          format: float
+          example: 50.0
+        can_cancel_free:
+          type: boolean
+          example: true
+        penalty_after_expiry:
+          type: number
+          format: float
+          example: 120.00
+
+    CancellationPolicy:
+      type: object
+      properties:
+        free_cancellation_window_seconds:
+          type: integer
+          example: 30
+          minimum: 0
+          maximum: 300
+        penalty_rate:
+          type: number
+          format: float
+          example: 0.40
+          minimum: 0
+          maximum: 1
+        min_penalty_amount:
+          type: number
+          format: float
+          example: 20.00
+        max_penalty_amount:
+          type: number
+          format: float
+          example: 500.00
+        policy_description:
+          type: string
+          example: 'Orders can be cancelled for free within 30 seconds'
+        last_updated:
+          type: string
+          format: date-time
+        updated_by:
+          type: string
+          example: 'admin_123'
+
+    CancellationPolicyUpdate:
+      type: object
+      properties:
+        free_cancellation_window_seconds:
+          type: integer
+          minimum: 0
+          maximum: 300
+        penalty_rate:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+        min_penalty_amount:
+          type: number
+          format: float
+          minimum: 0
+        max_penalty_amount:
+          type: number
+          format: float
+        policy_description:
+          type: string
+          maxLength: 500
+
+    CancellationAnalytics:
+      type: object
+      properties:
+        period:
+          type: string
+        total_orders:
+          type: integer
+          example: 1250
+        total_cancellations:
+          type: integer
+          example: 125
+        cancellation_rate:
+          type: number
+          format: float
+          example: 10.0
+        free_cancellations:
+          type: object
+          properties:
+            count:
+              type: integer
+              example: 45
+            percentage:
+              type: number
+              format: float
+              example: 36.0
+        penalty_cancellations:
+          type: object
+          properties:
+            count:
+              type: integer
+              example: 80
+            percentage:
+              type: number
+              format: float
+              example: 64.0
+            total_penalty_collected:
+              type: number
+              format: float
+              example: 12500.00
+            avg_penalty_amount:
+              type: number
+              format: float
+              example: 156.25
+        cancellation_reasons:
+          type: array
+          items:
+            type: object
+            properties:
+              reason:
+                type: string
+              count:
+                type: integer
+              percentage:
+                type: number
+                format: float
+        time_distribution:
+          type: object
+          properties:
+            within_30_seconds:
+              type: integer
+            after_30_seconds:
+              type: integer
+            avg_cancellation_time:
+              type: number
+              format: float
+        daily_breakdown:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              total_orders:
+                type: integer
+              cancellations:
+                type: integer
+              free_cancellations:
+                type: integer
+              penalty_cancellations:
+                type: integer
+              penalty_collected:
+                type: number
+                format: float
+
+tags:
+  - name: Order Cancellation
+    description: Order cancellation operations
+  - name: Order Countdown
+    description: Countdown timer management
+  - name: Admin Policy Management
+    description: Cancellation policy administration
+  - name: Admin Analytics
+    description: Cancellation analytics and reporting
+  - name: Notifications
+    description: Cancellation notification system

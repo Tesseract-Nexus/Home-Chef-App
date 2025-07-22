@@ -1,0 +1,292 @@
+openapi: 3.0.3
+info:
+  title: HomeChef Reviews API
+  description: Review and rating system endpoints
+  version: 1.0.0
+
+servers:
+  - url: https://api.homechef.com/v1
+    description: Production server
+
+security:
+  - BearerAuth: []
+
+paths:
+  /reviews:
+    post:
+      tags: [Reviews]
+      summary: Submit review
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewCreate'
+      responses:
+        '201':
+          description: Review submitted successfully
+
+    get:
+      tags: [Reviews]
+      summary: Get user reviews
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [given, received]
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Reviews retrieved
+
+  /reviews/{review_id}:
+    get:
+      tags: [Reviews]
+      summary: Get review details
+      parameters:
+        - name: review_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Review details retrieved
+
+    put:
+      tags: [Reviews]
+      summary: Update review
+      parameters:
+        - name: review_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewUpdate'
+      responses:
+        '200':
+          description: Review updated
+
+    delete:
+      tags: [Reviews]
+      summary: Delete review
+      parameters:
+        - name: review_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Review deleted
+
+  /reviews/{review_id}/helpful:
+    post:
+      tags: [Reviews]
+      summary: Mark review as helpful
+      parameters:
+        - name: review_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Review marked as helpful
+
+  /reviews/{review_id}/report:
+    post:
+      tags: [Reviews]
+      summary: Report review
+      parameters:
+        - name: review_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  enum: [inappropriate, spam, fake, offensive]
+                description:
+                  type: string
+      responses:
+        '200':
+          description: Review reported
+
+  /chefs/{chef_id}/reviews:
+    get:
+      tags: [Chef Reviews]
+      summary: Get chef reviews
+      parameters:
+        - name: chef_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: rating
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [newest, oldest, helpful, rating_high, rating_low]
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Chef reviews retrieved
+
+  /chefs/{chef_id}/reviews/stats:
+    get:
+      tags: [Chef Reviews]
+      summary: Get chef review statistics
+      parameters:
+        - name: chef_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Review statistics retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/ReviewStats'
+
+  /dishes/{dish_id}/reviews:
+    get:
+      tags: [Dish Reviews]
+      summary: Get dish reviews
+      parameters:
+        - name: dish_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Dish reviews retrieved
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ReviewCreate:
+      type: object
+      required: [chef_id, order_id, rating, review_text]
+      properties:
+        chef_id:
+          type: string
+          example: 'chef_123'
+        order_id:
+          type: string
+          example: 'order_123'
+        dish_id:
+          type: string
+          nullable: true
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+          example: 5
+        review_text:
+          type: string
+          maxLength: 1000
+          example: 'Amazing food! Will order again.'
+        images:
+          type: array
+          items:
+            type: string
+            description: 'Base64 encoded images'
+
+    ReviewUpdate:
+      type: object
+      properties:
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        review_text:
+          type: string
+          maxLength: 1000
+
+    ReviewStats:
+      type: object
+      properties:
+        total_reviews:
+          type: integer
+          example: 234
+        average_rating:
+          type: number
+          format: float
+          example: 4.8
+        rating_distribution:
+          type: object
+          properties:
+            '5':
+              type: integer
+            '4':
+              type: integer
+            '3':
+              type: integer
+            '2':
+              type: integer
+            '1':
+              type: integer
+
+tags:
+  - name: Reviews
+    description: Review management
+  - name: Chef Reviews
+    description: Chef-specific reviews
+  - name: Dish Reviews
+    description: Dish-specific reviews

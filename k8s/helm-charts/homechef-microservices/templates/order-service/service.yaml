@@ -1,0 +1,19 @@
+{{- if .Values.orderService.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "homechef.fullname" . }}-order-service
+  labels:
+    {{- include "homechef.labels" . | nindent 4 }}
+    app.kubernetes.io/component: order-service
+spec:
+  type: {{ .Values.orderService.service.type }}
+  ports:
+    - port: {{ .Values.orderService.service.port }}
+      targetPort: {{ .Values.orderService.service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "homechef.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: order-service
+{{- end }}

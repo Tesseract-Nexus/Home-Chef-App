@@ -1,0 +1,442 @@
+openapi: 3.0.3
+info:
+  title: HomeChef Ads API
+  description: Advertisement and campaign management endpoints
+  version: 1.0.0
+
+servers:
+  - url: https://api.homechef.com/v1
+    description: Production server
+
+security:
+  - BearerAuth: []
+
+paths:
+  /ads/campaigns:
+    get:
+      tags: [Ad Campaigns]
+      summary: Get ad campaigns
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, paused, completed, draft]
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [banner, interstitial, native, video, sponsored_content]
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Campaigns retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AdCampaign'
+
+    post:
+      tags: [Ad Campaigns]
+      summary: Create ad campaign
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CampaignCreate'
+      responses:
+        '201':
+          description: Campaign created
+
+  /ads/campaigns/{campaign_id}:
+    get:
+      tags: [Ad Campaigns]
+      summary: Get campaign details
+      parameters:
+        - name: campaign_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Campaign details retrieved
+
+    put:
+      tags: [Ad Campaigns]
+      summary: Update campaign
+      parameters:
+        - name: campaign_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CampaignUpdate'
+      responses:
+        '200':
+          description: Campaign updated
+
+    delete:
+      tags: [Ad Campaigns]
+      summary: Delete campaign
+      parameters:
+        - name: campaign_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Campaign deleted
+
+  /ads/campaigns/{campaign_id}/performance:
+    get:
+      tags: [Ad Analytics]
+      summary: Get campaign performance
+      parameters:
+        - name: campaign_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [today, week, month, all]
+      responses:
+        '200':
+          description: Performance data retrieved
+
+  /ads/serve:
+    get:
+      tags: [Ad Serving]
+      summary: Get ads for user
+      parameters:
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [banner, interstitial, native, video, sponsored_content]
+        - name: placement
+          in: query
+          schema:
+            type: string
+            example: 'home_feed'
+        - name: user_location
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 1
+      responses:
+        '200':
+          description: Ads retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AdContent'
+
+  /ads/track/impression:
+    post:
+      tags: [Ad Tracking]
+      summary: Track ad impression
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ad_id, campaign_id]
+              properties:
+                ad_id:
+                  type: string
+                campaign_id:
+                  type: string
+                placement:
+                  type: string
+                user_agent:
+                  type: string
+                ip_address:
+                  type: string
+      responses:
+        '200':
+          description: Impression tracked
+
+  /ads/track/click:
+    post:
+      tags: [Ad Tracking]
+      summary: Track ad click
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ad_id, campaign_id]
+              properties:
+                ad_id:
+                  type: string
+                campaign_id:
+                  type: string
+                placement:
+                  type: string
+                target_url:
+                  type: string
+                user_agent:
+                  type: string
+                ip_address:
+                  type: string
+      responses:
+        '200':
+          description: Click tracked
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    AdCampaign:
+      type: object
+      properties:
+        id:
+          type: string
+          example: 'campaign_123'
+        name:
+          type: string
+          example: 'Weekend Special Offer'
+        type:
+          type: string
+          enum: [banner, interstitial, native, video, sponsored_content]
+        status:
+          type: string
+          enum: [active, paused, completed, draft]
+        budget:
+          type: object
+          properties:
+            total_budget:
+              type: number
+              format: float
+            daily_budget:
+              type: number
+              format: float
+            cost_per_click:
+              type: number
+              format: float
+            cost_per_impression:
+              type: number
+              format: float
+        targeting:
+          type: object
+          properties:
+            user_types:
+              type: array
+              items:
+                type: string
+            locations:
+              type: array
+              items:
+                type: string
+            age_groups:
+              type: array
+              items:
+                type: string
+            interests:
+              type: array
+              items:
+                type: string
+        schedule:
+          type: object
+          properties:
+            start_date:
+              type: string
+              format: date-time
+            end_date:
+              type: string
+              format: date-time
+            time_slots:
+              type: array
+              items:
+                type: string
+        performance:
+          type: object
+          properties:
+            impressions:
+              type: integer
+            clicks:
+              type: integer
+            conversions:
+              type: integer
+            ctr:
+              type: number
+              format: float
+            cost:
+              type: number
+              format: float
+        created_at:
+          type: string
+          format: date-time
+
+    CampaignCreate:
+      type: object
+      required: [name, type, content, targeting, budget, schedule]
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [banner, interstitial, native, video, sponsored_content]
+        content:
+          type: object
+          properties:
+            title:
+              type: string
+            description:
+              type: string
+            image_url:
+              type: string
+            video_url:
+              type: string
+            action_text:
+              type: string
+            target_url:
+              type: string
+        targeting:
+          type: object
+          properties:
+            user_types:
+              type: array
+              items:
+                type: string
+            locations:
+              type: array
+              items:
+                type: string
+            age_groups:
+              type: array
+              items:
+                type: string
+            interests:
+              type: array
+              items:
+                type: string
+        budget:
+          type: object
+          required: [total_budget]
+          properties:
+            total_budget:
+              type: number
+              format: float
+            daily_budget:
+              type: number
+              format: float
+            cost_per_click:
+              type: number
+              format: float
+            cost_per_impression:
+              type: number
+              format: float
+        schedule:
+          type: object
+          required: [start_date, end_date]
+          properties:
+            start_date:
+              type: string
+              format: date-time
+            end_date:
+              type: string
+              format: date-time
+            time_slots:
+              type: array
+              items:
+                type: string
+
+    CampaignUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        status:
+          type: string
+          enum: [active, paused, completed, draft]
+        budget:
+          type: object
+          properties:
+            daily_budget:
+              type: number
+              format: float
+            cost_per_click:
+              type: number
+              format: float
+        targeting:
+          type: object
+        schedule:
+          type: object
+
+    AdContent:
+      type: object
+      properties:
+        id:
+          type: string
+        campaign_id:
+          type: string
+        type:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        image_url:
+          type: string
+        video_url:
+          type: string
+        action_text:
+          type: string
+        target_url:
+          type: string
+        sponsor:
+          type: string
+
+tags:
+  - name: Ad Campaigns
+    description: Advertisement campaign management
+  - name: Ad Serving
+    description: Ad content delivery
+  - name: Ad Tracking
+    description: Ad performance tracking
+  - name: Ad Analytics
+    description: Advertisement analytics

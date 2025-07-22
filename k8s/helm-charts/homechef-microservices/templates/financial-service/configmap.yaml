@@ -1,0 +1,16 @@
+{{- if .Values.financialService.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "homechef.fullname" . }}-financial-service-config
+  labels:
+    {{- include "homechef.labels" . | nindent 4 }}
+    app.kubernetes.io/component: financial-service
+data:
+  PORT: {{ .Values.financialService.env.PORT | quote }}
+  HOST: {{ .Values.financialService.env.HOST | quote }}
+  ENVIRONMENT: {{ .Values.financialService.env.ENVIRONMENT | quote }}
+  CRON_ENABLED: {{ .Values.financialService.env.CRON_ENABLED | quote }}
+  SSL_CERT_PATH: "/root/certs/tls.crt"
+  SSL_KEY_PATH: "/root/certs/tls.key"
+{{- end }}

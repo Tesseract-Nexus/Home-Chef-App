@@ -1,0 +1,17 @@
+{{- if .Values.databaseService.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "homechef.fullname" . }}-database-service-config
+  labels:
+    {{- include "homechef.labels" . | nindent 4 }}
+    app.kubernetes.io/component: database-service
+data:
+  PORT: {{ .Values.databaseService.env.PORT | quote }}
+  HOST: {{ .Values.databaseService.env.HOST | quote }}
+  ENVIRONMENT: {{ .Values.databaseService.env.ENVIRONMENT | quote }}
+  SSL_CERT_PATH: "/root/certs/tls.crt"
+  SSL_KEY_PATH: "/root/certs/tls.key"
+  WEBSOCKET_ORIGIN: "*"
+  LOG_LEVEL: "info"
+{{- end }}

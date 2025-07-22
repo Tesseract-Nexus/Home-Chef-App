@@ -1,6 +1,6 @@
 # Multi-stage Dockerfile for HomeChef React Native Web App
 # Stage 1: Dependencies and Build Environment
-FROM node:18-alpine AS dependencies
+FROM node:24-alpine AS dependencies
 
 # Set working directory
 WORKDIR /app

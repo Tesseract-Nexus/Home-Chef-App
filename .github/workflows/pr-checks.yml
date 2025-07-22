@@ -37,7 +37,7 @@ jobs:
         run: npm run test:coverage || npm test || echo "No tests found"
 
       - name: Upload coverage reports
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v5
         if: always()
         with:
           file: ./coverage/lcov.info

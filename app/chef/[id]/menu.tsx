@@ -1,17 +1,19 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal, TextInput, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { getResponsiveDimensions } from '@/utils/responsive';
-import { ArrowLeft, Star, Clock, Flame, Leaf, Plus, Minus, ShoppingCart, X, MapPin, Phone } from 'lucide-react-native';
+import { ArrowLeft, Star, Clock, Plus, Minus, ShoppingCart, X, MapPin, ChevronDown } from 'lucide-react-native';
 import { useCart, SAMPLE_CHEF, MenuItem } from '@/hooks/useCart';
+import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES, SHADOWS } from '@/utils/constants';
+import { useToast } from '@/hooks/useToast';
 
 const MENU_CATEGORIES = ['All', 'Appetizers', 'Main Course', 'Rice', 'Breads', 'Beverages'];
 
 const SPICE_LEVEL_CONFIG = {
-  mild: { color: '#4CAF50', icon: '🟢', label: 'Mild', description: 'Light spices, family-friendly' },
-  medium: { color: '#FF9800', icon: '🟡', label: 'Medium', description: 'Balanced heat, most popular' },
-  hot: { color: '#F44336', icon: '🔴', label: 'Hot', description: 'Spicy kick, for spice lovers' }
+  mild: { color: COLORS.success, icon: '🟢', label: 'Mild', description: 'Light spices, family-friendly' },
+  medium: { color: COLORS.warning, icon: '🟡', label: 'Medium', description: 'Balanced heat, most popular' },
+  hot: { color: COLORS.danger, icon: '🔴', label: 'Hot', description: 'Spicy kick, for spice lovers' }
 };
 
 export default function ChefMenuScreen() {
@@ -25,10 +27,11 @@ export default function ChefMenuScreen() {
   const [specialInstructions, setSpecialInstructions] = useState('');
   const [selectedSpiceLevel, setSelectedSpiceLevel] = useState<'mild' | 'medium' | 'hot'>('medium');
   const [showItemModal, setShowItemModal] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const { isWeb, isDesktop, maxWidth } = getResponsiveDimensions();
-  // In a real app, fetch chef data based on id
+  const { isWeb, isDesktop } = getResponsiveDimensions();
   const chef = SAMPLE_CHEF;
+  const { showSuccess, showError } = useToast();
 
   const filteredMenu = selectedCategory === 'All' 
     ? chef.menu 
@@ -43,39 +46,67 @@ export default function ChefMenuScreen() {
 
   const handleAddToCart = (menuItem: MenuItem, qty: number = 1, instructions?: string) => {
     if (!canAddFromDifferentChef(chef.id)) {
-      Alert.alert(
-        'Different Chef',
-        `You have items from ${currentChef?.name} in your cart. Adding items from ${chef.name} will clear your current cart.`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Continue', 
-            onPress: () => addToCart(chef, menuItem, qty, instructions)
-          }
-        ]
-      );
+      // Handle different chef scenario
+      showError('Different chef', 'Please clear your cart to order from a different chef');
       return;
     }
-
+    
     addToCart(chef, menuItem, qty, instructions);
+    showSuccess('Added to cart', `${menuItem.name} has been added to your cart`);
+  };
+
+  const handleQuickAdd = (menuItem: MenuItem) => {
+    if (!canAddFromDifferentChef(chef.id)) {
+      showError('Different chef', 'Please clear your cart to order from a different chef');
+      return;
+    }
+    addToCart(chef, menuItem, 1);
+    showSuccess('Added to cart', `${menuItem.name} has been added to your cart`);
   };
 
   const openItemModal = (item: MenuItem) => {
+    if (isProcessing) return; // Prevent opening while processing
+    
     setSelectedItem(item);
     setQuantity(getItemQuantityInCart(item.id) || 1);
-    setSelectedSpiceLevel(item.spiceLevel); // Set chef's default
+    setSelectedSpiceLevel(item.spiceLevel);
     setSpecialInstructions('');
     setShowItemModal(true);
   };
 
-  const handleModalAddToCart = () => {
-    if (selectedItem) {
+  const handleModalAddToCart = async () => {
+    if (isProcessing || !selectedItem) return;
+    
+    setIsProcessing(true);
+    
+    try {
       const customizedItem = {
         ...selectedItem,
         spiceLevel: selectedSpiceLevel
       };
+      
       handleAddToCart(customizedItem, quantity, specialInstructions);
+      
+      // Close modal and reset state
       setShowItemModal(false);
+      setSelectedItem(null);
+      setQuantity(1);
+      setSpecialInstructions('');
+      setSelectedSpiceLevel('medium');
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleCloseModal = () => {
+    if (selectedItem) {
+      setShowItemModal(false);
+      setSelectedItem(null);
+      setQuantity(1);
+      setSpecialInstructions('');
+      setSelectedSpiceLevel('medium');
     }
   };
 
@@ -90,7 +121,38 @@ export default function ChefMenuScreen() {
         onPress={() => openItemModal(item)}
         disabled={!item.available}
       >
-        <View style={styles.imageContainer}>
+        <View style={styles.itemContent}>
+          <View style={styles.itemHeader}>
+            <View style={styles.itemTitleSection}>
+              <Text style={styles.itemName}>{item.name}</Text>
+              <Text style={styles.itemPrice}>₹{item.price}</Text>
+            </View>
+          </View>
+          
+          <Text style={styles.itemDescription} numberOfLines={2}>
+            {item.description}
+          </Text>
+
+          <View style={styles.itemMeta}>
+            <View style={styles.ratingContainer}>
+              <Star size={12} color={COLORS.rating} fill={COLORS.rating} />
+              <Text style={styles.rating}>{item.rating}</Text>
+              <Text style={styles.reviewCount}>({item.reviewCount})</Text>
+            </View>
+            <Text style={styles.metaDivider}>•</Text>
+            <View style={styles.prepTime}>
+              <Clock size={12} color={COLORS.text.tertiary} />
+              <Text style={styles.prepTimeText}>{item.preparationTime} min</Text>
+            </View>
+          </View>
+
+          <View style={styles.spiceLevelContainer}>
+            <Text style={styles.spiceIcon}>{spiceConfig.icon}</Text>
+            <Text style={styles.spiceText}>{spiceConfig.label}</Text>
+          </View>
+        </View>
+
+        <View style={styles.itemImageContainer}>
           <Image source={{ uri: item.image }} style={styles.itemImage} />
           {!item.available && (
             <View style={styles.unavailableOverlay}>
@@ -98,102 +160,35 @@ export default function ChefMenuScreen() {
             </View>
           )}
           <View style={styles.vegIndicator}>
-            {item.isVeg ? (
-              <View style={styles.vegIcon}>
-                <View style={styles.vegDot} />
-              </View>
-            ) : (
-              <View style={styles.nonVegIcon}>
-                <View style={styles.nonVegDot} />
-              </View>
-            )}
+            <View style={[styles.vegDot, { backgroundColor: item.isVeg ? COLORS.success : COLORS.danger }]} />
           </View>
-        </View>
-        
-        <View style={styles.itemContent}>
-          <View style={styles.itemTitleRow}>
-            <Text style={[styles.itemName, isWeb && styles.webItemName]}>{item.name}</Text>
-            <Text style={styles.itemPrice}>₹{item.price}</Text>
-          </View>
-          
-          <View style={styles.itemMetaRow}>
-            <View style={styles.ratingContainer}>
-              <Star size={14} color="#FFD700" fill="#FFD700" />
-              <Text style={styles.rating}>{item.rating}</Text>
-              <Text style={styles.reviewCount}>({item.reviewCount})</Text>
-            </View>
-            
-            <View style={styles.prepTime}>
-              <Clock size={14} color="#666" />
-              <Text style={styles.prepTimeText}>{item.preparationTime} min</Text>
-            </View>
-          </View>
-
-          <Text style={[styles.itemDescription, isWeb && styles.webItemDescription]} numberOfLines={isWeb ? 4 : 3}>
-            {item.description}
-          </Text>
-
-          <View style={styles.spiceLevelContainer}>
-            <Text style={styles.spiceIcon}>{spiceConfig.icon}</Text>
-            <Text style={[styles.spiceText, { color: spiceConfig.color }]}>
-              {spiceConfig.label} (Chef's Default)
-            </Text>
-          </View>
-
-          <View style={[styles.itemFooter, isWeb && styles.webItemFooter]}>
-            {!item.available ? (
-              <View style={styles.unavailableButton}>
-                <Text style={styles.unavailableText}>Currently Unavailable</Text>
-              </View>
-            ) : cartQuantity > 0 ? (
-              <View style={styles.quantityControls}>
-                <TouchableOpacity 
-                  style={styles.quantityButton}
-                  onPress={() => {
-                    const newQty = cartQuantity - 1;
-                    if (newQty > 0) {
-                      handleAddToCart(item, -1);
-                    }
-                  }}
-                >
-                  <Minus size={16} color="#FF6B35" />
-                </TouchableOpacity>
-                <Text style={styles.quantityText}>{cartQuantity}</Text>
-                <TouchableOpacity 
-                  style={styles.quantityButton}
-                  onPress={() => handleAddToCart(item, 1)}
-                >
-                  <Plus size={16} color="#FF6B35" />
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <TouchableOpacity 
-                style={styles.addButton}
-                onPress={() => openItemModal(item)}
-              >
-                <Plus size={16} color="#FFFFFF" />
-                <Text style={styles.addButtonText}>Customize & Add</Text>
-              </TouchableOpacity>
-            )}
+          {item.available && (
             <TouchableOpacity 
-              style={styles.customizeButton}
-              onPress={() => openItemModal(item)}
+              style={styles.quickAddButton}
+              onPress={(e) => {
+                e.stopPropagation();
+                handleQuickAdd(item);
+              }}
             >
-              <Text style={styles.customizeButtonText}>Customize</Text>
+              <Plus size={16} color={COLORS.text.white} />
             </TouchableOpacity>
-          </View>
+          )}
         </View>
       </TouchableOpacity>
     );
   };
 
   const ItemDetailModal = () => (
-    <Modal visible={showItemModal} animationType="slide" presentationStyle="pageSheet">
+    <Modal 
+      visible={showItemModal} 
+      animationType="slide" 
+      presentationStyle="pageSheet"
+      onRequestClose={handleCloseModal}
+    >
       <SafeAreaView style={styles.modalContainer}>
         <View style={styles.modalHeader}>
-          <Text style={styles.modalTitle}>Add to Cart</Text>
-          <TouchableOpacity onPress={() => setShowItemModal(false)}>
-            <X size={24} color="#2C3E50" />
+          <TouchableOpacity onPress={handleCloseModal}>
+            <X size={24} color={COLORS.text.primary} />
           </TouchableOpacity>
         </View>
 
@@ -202,114 +197,93 @@ export default function ChefMenuScreen() {
             <Image source={{ uri: selectedItem.image }} style={styles.modalImage} />
             
             <View style={styles.modalItemInfo}>
-              <View style={styles.modalItemHeader}>
-                <Text style={styles.modalItemName}>{selectedItem.name}</Text>
-                {selectedItem.isVeg ? (
-                  <View style={styles.vegIcon}>
-                    <Leaf size={16} color="#4CAF50" />
-                  </View>
-                ) : (
-                  <View style={styles.nonVegIcon}>
-                    <View style={styles.nonVegDot} />
-                  </View>
-                )}
-              </View>
-
-              <Text style={styles.modalItemPrice}>₹{selectedItem.price}</Text>
+              <Text style={styles.modalItemName}>{selectedItem.name}</Text>
               <Text style={styles.modalItemDescription}>{selectedItem.description}</Text>
-
-              {selectedItem.nutritionInfo && (
-                <View style={styles.nutritionInfo}>
-                  <Text style={styles.nutritionTitle}>Nutrition (per serving)</Text>
-                  <View style={styles.nutritionGrid}>
-                    <View style={styles.nutritionItem}>
-                      <Text style={styles.nutritionValue}>{selectedItem.nutritionInfo.calories}</Text>
-                      <Text style={styles.nutritionLabel}>Calories</Text>
-                    </View>
-                    <View style={styles.nutritionItem}>
-                      <Text style={styles.nutritionValue}>{selectedItem.nutritionInfo.protein}g</Text>
-                      <Text style={styles.nutritionLabel}>Protein</Text>
-                    </View>
-                    <View style={styles.nutritionItem}>
-                      <Text style={styles.nutritionValue}>{selectedItem.nutritionInfo.carbs}g</Text>
-                      <Text style={styles.nutritionLabel}>Carbs</Text>
-                    </View>
-                    <View style={styles.nutritionItem}>
-                      <Text style={styles.nutritionValue}>{selectedItem.nutritionInfo.fat}g</Text>
-                      <Text style={styles.nutritionLabel}>Fat</Text>
-                    </View>
-                  </View>
-                </View>
-              )}
-
-              {selectedItem.allergens && selectedItem.allergens.length > 0 && (
-                <View style={styles.allergenInfo}>
-                  <Text style={styles.allergenTitle}>Contains: {selectedItem.allergens.join(', ')}</Text>
-                </View>
-              )}
 
               <View style={styles.quantitySection}>
                 <Text style={styles.quantityLabel}>Quantity</Text>
                 <View style={styles.quantityControls}>
                   <TouchableOpacity 
                     style={styles.quantityButton}
-                    onPress={() => setQuantity(Math.max(1, quantity - 1))}
+                    onPress={() => {
+                      if (!isProcessing) {
+                        setQuantity(Math.max(1, quantity - 1));
+                      }
+                    }}
+                    disabled={isProcessing}
                   >
-                    <Minus size={20} color="#FF6B35" />
+                    <Minus size={18} color={COLORS.text.primary} />
                   </TouchableOpacity>
                   <Text style={styles.quantityText}>{quantity}</Text>
                   <TouchableOpacity 
                     style={styles.quantityButton}
-                    onPress={() => setQuantity(quantity + 1)}
+                    onPress={() => {
+                      if (!isProcessing) {
+                        setQuantity(quantity + 1);
+                      }
+                    }}
+                    disabled={isProcessing}
                   >
-                    <Plus size={20} color="#FF6B35" />
+                    <Plus size={18} color={COLORS.text.primary} />
                   </TouchableOpacity>
                 </View>
               </View>
 
               <View style={styles.spiceLevelSection}>
                 <Text style={styles.spiceLevelLabel}>Spice Level</Text>
-                <Text style={styles.spiceLevelSubtext}>Chef's default: {SPICE_LEVEL_CONFIG[selectedItem.spiceLevel].label}</Text>
                 <View style={styles.spiceLevelOptions}>
                   {Object.entries(SPICE_LEVEL_CONFIG).map(([level, config]) => (
                     <TouchableOpacity
                       key={level}
                       style={[
                         styles.spiceLevelOption,
-                        selectedSpiceLevel === level && styles.selectedSpiceLevel,
-                        { borderColor: config.color }
+                        selectedSpiceLevel === level && styles.selectedSpiceLevel
                       ]}
-                      onPress={() => setSelectedSpiceLevel(level as 'mild' | 'medium' | 'hot')}
+                      onPress={() => {
+                        if (!isProcessing) {
+                          setSelectedSpiceLevel(level as 'mild' | 'medium' | 'hot');
+                        }
+                      }}
+                      disabled={isProcessing}
                     >
                       <Text style={styles.spiceLevelIcon}>{config.icon}</Text>
-                      <View style={styles.spiceLevelInfo}>
-                        <Text style={[
-                          styles.spiceLevelOptionText,
-                          selectedSpiceLevel === level && { color: config.color }
-                        ]}>
-                          {config.label}
-                        </Text>
-                        <Text style={styles.spiceLevelDescription}>{config.description}</Text>
-                      </View>
+                      <Text style={styles.spiceLevelOptionText}>{config.label}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
               </View>
+
               <View style={styles.instructionsSection}>
-                <Text style={styles.instructionsLabel}>Special Instructions (Optional)</Text>
+                <Text style={styles.instructionsLabel}>Special Instructions</Text>
                 <TextInput
                   style={styles.instructionsInput}
                   value={specialInstructions}
-                  onChangeText={setSpecialInstructions}
-                  placeholder="e.g., Less spicy, extra sauce..."
+                  onChangeText={(text) => {
+                    if (!isProcessing) {
+                      setSpecialInstructions(text);
+                    }
+                  }}
+                  placeholder="Add cooking instructions..."
                   multiline
                   numberOfLines={3}
+                  placeholderTextColor={COLORS.text.tertiary}
+                  editable={!isProcessing}
                 />
               </View>
 
-              <TouchableOpacity style={styles.modalAddButton} onPress={handleModalAddToCart}>
+              <TouchableOpacity 
+                style={[
+                  styles.modalAddButton,
+                  isProcessing && styles.disabledModalButton
+                ]} 
+                onPress={handleModalAddToCart}
+                disabled={isProcessing}
+              >
                 <Text style={styles.modalAddButtonText}>
-                  Add {quantity} to Cart ({SPICE_LEVEL_CONFIG[selectedSpiceLevel].label}) - ₹{selectedItem.price * quantity}
+                  {isProcessing 
+                    ? 'Adding to cart...' 
+                    : `Add ${quantity} to order • ₹${selectedItem.price * quantity}`
+                  }
                 </Text>
               </TouchableOpacity>
             </View>
@@ -321,92 +295,84 @@ export default function ChefMenuScreen() {
 
   return (
     <View style={[styles.container, isWeb && styles.webContainer]}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <ArrowLeft size={24} color="#2C3E50" />
-        </TouchableOpacity>
-        <View style={styles.headerInfo}>
-          <Text style={styles.headerTitle}>{chef.name}</Text>
-          <Text style={[styles.headerSubtitle, isWeb && styles.webHeaderSubtitle]}>{chef.specialty}</Text>
-        </View>
-        {itemCount > 0 && (
-          <TouchableOpacity 
-            style={styles.cartButton}
-            onPress={() => router.push('/cart' as any)}
-          >
-            <ShoppingCart size={24} color="#FF6B35" />
-            <View style={styles.cartBadge}>
-              <Text style={styles.cartBadgeText}>{itemCount}</Text>
-            </View>
+      <SafeAreaView style={styles.safeArea}>
+        {/* Header */}
+        <View style={[styles.header, isWeb && styles.webHeader]}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <ArrowLeft size={24} color={COLORS.text.primary} />
           </TouchableOpacity>
-        )}
-      </View>
-
-      {/* Chef Info */}
-      <View style={[styles.chefInfo, isWeb && styles.webChefInfo]}>
-        <Image source={{ uri: chef.image }} style={styles.chefImage} />
-        <View style={styles.chefDetails}>
-          <View style={styles.chefRating}>
-            <Star size={16} color="#FFD700" fill="#FFD700" />
-            <Text style={styles.rating}>{chef.rating}</Text>
-            <Text style={styles.reviewCount}>({chef.reviewCount} reviews)</Text>
-          </View>
-          <View style={styles.chefMeta}>
-            <View style={styles.metaItem}>
-              <MapPin size={14} color="#666" />
-              <Text style={styles.metaText}>{chef.distance}</Text>
-            </View>
-            <View style={styles.metaItem}>
-              <Clock size={14} color="#666" />
-              <Text style={styles.metaText}>{chef.deliveryTime}</Text>
+          <View style={styles.headerInfo}>
+            <Text style={styles.headerTitle}>{chef.name}</Text>
+            <View style={styles.headerMeta}>
+              <View style={styles.ratingContainer}>
+                <Star size={14} color={COLORS.rating} fill={COLORS.rating} />
+                <Text style={styles.rating}>{chef.rating}</Text>
+              </View>
+              <Text style={styles.metaDivider}>•</Text>
+              <Text style={styles.deliveryTime}>{chef.deliveryTime}</Text>
+              <Text style={styles.metaDivider}>•</Text>
+              <Text style={styles.distance}>{chef.distance}</Text>
             </View>
           </View>
-          <Text style={styles.minOrder}>Min order: ₹{chef.minOrder}</Text>
+          {itemCount > 0 && (
+            <TouchableOpacity 
+              style={styles.cartButton}
+              onPress={() => router.push('/cart' as any)}
+            >
+              <ShoppingCart size={20} color={COLORS.text.primary} />
+              <View style={styles.cartBadge}>
+                <Text style={styles.cartBadgeText}>{itemCount}</Text>
+              </View>
+            </TouchableOpacity>
+          )}
         </View>
-      </View>
 
-      {/* Category Filter */}
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false}
-        style={styles.categoryFilter}
-      >
-        {MENU_CATEGORIES.map((category) => (
-          <TouchableOpacity
-            key={category}
-            style={[
-              styles.categoryButton,
-              selectedCategory === category && styles.activeCategoryButton
-            ]}
-            onPress={() => setSelectedCategory(category)}
+        {/* Category Filter */}
+        <View style={styles.categorySection}>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            style={styles.categoryFilter}
+            contentContainerStyle={styles.categoryContent}
           >
-            <Text style={[
-              styles.categoryButtonText,
-              selectedCategory === category && styles.activeCategoryButtonText
-            ]}>
-              {category}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+            {MENU_CATEGORIES.map((category) => (
+              <TouchableOpacity
+                key={category}
+                style={[
+                  styles.categoryButton,
+                  selectedCategory === category && styles.activeCategoryButton
+                ]}
+                onPress={() => setSelectedCategory(category)}
+              >
+                <Text style={[
+                  styles.categoryButtonText,
+                  selectedCategory === category && styles.activeCategoryButtonText
+                ]}>
+                  {category}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
 
-      {/* Menu Items */}
-      <ScrollView 
-        showsVerticalScrollIndicator={false} 
-        style={[styles.menuList, isWeb && styles.webMenuList]}
-        contentContainerStyle={isWeb ? styles.webMenuContent : undefined}>
-        {availableMenu.length > 0 ? (
-          availableMenu.map(renderMenuItem)
-        ) : (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>No items available in this category</Text>
-            <Text style={styles.emptyStateSubtext}>Try selecting a different category</Text>
-          </View>
-        )}
-      </ScrollView>
+        {/* Menu Items */}
+        <ScrollView 
+          showsVerticalScrollIndicator={false} 
+          style={[styles.menuList, isWeb && styles.webMenuList]}
+          contentContainerStyle={isWeb ? styles.webMenuContent : styles.mobileMenuContent}
+        >
+          {availableMenu.length > 0 ? (
+            availableMenu.map(renderMenuItem)
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>No items available</Text>
+              <Text style={styles.emptyStateSubtext}>Try selecting a different category</Text>
+            </View>
+          )}
+        </ScrollView>
 
-      <ItemDetailModal />
+        <ItemDetailModal />
+      </SafeAreaView>
     </View>
   );
 }
@@ -414,223 +380,227 @@ export default function ChefMenuScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: COLORS.background.primary,
   },
   webContainer: {
     minHeight: '100vh',
-    maxWidth: 1200,
-    alignSelf: 'center',
-    width: '100%',
-    paddingHorizontal: 20,
-    paddingTop: 20,
+  },
+  safeArea: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    backgroundColor: COLORS.background.primary,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.lg,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: COLORS.border.light,
   },
   webHeader: {
-    paddingHorizontal: 30,
-    paddingVertical: 20,
-    borderRadius: 16,
-    marginBottom: 20,
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
+    paddingHorizontal: SPACING.xl,
   },
   backButton: {
-    padding: 8,
-    marginRight: 12,
+    padding: SPACING.sm,
+    marginRight: SPACING.md,
   },
   headerInfo: {
     flex: 1,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2C3E50',
+    fontSize: FONT_SIZES.xl,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+    marginBottom: SPACING.xs,
   },
-  headerSubtitle: {
-    fontSize: 14,
-    color: '#FF6B35',
-    marginTop: 2,
+  headerMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  webHeaderSubtitle: {
-    fontSize: 16,
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  rating: {
+    marginLeft: SPACING.xs,
+    fontSize: FONT_SIZES.sm,
+    fontWeight: '500',
+    color: COLORS.text.primary,
+  },
+  metaDivider: {
+    marginHorizontal: SPACING.sm,
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.tertiary,
+  },
+  deliveryTime: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.secondary,
+  },
+  distance: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.secondary,
   },
   cartButton: {
     position: 'relative',
-    padding: 8,
+    padding: SPACING.sm,
+    backgroundColor: COLORS.background.secondary,
+    borderRadius: BORDER_RADIUS.md,
   },
   cartBadge: {
     position: 'absolute',
     top: 0,
     right: 0,
-    backgroundColor: '#FF6B35',
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
+    backgroundColor: COLORS.text.primary,
+    borderRadius: BORDER_RADIUS.round,
+    minWidth: 18,
+    height: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
   cartBadgeText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  chefInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  webChefInfo: {
-    paddingHorizontal: 30,
-    paddingVertical: 20,
-    borderRadius: 16,
-    marginBottom: 20,
-  },
-  chefImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    marginRight: 15,
-  },
-  chefDetails: {
-    flex: 1,
-  },
-  chefRating: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  rating: {
-    marginLeft: 4,
-    fontSize: 14,
+    color: COLORS.text.white,
+    fontSize: FONT_SIZES.xs,
     fontWeight: '600',
-    color: '#2C3E50',
   },
-  reviewCount: {
-    marginLeft: 4,
-    fontSize: 12,
-    color: '#7F8C8D',
-  },
-  chefMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-    gap: 15,
-  },
-  metaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  metaText: {
-    marginLeft: 4,
-    fontSize: 12,
-    color: '#666',
-  },
-  minOrder: {
-    fontSize: 12,
-    color: '#7F8C8D',
-  },
-  callButton: {
-    padding: 10,
-    borderRadius: 20,
-    backgroundColor: '#FFF5F0',
+  categorySection: {
+    backgroundColor: COLORS.background.primary,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border.light,
   },
   categoryFilter: {
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 8,
-    paddingLeft: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-    paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    paddingVertical: SPACING.lg,
+  },
+  categoryContent: {
+    paddingHorizontal: SPACING.lg,
   },
   categoryButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    marginRight: 6,
-    backgroundColor: '#F8F9FA',
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    marginRight: SPACING.md,
+    backgroundColor: COLORS.background.secondary,
+    borderRadius: BORDER_RADIUS.xxl,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    minWidth: 60,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderColor: COLORS.border.light,
   },
   activeCategoryButton: {
-    backgroundColor: '#FF6B35',
-    borderColor: '#FF6B35',
+    backgroundColor: COLORS.text.primary,
+    borderColor: COLORS.text.primary,
   },
   categoryButtonText: {
-    fontSize: 12,
-    color: '#7F8C8D',
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.primary,
     fontWeight: '500',
-    textAlign: 'center',
   },
   activeCategoryButtonText: {
-    color: '#FFFFFF',
+    color: COLORS.text.white,
   },
   menuList: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 20,
   },
   webMenuList: {
-    paddingHorizontal: 0,
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  mobileMenuContent: {
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.lg,
   },
   webMenuContent: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
-    gap: 20,
-    paddingBottom: 40,
-  },
-  webMenuList: {
-    paddingHorizontal: 0,
-  },
-  webMenuContent: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
-    gap: 20,
-    paddingBottom: 40,
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.xl,
   },
   menuItemCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    marginBottom: 20,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    marginBottom: 20,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    marginBottom: 12,
-    marginHorizontal: 2,
-    overflow: 'hidden',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  webMenuItemCard: {
-    marginBottom: 0,
+    backgroundColor: COLORS.background.primary,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border.light,
+    paddingVertical: SPACING.xl,
+    flexDirection: 'row',
   },
   unavailableItem: {
-    opacity: 0.7,
+    opacity: 0.5,
   },
-  imageContainer: {
+  itemContent: {
+    flex: 1,
+    marginRight: SPACING.lg,
+  },
+  itemHeader: {
+    marginBottom: SPACING.sm,
+  },
+  itemTitleSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  itemName: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+    flex: 1,
+    marginRight: SPACING.md,
+  },
+  itemPrice: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+  },
+  itemDescription: {
+    fontSize: FONT_SIZES.md,
+    color: COLORS.text.secondary,
+    lineHeight: 20,
+    marginBottom: SPACING.md,
+  },
+  itemMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.sm,
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  rating: {
+    marginLeft: SPACING.xs,
+    fontSize: FONT_SIZES.sm,
+    fontWeight: '500',
+    color: COLORS.text.primary,
+  },
+  reviewCount: {
+    marginLeft: SPACING.xs,
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.tertiary,
+  },
+  prepTime: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  prepTimeText: {
+    marginLeft: SPACING.xs,
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.tertiary,
+  },
+  spiceLevelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  spiceIcon: {
+    fontSize: 12,
+    marginRight: SPACING.xs,
+  },
+  spiceText: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.tertiary,
+  },
+  itemImageContainer: {
     position: 'relative',
   },
   itemImage: {
-    width: '100%',
-    height: 200,
+    width: 120,
+    height: 120,
+    borderRadius: BORDER_RADIUS.md,
     resizeMode: 'cover',
   },
   unavailableOverlay: {
@@ -642,273 +612,74 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.6)',
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: BORDER_RADIUS.md,
   },
   unavailableText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
+    color: COLORS.text.white,
+    fontSize: FONT_SIZES.sm,
+    fontWeight: '600',
   },
   vegIndicator: {
     position: 'absolute',
-    top: 12,
-    left: 12,
-  },
-  vegIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 4,
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    top: SPACING.sm,
+    left: SPACING.sm,
+    width: 16,
+    height: 16,
+    borderRadius: BORDER_RADIUS.sm,
+    backgroundColor: COLORS.background.primary,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#4CAF50',
+    borderWidth: 1,
+    borderColor: COLORS.border.medium,
   },
   vegDot: {
     width: 8,
     height: 8,
-    borderRadius: 4,
-    backgroundColor: '#4CAF50',
+    borderRadius: BORDER_RADIUS.sm,
   },
-  nonVegIcon: {
-    width: 24,
-    height: 24,
-    borderRadius: 4,
-    backgroundColor: 'rgba(255,255,255,0.9)',
+  quickAddButton: {
+    position: 'absolute',
+    bottom: SPACING.sm,
+    right: SPACING.sm,
+    backgroundColor: COLORS.text.primary,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#F44336',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
-  nonVegDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#F44336',
-  },
-  itemContent: {
-    padding: 12,
-  },
-  itemTitleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  emptyState: {
     alignItems: 'center',
-    marginBottom: 6,
+    paddingVertical: SPACING.xxxl * 2,
   },
-  itemName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    flex: 1,
-    marginRight: 6,
-  },
-  webItemName: {
-    fontSize: 18,
-  },
-  webItemDescription: {
-    fontSize: 15,
-    lineHeight: 22,
-  },
-  webItemFooter: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  itemPrice: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#FF6B35',
-  },
-  itemMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 8,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8F9FA',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  rating: {
-    marginLeft: 4,
-    fontSize: 14,
+  emptyStateText: {
+    fontSize: FONT_SIZES.xl,
     fontWeight: '600',
-    color: '#2C3E50',
+    color: COLORS.text.primary,
+    marginBottom: SPACING.sm,
   },
-  reviewCount: {
-    marginLeft: 2,
-    fontSize: 12,
-    color: '#7F8C8D',
-  },
-  prepTime: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F0F8FF',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  prepTimeText: {
-    marginLeft: 4,
-    fontSize: 12,
-    color: '#2196F3',
-    fontWeight: '500',
-  },
-  itemDescription: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 18,
-    marginBottom: 8,
-  },
-  spiceLevelContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8F9FA',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 6,
-    marginBottom: 8,
-    alignSelf: 'flex-start',
-  },
-  spiceIcon: {
-    fontSize: 10,
-    marginRight: 4,
-  },
-  spiceText: {
-    fontSize: 11,
-    fontWeight: '500',
-  },
-  itemFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FF6B35',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    gap: 3,
-    flex: 1,
-    justifyContent: 'center',
-  },
-  addButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  customizeButton: {
-    backgroundColor: '#F8F9FA',
-    paddingHorizontal: 8,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  customizeButtonText: {
-    color: '#666',
-    fontSize: 11,
-    fontWeight: '500',
-  },
-  quantityControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8F9FA',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    flex: 1,
-  },
-  quantityButton: {
-    padding: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  quantityText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FF6B35',
-    paddingHorizontal: 8,
-  },
-  unavailableButton: {
-    backgroundColor: '#F0F0F0',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 25,
-  },
-  spiceLevelSection: {
-    marginBottom: 20,
-  },
-  spiceLevelLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2C3E50',
-    marginBottom: 4,
-  },
-  spiceLevelSubtext: {
-    fontSize: 14,
-    color: '#7F8C8D',
-    marginBottom: 12,
-  },
-  spiceLevelOptions: {
-    gap: 12,
-  },
-  spiceLevelOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#E0E0E0',
-  },
-  selectedSpiceLevel: {
-    backgroundColor: '#FFF5F0',
-  },
-  spiceLevelIcon: {
-    fontSize: 20,
-    marginRight: 12,
-  },
-  spiceLevelInfo: {
-    flex: 1,
-  },
-  spiceLevelOptionText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2C3E50',
-    marginBottom: 2,
-  },
-  spiceLevelDescription: {
-    fontSize: 12,
-    color: '#7F8C8D',
-  },
-  unavailableText: {
-    color: '#999',
-    fontSize: 14,
-    fontWeight: '500',
+  emptyStateSubtext: {
+    fontSize: FONT_SIZES.md,
+    color: COLORS.text.secondary,
+    textAlign: 'center',
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: COLORS.background.primary,
   },
   modalHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.lg,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2C3E50',
+    borderBottomColor: COLORS.border.light,
   },
   modalContent: {
     flex: 1,
@@ -919,125 +690,118 @@ const styles = StyleSheet.create({
     resizeMode: 'cover',
   },
   modalItemInfo: {
-    padding: 20,
-  },
-  modalItemHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
+    padding: SPACING.xl,
   },
   modalItemName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    flex: 1,
-    marginRight: 12,
-  },
-  modalItemPrice: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#FF6B35',
-    marginBottom: 12,
+    fontSize: FONT_SIZES.xxl,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+    marginBottom: SPACING.md,
   },
   modalItemDescription: {
-    fontSize: 16,
-    color: '#666',
-    lineHeight: 24,
-    marginBottom: 20,
-  },
-  nutritionInfo: {
-    backgroundColor: '#F8F9FA',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
-  },
-  nutritionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2C3E50',
-    marginBottom: 12,
-  },
-  nutritionGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  nutritionItem: {
-    alignItems: 'center',
-  },
-  nutritionValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FF6B35',
-  },
-  nutritionLabel: {
-    fontSize: 12,
-    color: '#7F8C8D',
-    marginTop: 4,
-  },
-  allergenInfo: {
-    backgroundColor: '#FFF3E0',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 20,
-  },
-  allergenTitle: {
-    fontSize: 14,
-    color: '#F57C00',
-    fontWeight: '500',
+    fontSize: FONT_SIZES.md,
+    color: COLORS.text.secondary,
+    lineHeight: 22,
+    marginBottom: SPACING.xl,
   },
   quantitySection: {
-    marginBottom: 20,
+    marginBottom: SPACING.xl,
   },
   quantityLabel: {
-    fontSize: 16,
+    fontSize: FONT_SIZES.lg,
     fontWeight: '600',
-    color: '#2C3E50',
-    marginBottom: 12,
+    color: COLORS.text.primary,
+    marginBottom: SPACING.md,
+  },
+  quantityControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.background.secondary,
+    borderRadius: BORDER_RADIUS.xxl,
+    paddingHorizontal: SPACING.md,
+    alignSelf: 'flex-start',
+  },
+  quantityButton: {
+    padding: SPACING.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quantityText: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+    paddingHorizontal: SPACING.lg,
+  },
+  spiceLevelSection: {
+    marginBottom: SPACING.xl,
+  },
+  spiceLevelLabel: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+    marginBottom: SPACING.md,
+  },
+  spiceLevelOptions: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+  },
+  spiceLevelOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    backgroundColor: COLORS.background.secondary,
+    borderRadius: BORDER_RADIUS.xxl,
+    borderWidth: 1,
+    borderColor: COLORS.border.light,
+    gap: SPACING.sm,
+  },
+  selectedSpiceLevel: {
+    backgroundColor: COLORS.text.primary,
+    borderColor: COLORS.text.primary,
+  },
+  spiceLevelIcon: {
+    fontSize: 14,
+  },
+  spiceLevelOptionText: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.primary,
+    fontWeight: '500',
   },
   instructionsSection: {
-    marginBottom: 30,
+    marginBottom: SPACING.xl,
   },
   instructionsLabel: {
-    fontSize: 16,
+    fontSize: FONT_SIZES.lg,
     fontWeight: '600',
-    color: '#2C3E50',
-    marginBottom: 8,
+    color: COLORS.text.primary,
+    marginBottom: SPACING.md,
   },
   instructionsInput: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: '#2C3E50',
+    backgroundColor: COLORS.background.secondary,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.lg,
+    fontSize: FONT_SIZES.md,
+    color: COLORS.text.primary,
     textAlignVertical: 'top',
     minHeight: 80,
+    borderWidth: 1,
+    borderColor: COLORS.border.light,
   },
   modalAddButton: {
-    backgroundColor: '#FF6B35',
-    paddingVertical: 16,
-    borderRadius: 12,
+    backgroundColor: COLORS.text.primary,
+    paddingVertical: SPACING.lg,
+    borderRadius: BORDER_RADIUS.md,
     alignItems: 'center',
+    marginTop: SPACING.xl,
   },
   modalAddButtonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
+    color: COLORS.text.white,
+    fontSize: FONT_SIZES.lg,
     fontWeight: '600',
   },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
-  emptyStateText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2C3E50',
-    marginBottom: 8,
-  },
-  emptyStateSubtext: {
-    fontSize: 14,
-    color: '#7F8C8D',
-    textAlign: 'center',
+  disabledModalButton: {
+    backgroundColor: COLORS.text.disabled,
+    opacity: 0.6,
   },
 });

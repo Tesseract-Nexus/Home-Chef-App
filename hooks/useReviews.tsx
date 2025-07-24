@@ -17,6 +17,10 @@ export interface Review {
   isHelpful?: boolean;
   createdAt: Date;
   updatedAt?: Date;
+  chefResponse?: {
+    responseText: string;
+    respondedAt: Date;
+  };
 }
 
 export interface ReviewStats {
@@ -43,6 +47,9 @@ interface ReviewsContextType {
   markHelpful: (reviewId: string) => Promise<void>;
   canReviewOrder: (orderId: string) => boolean;
   getUserReviewForOrder: (orderId: string) => Review | null;
+  addChefResponse: (reviewId: string, responseText: string) => Promise<void>;
+  updateChefResponse: (reviewId: string, responseText: string) => Promise<void>;
+  deleteChefResponse: (reviewId: string) => Promise<void>;
 }
 
 const SAMPLE_REVIEWS: Review[] = [
@@ -59,6 +66,10 @@ const SAMPLE_REVIEWS: Review[] = [
     reviewText: 'Amazing butter chicken! The flavors were authentic and the delivery was quick. The chef really knows how to make traditional North Indian food. Will definitely order again!',
     helpfulCount: 12,
     createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
+    chefResponse: {
+      responseText: "Thank you so much for your wonderful review! I'm delighted that you enjoyed the butter chicken. Your feedback motivates me to keep cooking with love. Looking forward to serving you again soon! 🙏",
+      respondedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+    },
   },
   {
     id: '2',
@@ -222,6 +233,63 @@ export const ReviewsProvider: React.FC<ReviewsProviderProps> = ({ children }) =>
     return reviews.find(review => review.orderId === orderId && review.userId === user?.id) || null;
   };
 
+  const addChefResponse = async (reviewId: string, responseText: string) => {
+    if (!user || user.role !== 'chef') {
+      console.warn('Only chefs can respond to reviews');
+      return;
+    }
+
+    setReviews(prev => prev.map(review => 
+      review.id === reviewId 
+        ? { 
+            ...review, 
+            chefResponse: {
+              responseText: responseText.trim(),
+              respondedAt: new Date(),
+            },
+            updatedAt: new Date()
+          }
+        : review
+    ));
+  };
+
+  const updateChefResponse = async (reviewId: string, responseText: string) => {
+    if (!user || user.role !== 'chef') {
+      console.warn('Only chefs can update responses');
+      return;
+    }
+
+    setReviews(prev => prev.map(review => 
+      review.id === reviewId && review.chefResponse
+        ? { 
+            ...review, 
+            chefResponse: {
+              ...review.chefResponse,
+              responseText: responseText.trim(),
+            },
+            updatedAt: new Date()
+          }
+        : review
+    ));
+  };
+
+  const deleteChefResponse = async (reviewId: string) => {
+    if (!user || user.role !== 'chef') {
+      console.warn('Only chefs can delete responses');
+      return;
+    }
+
+    setReviews(prev => prev.map(review => 
+      review.id === reviewId 
+        ? { 
+            ...review, 
+            chefResponse: undefined,
+            updatedAt: new Date()
+          }
+        : review
+    ));
+  };
+
   const contextValue: ReviewsContextType = {
     reviews,
     userReviews,
@@ -234,6 +302,9 @@ export const ReviewsProvider: React.FC<ReviewsProviderProps> = ({ children }) =>
     markHelpful,
     canReviewOrder,
     getUserReviewForOrder,
+    addChefResponse,
+    updateChefResponse,
+    deleteChefResponse,
   };
 
   return (

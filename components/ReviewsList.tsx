@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
-import { Star, ThumbsUp, MoveVertical as MoreVertical, Flag } from 'lucide-react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Modal, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Star, ThumbsUp, MoveVertical as MoreVertical, Flag, MessageCircle, Send, X, CreditCard as Edit3, Trash2 } from 'lucide-react-native';
 import { useReviews, Review } from '@/hooks/useReviews';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -95,12 +96,59 @@ export const ReviewsList: React.FC<ReviewsListProps> = ({
             <Text style={styles.dishName}>Ordered: {review.dishName}</Text>
           )}
         </View>
-        <TouchableOpacity style={styles.moreButton}>
-          <MoreVertical size={16} color="#7F8C8D" />
-        </TouchableOpacity>
+        {user?.role === 'chef' && !review.chefResponse && (
+          <TouchableOpacity 
+            style={styles.respondButton}
+            onPress={() => {
+              setSelectedReview(review);
+              setShowResponseModal(true);
+            }}
+          >
+            <MessageCircle size={14} color="#FF6B35" />
+            <Text style={styles.respondButtonText}>Respond</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <Text style={styles.reviewText}>{review.reviewText}</Text>
+
+      {/* Chef Response */}
+      {review.chefResponse && (
+        <View style={styles.chefResponseContainer}>
+          <View style={styles.chefResponseHeader}>
+            <View style={styles.chefIcon}>
+              <Text style={styles.chefIconText}>👨‍🍳</Text>
+            </View>
+            <View style={styles.chefResponseInfo}>
+              <Text style={styles.chefResponseTitle}>Response from {review.chefName}</Text>
+              <Text style={styles.chefResponseDate}>
+                {review.chefResponse.respondedAt.toLocaleDateString()}
+              </Text>
+            </View>
+            {user?.role === 'chef' && (
+              <View style={styles.responseActions}>
+                <TouchableOpacity 
+                  style={styles.editResponseButton}
+                  onPress={() => {
+                    setSelectedReview(review);
+                    setResponseText(review.chefResponse?.responseText || '');
+                    setShowResponseModal(true);
+                  }}
+                >
+                  <Edit3 size={12} color="#8E8E93" />
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.deleteResponseButton}
+                  onPress={() => handleDeleteResponse(review.id)}
+                >
+                  <Trash2 size={12} color="#8E8E93" />
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+          <Text style={styles.chefResponseText}>{review.chefResponse.responseText}</Text>
+        </View>
+      )}
 
       {review.images && review.images.length > 0 && (
         <ScrollView horizontal style={styles.reviewImages}>
@@ -117,8 +165,8 @@ export const ReviewsList: React.FC<ReviewsListProps> = ({
         >
           <ThumbsUp 
             size={14} 
-            color={review.isHelpful ? "#FF6B35" : "#7F8C8D"} 
-            fill={review.isHelpful ? "#FF6B35" : "transparent"}
+            color={review.isHelpful ? "#000000" : "#8E8E93"} 
+            fill={review.isHelpful ? "#000000" : "transparent"}
           />
           <Text style={[styles.helpfulText, review.isHelpful && styles.helpfulTextActive]}>
             Helpful ({review.helpfulCount})
@@ -126,7 +174,7 @@ export const ReviewsList: React.FC<ReviewsListProps> = ({
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.reportButton}>
-          <Flag size={14} color="#7F8C8D" />
+          <Flag size={14} color="#8E8E93" />
           <Text style={styles.reportText}>Report</Text>
         </TouchableOpacity>
       </View>
@@ -300,10 +348,208 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   reviewCard: {
-    marginBottom: 20,
-    paddingBottom: 20,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  respondButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF5F0',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    gap: 4,
+  },
+  respondButtonText: {
+    fontSize: 12,
+    color: '#FF6B35',
+    fontWeight: '500',
+  },
+  chefResponseContainer: {
+    backgroundColor: '#FFF5F0',
+    borderLeftWidth: 3,
+    borderLeftColor: '#FF6B35',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 12,
+  },
+  chefResponseHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  chefIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#FF6B35',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 8,
+  },
+  chefIconText: {
+    fontSize: 12,
+  },
+  chefResponseInfo: {
+    flex: 1,
+  },
+  chefResponseTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#FF6B35',
+    marginBottom: 2,
+  },
+  chefResponseDate: {
+    fontSize: 10,
+    color: '#8E8E93',
+  },
+  responseActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  editResponseButton: {
+    padding: 4,
+  },
+  deleteResponseButton: {
+    padding: 4,
+  },
+  chefResponseText: {
+    fontSize: 13,
+    color: '#2C3E50',
+    lineHeight: 18,
+  },
+  helpfulTextActive: {
+    color: '#000000',
+    fontWeight: '500',
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: '#EEEEEE',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#000000',
+  },
+  modalContent: {
+    flex: 1,
+    padding: 20,
+  },
+  reviewPreview: {
+    backgroundColor: '#F6F6F6',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+  },
+  previewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  previewUserName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#000000',
+    marginLeft: 8,
+  },
+  previewRating: {
+    flexDirection: 'row',
+    gap: 2,
+    marginBottom: 8,
+  },
+  previewText: {
+    fontSize: 14,
+    color: '#545454',
+    lineHeight: 20,
+  },
+  responseSection: {
+    marginBottom: 20,
+  },
+  responseLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 12,
+  },
+  responseInput: {
+    backgroundColor: '#F6F6F6',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 14,
+    color: '#000000',
+    textAlignVertical: 'top',
+    minHeight: 100,
+    borderWidth: 1,
+    borderColor: '#EEEEEE',
+  },
+  characterCount: {
+    fontSize: 12,
+    color: '#8E8E93',
+    textAlign: 'right',
+    marginTop: 4,
+  },
+  guidelinesSection: {
+    backgroundColor: '#F0F9FF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+  },
+  guidelinesTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 8,
+  },
+  guideline: {
+    fontSize: 12,
+    color: '#545454',
+    marginBottom: 4,
+  },
+  responseButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  cancelResponseButton: {
+    flex: 1,
+    backgroundColor: '#F6F6F6',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#EEEEEE',
+  },
+  cancelResponseButtonText: {
+    color: '#000000',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  submitResponseButton: {
+    flex: 1,
+    backgroundColor: '#000000',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  submitResponseButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
   },
   reviewHeader: {
     flexDirection: 'row',

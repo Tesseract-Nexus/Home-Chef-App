@@ -3,7 +3,9 @@ import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert,
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
-import { ChefHat, Upload, FileText } from 'lucide-react-native';
+import { ChefHat, Upload, FileText, ArrowLeft } from 'lucide-react-native';
+import { getResponsiveDimensions } from '@/utils/responsive';
+import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES } from '@/utils/constants';
 
 const INDIAN_STATES = [
   'Andhra Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Delhi', 'Goa', 'Gujarat',
@@ -42,6 +44,7 @@ export default function Register() {
   
   const router = useRouter();
   const { register } = useAuth();
+  const { isWeb, isDesktop } = getResponsiveDimensions();
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -145,384 +148,479 @@ export default function Register() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <View style={styles.header}>
-          <View style={styles.logoContainer}>
-            <ChefHat size={40} color="#FF6B35" />
-          </View>
-          <Text style={styles.title}>Join HomeChef</Text>
-          <Text style={styles.subtitle}>Create your account to get started</Text>
-        </View>
-
-        <View style={styles.form}>
-          {/* User Type Selection */}
-          <View style={styles.userTypeSelector}>
-            <Text style={styles.sectionTitle}>I want to:</Text>
-            <View style={styles.userTypeOptions}>
-              <TouchableOpacity
-                style={[styles.roleOption, userType === 'customer' && styles.selectedRole]}
-                onPress={() => setUserType('customer')}
-              >
-                <Text style={styles.roleEmoji}>🍽️</Text>
-                <Text style={[styles.roleText, userType === 'customer' && styles.selectedRoleText]}>
-                  Customer
-                </Text>
+    <View style={[styles.container, isWeb && styles.webContainer]}>
+      <SafeAreaView style={styles.safeArea}>
+        <ScrollView 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[styles.scrollContainer, isWeb && styles.webScrollContainer]}
+        >
+          <View style={[styles.formContainer, isWeb && styles.webFormContainer]}>
+            <View style={styles.header}>
+              <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+                <ArrowLeft size={24} color={COLORS.text.primary} />
               </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.roleOption, userType === 'chef' && styles.selectedRole]}
-                onPress={() => setUserType('chef')}
-              >
-                <Text style={styles.roleEmoji}>👨‍🍳</Text>
-                <Text style={[styles.roleText, userType === 'chef' && styles.selectedRoleText]}>
-                  Chef
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.roleOption, userType === 'delivery_partner' && styles.selectedRole]}
-                onPress={() => router.push('/auth/delivery-onboarding')}
-              >
-                <Text style={styles.roleEmoji}>🚚</Text>
-                <Text style={[styles.roleText, userType === 'delivery_partner' && styles.selectedRoleText]}>
-                  Delivery
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Basic Information */}
-          <Text style={styles.sectionTitle}>Basic Information</Text>
-          
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Full Name <Text style={styles.required}>*</Text></Text>
-            <TextInput
-              style={styles.input}
-              value={formData.name}
-              onChangeText={(value) => handleInputChange('name', value)}
-              placeholder="Enter your full name"
-              placeholderTextColor="#999"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email <Text style={styles.required}>*</Text></Text>
-            <TextInput
-              style={styles.input}
-              value={formData.email}
-              onChangeText={(value) => handleInputChange('email', value)}
-              placeholder="Enter your email"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              placeholderTextColor="#999"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password <Text style={styles.required}>*</Text></Text>
-            <TextInput
-              style={styles.input}
-              value={formData.password}
-              onChangeText={(value) => handleInputChange('password', value)}
-              placeholder="Create a password"
-              secureTextEntry
-              placeholderTextColor="#999"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Phone Number <Text style={styles.required}>*</Text></Text>
-            <TextInput
-              style={styles.input}
-              value={formData.phone}
-              onChangeText={(value) => handleInputChange('phone', value)}
-              placeholder="Enter your phone number"
-              keyboardType="phone-pad"
-              placeholderTextColor="#999"
-            />
-          </View>
-
-          {/* Address Information */}
-          <Text style={styles.sectionTitle}>Address Information</Text>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Complete Address <Text style={styles.required}>*</Text></Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={formData.address}
-              onChangeText={(value) => handleInputChange('address', value)}
-              placeholder="Enter your complete address"
-              multiline
-              numberOfLines={3}
-              placeholderTextColor="#999"
-            />
-          </View>
-
-          <View style={styles.row}>
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>Pincode <Text style={styles.required}>*</Text></Text>
-              <TextInput
-                style={styles.input}
-                value={formData.pincode}
-                onChangeText={(value) => handleInputChange('pincode', value)}
-                placeholder="Pincode"
-                keyboardType="numeric"
-                maxLength={6}
-                placeholderTextColor="#999"
-              />
-            </View>
-
-            <View style={[styles.inputGroup, styles.halfWidth]}>
-              <Text style={styles.label}>State <Text style={styles.required}>*</Text></Text>
-              <TouchableOpacity 
-                style={styles.input} 
-                onPress={() => setShowStateModal(true)}
-              >
-                <Text style={formData.state ? styles.inputText : styles.placeholder}>
-                  {formData.state || 'Select State'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Chef Specific Fields */}
-          {(userType === 'chef' || userType === 'delivery_partner') && (
-            <>
-              <Text style={styles.sectionTitle}>
-                {userType === 'chef' ? 'Chef Information' : 'Delivery Partner Information'}
+             <TouchableOpacity style={styles.homeButton} onPress={() => router.push('/')}>
+               <Text style={styles.homeButtonText}>← Home</Text>
+             </TouchableOpacity>
+              <Text style={[styles.title, isWeb && styles.webTitle]}>Create account</Text>
+              <Text style={[styles.subtitle, isWeb && styles.webSubtitle]}>
+                Join HomeChef and start your food journey
               </Text>
+            </View>
 
-              {userType === 'chef' && (
-                <>
+            <View style={[styles.form, isWeb && styles.webForm]}>
+              {/* User Type Selection */}
+              <View style={styles.userTypeSelector}>
+                <Text style={styles.sectionTitle}>I want to:</Text>
+                <View style={styles.userTypeOptions}>
+                  <TouchableOpacity
+                    style={[styles.roleOption, userType === 'customer' && styles.selectedRole]}
+                    onPress={() => setUserType('customer')}
+                  >
+                    <Text style={styles.roleEmoji}>🍽️</Text>
+                    <Text style={[styles.roleText, userType === 'customer' && styles.selectedRoleText]}>
+                      Customer
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.roleOption, userType === 'chef' && styles.selectedRole]}
+                    onPress={() => setUserType('chef')}
+                  >
+                    <Text style={styles.roleEmoji}>👨‍🍳</Text>
+                    <Text style={[styles.roleText, userType === 'chef' && styles.selectedRoleText]}>
+                      Chef
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.roleOption, userType === 'delivery_partner' && styles.selectedRole]}
+                    onPress={() => router.push('/auth/delivery-onboarding')}
+                  >
+                    <Text style={styles.roleEmoji}>🚚</Text>
+                    <Text style={[styles.roleText, userType === 'delivery_partner' && styles.selectedRoleText]}>
+                      Delivery
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Social Login - Moved to top */}
+              <View style={styles.socialSection}>
+                <Text style={styles.socialTitle}>Continue with</Text>
+                <View style={styles.socialButtons}>
+                <TouchableOpacity
+                  style={[styles.socialIconButton, isWeb && styles.webSocialIconButton]}
+                  onPress={() => handleSocialLogin('google')}
+                  disabled={isLoading}
+                >
+                  <View style={styles.googleIcon}>
+                    <Text style={styles.googleIconText}>G</Text>
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.socialIconButton, isWeb && styles.webSocialIconButton]}
+                  onPress={() => handleSocialLogin('facebook')}
+                  disabled={isLoading}
+                >
+                  <View style={styles.facebookIcon}>
+                    <Text style={styles.facebookIconText}>f</Text>
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.socialIconButton, isWeb && styles.webSocialIconButton]}
+                  onPress={() => handleSocialLogin('instagram')}
+                  disabled={isLoading}
+                >
+                  <View style={styles.instagramIcon}>
+                    <Text style={styles.instagramIconText}>📷</Text>
+                  </View>
+                </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Divider */}
+              <View style={styles.divider}>
+                <View style={styles.dividerLine} />
+                <Text style={styles.dividerText}>or</Text>
+                <View style={styles.dividerLine} />
+              </View>
+
+              {/* Basic Information */}
+              <Text style={styles.sectionTitle}>Basic Information</Text>
+              
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Specialty <Text style={styles.required}>*</Text></Text>
+                <Text style={styles.label}>Full Name <Text style={styles.required}>*</Text></Text>
+                <TextInput
+                  style={[styles.input, isWeb && styles.webInput]}
+                  value={formData.name}
+                  onChangeText={(value) => handleInputChange('name', value)}
+                  placeholder="Enter your full name"
+                  placeholderTextColor={COLORS.text.tertiary}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Email <Text style={styles.required}>*</Text></Text>
+                <TextInput
+                  style={[styles.input, isWeb && styles.webInput]}
+                  value={formData.email}
+                  onChangeText={(value) => handleInputChange('email', value)}
+                  placeholder="Enter your email"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  placeholderTextColor={COLORS.text.tertiary}
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Password <Text style={styles.required}>*</Text></Text>
                 <TextInput
                   style={styles.input}
-                  value={formData.specialty}
-                  onChangeText={(value) => handleInputChange('specialty', value)}
-                  placeholder="e.g., North Indian, South Indian, Punjabi"
+                  value={formData.password}
+                  onChangeText={(value) => handleInputChange('password', value)}
+                  placeholder="Create a password"
+                  secureTextEntry
                   placeholderTextColor="#999"
                 />
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Experience <Text style={styles.required}>*</Text></Text>
+                <Text style={styles.label}>Phone Number <Text style={styles.required}>*</Text></Text>
                 <TextInput
                   style={styles.input}
-                  value={formData.experience}
-                  onChangeText={(value) => handleInputChange('experience', value)}
-                  placeholder="e.g., 5 years"
+                  value={formData.phone}
+                  onChangeText={(value) => handleInputChange('phone', value)}
+                  placeholder="Enter your phone number"
+                  keyboardType="phone-pad"
                   placeholderTextColor="#999"
                 />
               </View>
 
+              {/* Address Information */}
+              <Text style={styles.sectionTitle}>Address Information</Text>
+
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Description</Text>
+                <Text style={styles.label}>Complete Address <Text style={styles.required}>*</Text></Text>
                 <TextInput
                   style={[styles.input, styles.textArea]}
-                  value={formData.description}
-                  onChangeText={(value) => handleInputChange('description', value)}
-                  placeholder="Tell us about your cooking style and specialties..."
+                  value={formData.address}
+                  onChangeText={(value) => handleInputChange('address', value)}
+                  placeholder="Enter your complete address"
                   multiline
                   numberOfLines={3}
                   placeholderTextColor="#999"
                 />
               </View>
-                </>
-              )}
 
-              {userType === 'delivery_partner' && (
-                <>
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Vehicle Type <Text style={styles.required}>*</Text></Text>
-                    <View style={styles.vehicleTypeSelector}>
-                      {[
-                        { id: 'bike', label: 'Motorcycle', emoji: '🏍️' },
-                        { id: 'scooter', label: 'Scooter', emoji: '🛵' },
-                        { id: 'car', label: 'Car', emoji: '🚗' },
-                        { id: 'bicycle', label: 'Bicycle', emoji: '🚲' },
-                      ].map((vehicle) => (
-                        <TouchableOpacity
-                          key={vehicle.id}
-                          style={[
-                            styles.vehicleTypeOption,
-                            formData.vehicleType === vehicle.id && styles.selectedVehicleType
-                          ]}
-                          onPress={() => handleInputChange('vehicleType', vehicle.id)}
-                        >
-                          <Text style={styles.vehicleEmoji}>{vehicle.emoji}</Text>
-                          <Text style={[
-                            styles.vehicleTypeText,
-                            formData.vehicleType === vehicle.id && styles.selectedVehicleTypeText
-                          ]}>
-                            {vehicle.label}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </View>
+              <View style={styles.row}>
+                <View style={[styles.inputGroup, styles.halfWidth]}>
+                  <Text style={styles.label}>Pincode <Text style={styles.required}>*</Text></Text>
+                  <TextInput
+                    style={styles.input}
+                    value={formData.pincode}
+                    onChangeText={(value) => handleInputChange('pincode', value)}
+                    placeholder="Pincode"
+                    keyboardType="numeric"
+                    maxLength={6}
+                    placeholderTextColor="#999"
+                  />
+                </View>
 
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Vehicle Number <Text style={styles.required}>*</Text></Text>
-                    <TextInput
-                      style={styles.input}
-                      value={formData.vehicleNumber}
-                      onChangeText={(value) => handleInputChange('vehicleNumber', value)}
-                      placeholder="e.g., MH12AB1234"
-                      autoCapitalize="characters"
-                      placeholderTextColor="#999"
-                    />
-                  </View>
-
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Driving License Number <Text style={styles.required}>*</Text></Text>
-                    <TextInput
-                      style={styles.input}
-                      value={formData.drivingLicense}
-                      onChangeText={(value) => handleInputChange('drivingLicense', value)}
-                      placeholder="Enter your driving license number"
-                      autoCapitalize="characters"
-                      placeholderTextColor="#999"
-                    />
-                  </View>
-                </>
-              )}
-
-              {/* Document Upload Section */}
-              <Text style={styles.sectionTitle}>Required Documents</Text>
-              
-              <DocumentUpload label="Identity Proof (Aadhaar/PAN/Voter ID)" required />
-              {userType === 'chef' && (
-                <DocumentUpload label="Food Safety Certificate (FSSAI License)" required />
-              )}
-              {userType === 'delivery_partner' && (
-                <>
-                  <DocumentUpload label="Driving License" required />
-                  <DocumentUpload label="Vehicle Registration Certificate" required />
-                  <DocumentUpload label="Vehicle Insurance" required />
-                </>
-              )}
-              <DocumentUpload label="Address Proof (Utility Bill/Rent Agreement)" />
-
-              <View style={styles.documentNote}>
-                <FileText size={16} color="#7F8C8D" />
-                <Text style={styles.documentNoteText}>
-                  All documents will be verified before account approval. 
-                  Please ensure all documents are clear and valid. 
-                  {userType === 'delivery_partner' && 'Background verification will be conducted for delivery partners.'}
-                </Text>
+                <View style={[styles.inputGroup, styles.halfWidth]}>
+                  <Text style={styles.label}>State <Text style={styles.required}>*</Text></Text>
+                  <TouchableOpacity 
+                    style={styles.input} 
+                    onPress={() => setShowStateModal(true)}
+                  >
+                    <Text style={formData.state ? styles.inputText : styles.placeholder}>
+                      {formData.state || 'Select State'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </>
-          )}
 
-          <TouchableOpacity 
-            style={[styles.registerButton, isLoading && styles.disabledButton]} 
-            onPress={handleRegister}
-            disabled={isLoading}
-          >
-            <Text style={styles.registerButtonText}>
-              {isLoading 
-                ? 'Creating Account...' 
-                : (userType === 'chef' || userType === 'delivery_partner' ? 'Submit Application' : 'Create Account')
-              }
-            </Text>
-          </TouchableOpacity>
+              {/* Chef Specific Fields */}
+              {(userType === 'chef' || userType === 'delivery_partner') && (
+                <>
+                  <Text style={styles.sectionTitle}>
+                    {userType === 'chef' ? 'Chef Information' : 'Delivery Partner Information'}
+                  </Text>
 
-          <View style={styles.footer}>
-            <Text style={styles.footerText}>Already have an account? </Text>
-            <TouchableOpacity onPress={() => router.push('/auth/login')}>
-              <Text style={styles.footerLink}>Login</Text>
-            </TouchableOpacity>
+                  {userType === 'chef' && (
+                    <>
+                      <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Specialty <Text style={styles.required}>*</Text></Text>
+                        <TextInput
+                          style={styles.input}
+                          value={formData.specialty}
+                          onChangeText={(value) => handleInputChange('specialty', value)}
+                          placeholder="e.g., North Indian, South Indian, Punjabi"
+                          placeholderTextColor="#999"
+                        />
+                      </View>
+
+                      <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Experience <Text style={styles.required}>*</Text></Text>
+                        <TextInput
+                          style={styles.input}
+                          value={formData.experience}
+                          onChangeText={(value) => handleInputChange('experience', value)}
+                          placeholder="e.g., 5 years"
+                          placeholderTextColor="#999"
+                        />
+                      </View>
+
+                      <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Description</Text>
+                        <TextInput
+                          style={[styles.input, styles.textArea]}
+                          value={formData.description}
+                          onChangeText={(value) => handleInputChange('description', value)}
+                          placeholder="Tell us about your cooking style and specialties..."
+                          multiline
+                          numberOfLines={3}
+                          placeholderTextColor="#999"
+                        />
+                      </View>
+                    </>
+                  )}
+
+                  {userType === 'delivery_partner' && (
+                    <>
+                      <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Vehicle Type <Text style={styles.required}>*</Text></Text>
+                        <View style={styles.vehicleTypeSelector}>
+                          {[
+                            { id: 'bike', label: 'Motorcycle', emoji: '🏍️' },
+                            { id: 'scooter', label: 'Scooter', emoji: '🛵' },
+                            { id: 'car', label: 'Car', emoji: '🚗' },
+                            { id: 'bicycle', label: 'Bicycle', emoji: '🚲' },
+                          ].map((vehicle) => (
+                            <TouchableOpacity
+                              key={vehicle.id}
+                              style={[
+                                styles.vehicleTypeOption,
+                                formData.vehicleType === vehicle.id && styles.selectedVehicleType
+                              ]}
+                              onPress={() => handleInputChange('vehicleType', vehicle.id)}
+                            >
+                              <Text style={styles.vehicleEmoji}>{vehicle.emoji}</Text>
+                              <Text style={[
+                                styles.vehicleTypeText,
+                                formData.vehicleType === vehicle.id && styles.selectedVehicleTypeText
+                              ]}>
+                                {vehicle.label}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </View>
+
+                      <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Vehicle Number <Text style={styles.required}>*</Text></Text>
+                        <TextInput
+                          style={styles.input}
+                          value={formData.vehicleNumber}
+                          onChangeText={(value) => handleInputChange('vehicleNumber', value)}
+                          placeholder="e.g., MH12AB1234"
+                          autoCapitalize="characters"
+                          placeholderTextColor="#999"
+                        />
+                      </View>
+
+                      <View style={styles.inputGroup}>
+                        <Text style={styles.label}>Driving License Number <Text style={styles.required}>*</Text></Text>
+                        <TextInput
+                          style={styles.input}
+                          value={formData.drivingLicense}
+                          onChangeText={(value) => handleInputChange('drivingLicense', value)}
+                          placeholder="Enter your driving license number"
+                          autoCapitalize="characters"
+                          placeholderTextColor="#999"
+                        />
+                      </View>
+                    </>
+                  )}
+
+                  {/* Document Upload Section */}
+                  <Text style={styles.sectionTitle}>Required Documents</Text>
+                  
+                  <DocumentUpload label="Identity Proof (Aadhaar/PAN/Voter ID)" required />
+                  {userType === 'chef' && (
+                    <DocumentUpload label="Food Safety Certificate (FSSAI License)" required />
+                  )}
+                  {userType === 'delivery_partner' && (
+                    <>
+                      <DocumentUpload label="Driving License" required />
+                      <DocumentUpload label="Vehicle Registration Certificate" required />
+                      <DocumentUpload label="Vehicle Insurance" required />
+                    </>
+                  )}
+                  <DocumentUpload label="Address Proof (Utility Bill/Rent Agreement)" />
+
+                  <View style={styles.documentNote}>
+                    <FileText size={16} color="#7F8C8D" />
+                    <Text style={styles.documentNoteText}>
+                      All documents will be verified before account approval. 
+                      Please ensure all documents are clear and valid. 
+                      {userType === 'delivery_partner' && 'Background verification will be conducted for delivery partners.'}
+                    </Text>
+                  </View>
+                </>
+              )}
+
+              <TouchableOpacity 
+                style={[styles.registerButton, isLoading && styles.disabledButton, isWeb && styles.webRegisterButton]} 
+                onPress={handleRegister}
+                disabled={isLoading}
+              >
+                <Text style={[styles.registerButtonText, isWeb && styles.webButtonText]}>
+                  {isLoading 
+                    ? 'Creating Account...' 
+                    : (userType === 'chef' || userType === 'delivery_partner' ? 'Submit Application' : 'Create Account')
+                  }
+                </Text>
+              </TouchableOpacity>
+
+              <View style={[styles.footer, isWeb && styles.webFooter]}>
+                <Text style={styles.footerText}>Already have an account? </Text>
+                <TouchableOpacity onPress={() => router.push('/auth/login')}>
+                  <Text style={styles.footerLink}>Login</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
-        </View>
-      </ScrollView>
-      
-      <StatePickerModal />
-    </SafeAreaView>
+        </ScrollView>
+        
+        <StatePickerModal />
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: COLORS.background.primary,
+  },
+  webContainer: {
+    minHeight: '100vh',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  safeArea: {
+    flex: 1,
+  },
+  scrollContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+  webScrollContainer: {
+    minHeight: '100vh',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: SPACING.xl * 2,
+  },
+  formContainer: {
+    flex: 1,
+    paddingHorizontal: SPACING.lg,
+  },
+  webFormContainer: {
+    backgroundColor: COLORS.background.primary,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.xl * 2,
+    maxWidth: 500,
+    width: '90%',
+    borderWidth: 1,
+    borderColor: COLORS.border.light,
   },
   header: {
-    alignItems: 'center',
-    paddingVertical: 40,
-    backgroundColor: '#FFFFFF',
+    marginBottom: SPACING.xl * 2,
   },
-  logoContainer: {
-    width: 80,
-    height: 80,
-    backgroundColor: '#FFF5F0',
-    borderRadius: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
+  backButton: {
+    alignSelf: 'flex-start',
+    padding: SPACING.sm,
+    marginBottom: SPACING.lg,
+  },
+  homeButton: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    marginBottom: SPACING.lg,
+    backgroundColor: COLORS.background.secondary,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border.light,
+  },
+  homeButtonText: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.primary,
+    fontWeight: '500',
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    marginBottom: 8,
+    fontSize: FONT_SIZES.xxxl,
+    fontWeight: '700',
+    color: COLORS.text.primary,
+    marginBottom: SPACING.sm,
+  },
+  webTitle: {
+    fontSize: 32,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#7F8C8D',
-    textAlign: 'center',
-    paddingHorizontal: 40,
+    fontSize: FONT_SIZES.md,
+    color: COLORS.text.secondary,
+    lineHeight: 20,
+  },
+  webSubtitle: {
+    fontSize: FONT_SIZES.lg,
   },
   form: {
-    padding: 20,
+    gap: SPACING.lg,
+  },
+  webForm: {
+    gap: SPACING.xl,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: FONT_SIZES.lg,
     fontWeight: '600',
-    color: '#2C3E50',
-    marginBottom: 15,
-    marginTop: 20,
+    color: COLORS.text.primary,
+    marginBottom: SPACING.md,
   },
   userTypeSelector: {
-    marginBottom: 10,
+    gap: SPACING.md,
   },
   userTypeOptions: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 8,
+    gap: SPACING.sm,
   },
   roleOption: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 8,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#E0E0E0',
-    elevation: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    paddingVertical: SPACING.lg,
+    paddingHorizontal: SPACING.sm,
+    backgroundColor: COLORS.background.primary,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border.medium,
   },
   selectedRole: {
-    borderColor: '#FF6B35',
-    backgroundColor: '#FFF5F0',
-    elevation: 2,
-    shadowOpacity: 0.15,
+    backgroundColor: COLORS.background.secondary,
+    borderColor: COLORS.text.primary,
   },
   roleEmoji: {
-    fontSize: 24,
-    marginBottom: 8,
+    fontSize: 20,
+    marginBottom: SPACING.sm,
   },
   roleText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#7F8C8D',
+    fontSize: FONT_SIZES.sm,
+    fontWeight: '500',
+    color: COLORS.text.secondary,
     textAlign: 'center',
   },
   selectedRoleText: {
-    color: '#FF6B35',
+    color: COLORS.text.primary,
+    fontWeight: '600',
   },
   vehicleTypeSelector: {
     flexDirection: 'row',
@@ -558,34 +656,37 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   inputGroup: {
-    marginBottom: 15,
+    gap: SPACING.sm,
   },
   row: {
     flexDirection: 'row',
-    gap: 15,
+    gap: SPACING.md,
   },
   halfWidth: {
     flex: 1,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#2C3E50',
-    marginBottom: 8,
+    fontSize: FONT_SIZES.md,
+    fontWeight: '500',
+    color: COLORS.text.primary,
   },
   required: {
-    color: '#F44336',
+    color: COLORS.danger,
   },
   input: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    borderRadius: 8,
+    backgroundColor: COLORS.background.secondary,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.lg,
+    borderRadius: BORDER_RADIUS.md,
+    fontSize: FONT_SIZES.md,
+    color: COLORS.text.primary,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    fontSize: 16,
-    color: '#2C3E50',
+    borderColor: COLORS.border.light,
     justifyContent: 'center',
+  },
+  webInput: {
+    paddingVertical: SPACING.xl,
+    fontSize: FONT_SIZES.lg,
   },
   inputText: {
     fontSize: 16,
@@ -645,35 +746,131 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   registerButton: {
-    backgroundColor: '#FF6B35',
-    paddingVertical: 15,
-    borderRadius: 8,
+    backgroundColor: COLORS.text.primary,
+    paddingVertical: SPACING.lg,
+    borderRadius: BORDER_RADIUS.md,
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: SPACING.lg,
+  },
+  webRegisterButton: {
+    paddingVertical: SPACING.xl,
+    borderRadius: BORDER_RADIUS.lg,
   },
   disabledButton: {
-    backgroundColor: '#BDC3C7',
+    backgroundColor: COLORS.text.disabled,
   },
   registerButtonText: {
-    color: '#FFFFFF',
-    fontSize: 18,
+    color: COLORS.text.white,
+    fontSize: FONT_SIZES.lg,
     fontWeight: '600',
+  },
+  webButtonText: {
+    fontSize: FONT_SIZES.xl,
   },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 30,
-    marginBottom: 20,
+    marginTop: SPACING.xl,
+  },
+  webFooter: {
+    marginTop: SPACING.xl * 2,
   },
   footerText: {
-    fontSize: 16,
-    color: '#7F8C8D',
+    fontSize: FONT_SIZES.md,
+    color: COLORS.text.secondary,
   },
   footerLink: {
-    fontSize: 16,
-    color: '#FF6B35',
-    fontWeight: '600',
+    fontSize: FONT_SIZES.md,
+    color: COLORS.text.primary,
+    fontWeight: '500',
+  },
+  socialSection: {
+    alignItems: 'center',
+    gap: SPACING.md,
+  },
+  socialTitle: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.secondary,
+    fontWeight: '500',
+  },
+  socialButtons: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: SPACING.lg,
+  },
+  socialIconButton: {
+    width: 48,
+    height: 48,
+    backgroundColor: COLORS.background.primary,
+    borderWidth: 1,
+    borderColor: COLORS.border.light,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  webSocialIconButton: {
+    width: 56,
+    height: 56,
+    borderRadius: BORDER_RADIUS.lg,
+  },
+  googleIcon: {
+    width: 20,
+    height: 20,
+    backgroundColor: '#4285F4',
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  googleIconText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  facebookIcon: {
+    width: 20,
+    height: 20,
+    backgroundColor: '#1877F2',
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  facebookIconText: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  instagramIcon: {
+    width: 20,
+    height: 20,
+    backgroundColor: '#E4405F', // Fallback for non-web
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  instagramIconText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.lg,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: COLORS.border.light,
+  },
+  dividerText: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.tertiary,
   },
   modalContainer: {
     flex: 1,
@@ -714,39 +911,6 @@ const styles = StyleSheet.create({
     color: '#2C3E50',
   },
   selectedStateText: {
-    color: '#FF6B35',
-    fontWeight: '600',
-  },
-  vehicleTypeSelector: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  vehicleTypeOption: {
-    width: '48%',
-    alignItems: 'center',
-    paddingVertical: 15,
-    paddingHorizontal: 10,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    borderWidth: 2,
-    borderColor: '#E0E0E0',
-  },
-  selectedVehicleType: {
-    borderColor: '#FF6B35',
-    backgroundColor: '#FFF5F0',
-  },
-  vehicleEmoji: {
-    fontSize: 24,
-    marginBottom: 8,
-  },
-  vehicleTypeText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#2C3E50',
-    textAlign: 'center',
-  },
-  selectedVehicleTypeText: {
     color: '#FF6B35',
     fontWeight: '600',
   },

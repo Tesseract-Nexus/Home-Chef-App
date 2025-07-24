@@ -126,7 +126,7 @@ class ApiService {
     );
   }
 
-  async socialLogin(provider: 'google' | 'facebook', token: string, role: string) {
+  async socialLogin(provider: 'google' | 'facebook' | 'instagram', token: string, role: string) {
     // Generate provider-specific mock data
     const mockUser = {
       google: {
@@ -139,6 +139,12 @@ class ApiService {
         id: 'facebook_' + Date.now(),
         email: 'user@facebook.com', 
         name: 'Facebook User',
+        role: role,
+      },
+      instagram: {
+        id: 'instagram_' + Date.now(),
+        email: 'user@instagram.com',
+        name: 'Instagram User',
         role: role,
       }
     };

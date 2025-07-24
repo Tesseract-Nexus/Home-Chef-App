@@ -10,12 +10,16 @@ import { AddressProvider } from '@/hooks/useAddresses';
 import { ReviewsProvider } from '@/hooks/useReviews';
 import { TippingProvider } from '@/hooks/useTipping';
 import { OrderManagementProvider } from '@/hooks/useOrderManagement';
+import { ToastProvider } from '@/hooks/useToast';
+import { NotificationsProvider } from '@/hooks/useNotifications';
 
 export default function RootLayout() {
   useFrameworkReady();
 
   return (
     <AuthProvider>
+      <NotificationsProvider>
+        <ToastProvider>
         <AddressProvider>
           <CartProvider>
           <ReviewsProvider>
@@ -41,6 +45,8 @@ export default function RootLayout() {
           </ReviewsProvider>
           </CartProvider>
         </AddressProvider>
+        </ToastProvider>
+      </NotificationsProvider>
     </AuthProvider>
   );
 }

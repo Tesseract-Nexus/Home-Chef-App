@@ -223,7 +223,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   const addToCart = (chef: Chef, menuItem: MenuItem, quantity: number, specialInstructions?: string) => {
     // Check if adding from different chef
     if (currentChef && currentChef.id !== chef.id) {
-      // In a real app, show confirmation dialog
+      // Clear cart when switching chefs
       setCartItems([]);
       setCurrentChef(chef);
     } else if (!currentChef) {
@@ -234,12 +234,19 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       const existingItem = prev.find(item => item.menuItem.id === menuItem.id);
       
       if (existingItem) {
+        // Update existing item with new customizations
         return prev.map(item =>
           item.menuItem.id === menuItem.id
-            ? { ...item, quantity: item.quantity + quantity, specialInstructions }
+            ? { 
+                ...item, 
+                quantity: item.quantity + quantity, 
+                specialInstructions: specialInstructions || item.specialInstructions,
+                menuItem: { ...item.menuItem, ...menuItem } // Update any customizations
+              }
             : item
         );
       } else {
+        // Add new item to cart
         return [...prev, { menuItem, quantity, specialInstructions }];
       }
     });

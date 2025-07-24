@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { useAuth } from '@/hooks/useAuth';
 import { useCart } from '@/hooks/useCart';
 import { Alert } from 'react-native';
+import { useToast } from '@/hooks/useToast';
+import { useNotifications } from '@/hooks/useNotifications';
 
 export type OrderStatus = 
   | 'pending_payment' 
@@ -104,6 +106,8 @@ interface OrderManagementProviderProps {
 export const OrderManagementProvider: React.FC<OrderManagementProviderProps> = ({ children }) => {
   const { user } = useAuth();
   const { canCancelForFree, getCancellationPenalty } = useCart();
+  const { showSuccess, showInfo, showError } = useToast();
+  const { addNotification } = useNotifications();
   const [orders, setOrders] = useState<Order[]>([]);
   const [activeOrder, setActiveOrder] = useState<Order | null>(null);
   const [orderTimers, setOrderTimers] = useState<{[key: string]: NodeJS.Timeout}>({});
@@ -138,10 +142,17 @@ export const OrderManagementProvider: React.FC<OrderManagementProviderProps> = (
     // In a real app, this would send push notifications
     console.log(`📱 Notification to ${userId}: ${title} - ${message}`, data);
     
-    // Show alert for demo purposes
-    setTimeout(() => {
-      Alert.alert(title, message);
-    }, 1000);
+    // Add to notification system
+    addNotification({
+      type: 'order_update',
+      title,
+      message,
+      isRead: false,
+      ...data,
+    });
+    
+    // Show toast for immediate feedback
+    showInfo(title, message);
   };
 
   const placeOrder = async (orderData: any): Promise<string> => {
@@ -177,6 +188,15 @@ export const OrderManagementProvider: React.FC<OrderManagementProviderProps> = (
     setOrders(prev => [newOrder, ...prev]);
     setActiveOrder(newOrder);
 
+    // Immediately add cancellation notification
+    addNotification({
+      type: 'order_update',
+      title: 'Free Cancellation Available! ⏰',
+      message: `Cancel order #${orderId} within 30 seconds for full refund`,
+      isRead: false,
+      orderId: orderId,
+      actionType: 'show_cancellation_timer',
+    });
     // Start 30-second timer for automatic order confirmation
     const timer = setTimeout(() => {
       sendOrderToChef(orderId);
@@ -184,20 +204,6 @@ export const OrderManagementProvider: React.FC<OrderManagementProviderProps> = (
     
     setOrderTimers(prev => ({ ...prev, [orderId]: timer }));
 
-    // Notify customer about successful order placement
-    setTimeout(() => {
-      sendNotification(
-        newOrder.customerId,
-        'Order Placed Successfully! 🎉',
-        'You have 30 seconds for free cancellation. After that, a 40% penalty will apply.',
-        { 
-          orderId: newOrder.id, 
-          canCancelFree: true,
-          freeWindowSeconds: 30,
-          penaltyAmount: newOrder.cancellationPenalty
-        }
-      );
-    }, 500);
 
     return orderId;
   };
@@ -521,7 +527,8 @@ export const OrderManagementProvider: React.FC<OrderManagementProviderProps> = (
             { orderId: order.id }
           );
         }
-        break;
+      console.error('Order placement error:', error);
+      throw error; // Re-throw to be handled by the calling component
     }
   };
 

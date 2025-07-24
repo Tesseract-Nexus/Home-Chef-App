@@ -1,21 +1,23 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { TrendingUp, Users, ShoppingBag, DollarSign, Plus, Clock, Star, Award, ChefHat, Eye, EyeOff } from 'lucide-react-native';
+import { TrendingUp, Users, ShoppingBag, DollarSign, Star, ChefHat, Eye, EyeOff, MessageCircle, ChartBar as BarChart3 } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'expo-router';
+import { useReviews } from '@/hooks/useReviews';
+import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES, SHADOWS } from '@/utils/constants';
 
 const CHEF_STATS = [
-  { icon: TrendingUp, label: 'Today\'s Revenue', value: '₹2,450', change: '+12%' },
-  { icon: ShoppingBag, label: 'Orders Today', value: '23', change: '+8%' },
-  { icon: Users, label: 'Active Customers', value: '156', change: '+15%' },
-  { icon: Clock, label: 'Avg. Prep Time', value: '28 min', change: '-5%' },
+  { icon: DollarSign, label: 'Today\'s Revenue', value: '₹2,450', change: '+12%', color: '#06C167' },
+  { icon: ShoppingBag, label: 'Orders Today', value: '23', change: '+8%', color: '#000000' },
+  { icon: Users, label: 'Active Customers', value: '156', change: '+15%', color: '#000000' },
+  { icon: Star, label: 'Rating', value: '4.8', change: '+0.2', color: '#FFCC02' },
 ];
 
 const RECENT_ORDERS = [
-  { id: 'ORD125', customer: 'Raj Patel', items: 'Butter Chicken x2', amount: '₹560', status: 'preparing' },
-  { id: 'ORD124', customer: 'Anita Sharma', items: 'Dal Makhani + Naan', amount: '₹280', status: 'ready' },
-  { id: 'ORD123', customer: 'Vikram Singh', items: 'Paneer Curry + Rice', amount: '₹340', status: 'new' },
+  { id: 'ORD125', customer: 'Raj Patel', items: 'Butter Chicken x2', amount: '₹560', status: 'preparing', time: '2 mins ago' },
+  { id: 'ORD124', customer: 'Anita Sharma', items: 'Dal Makhani + Naan', amount: '₹280', status: 'ready', time: '5 mins ago' },
+  { id: 'ORD123', customer: 'Vikram Singh', items: 'Paneer Curry + Rice', amount: '₹340', status: 'delivered', time: '1 hour ago' },
 ];
 
 const MENU_HIGHLIGHTS = [
@@ -48,20 +50,25 @@ const MENU_HIGHLIGHTS = [
 export default function ChefHome() {
   const { user } = useAuth();
   const router = useRouter();
+  const { getReviewsByChef, getReviewStats } = useReviews();
   const [isOnline, setIsOnline] = useState(true);
+
+  // Get chef's reviews and stats
+  const chefReviews = getReviewsByChef('1'); // Using sample chef ID
+  const reviewStats = getReviewStats('1');
+  const recentReviews = chefReviews.slice(0, 3);
+  const pendingResponses = chefReviews.filter(review => !review.chefResponse).length;
 
   const renderStatCard = (stat: typeof CHEF_STATS[0], index: number) => (
     <View key={index} style={styles.statCard}>
-      <View style={styles.statIconContainer}>
-        <stat.icon size={24} color="#FF6B35" />
+      <View style={[styles.statIcon, { backgroundColor: stat.color === '#000000' ? '#F6F6F6' : stat.color + '15' }]}>
+        <stat.icon size={20} color={stat.color} />
       </View>
-      <View style={styles.statInfo}>
-        <Text style={styles.statValue}>{stat.value}</Text>
-        <Text style={styles.statLabel}>{stat.label}</Text>
-        <Text style={[styles.statChange, { color: stat.change.startsWith('+') ? '#4CAF50' : '#F44336' }]}>
-          {stat.change}
-        </Text>
-      </View>
+      <Text style={styles.statValue}>{stat.value}</Text>
+      <Text style={styles.statLabel}>{stat.label}</Text>
+      <Text style={[styles.statChange, { color: stat.change.startsWith('+') ? '#06C167' : '#EF4444' }]}>
+        {stat.change}
+      </Text>
     </View>
   );
 
@@ -75,7 +82,10 @@ export default function ChefHome() {
       </View>
       <Text style={styles.customerName}>{order.customer}</Text>
       <Text style={styles.orderItems}>{order.items}</Text>
-      <Text style={styles.orderAmount}>{order.amount}</Text>
+      <View style={styles.orderFooter}>
+        <Text style={styles.orderAmount}>{order.amount}</Text>
+        <Text style={styles.orderTime}>{order.time}</Text>
+      </View>
     </View>
   );
 
@@ -85,16 +95,16 @@ export default function ChefHome() {
       <View style={styles.menuInfo}>
         <Text style={styles.menuName}>{item.name}</Text>
         <Text style={styles.menuPrice}>₹{item.price}</Text>
-        <Text style={styles.menuOrders}>{item.orders} orders this week</Text>
+        <Text style={styles.menuOrders}>{item.orders} orders</Text>
         <View style={styles.menuStatus}>
           {item.available ? (
             <View style={styles.availableStatus}>
-              <Eye size={12} color="#4CAF50" />
+              <Eye size={12} color="#06C167" />
               <Text style={styles.availableText}>Available</Text>
             </View>
           ) : (
             <View style={styles.unavailableStatus}>
-              <EyeOff size={12} color="#F44336" />
+              <EyeOff size={12} color="#8E8E93" />
               <Text style={styles.unavailableText}>Hidden</Text>
             </View>
           )}
@@ -103,19 +113,45 @@ export default function ChefHome() {
     </View>
   );
 
+  const renderReviewCard = (review: any) => (
+    <View key={review.id} style={styles.reviewCard}>
+      <View style={styles.reviewHeader}>
+        <View style={styles.reviewRating}>
+          {[1, 2, 3, 4, 5].map((star) => (
+            <Star
+              key={star}
+              size={12}
+              color={star <= review.rating ? "#FFCC02" : "#EEEEEE"}
+              fill={star <= review.rating ? "#FFCC02" : "transparent"}
+            />
+          ))}
+        </View>
+        <Text style={styles.reviewTime}>{review.createdAt.toLocaleDateString()}</Text>
+      </View>
+      <Text style={styles.reviewText} numberOfLines={2}>{review.reviewText}</Text>
+      <Text style={styles.reviewCustomer}>- {review.userName}</Text>
+      {!review.chefResponse && (
+        <TouchableOpacity style={styles.respondButton}>
+          <MessageCircle size={14} color="#000000" />
+          <Text style={styles.respondButtonText}>Respond</Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'new': return '#FF6B35';
-      case 'preparing': return '#2196F3';
-      case 'ready': return '#4CAF50';
-      default: return '#7F8C8D';
+      case 'preparing': return '#000000';
+      case 'ready': return '#06C167';
+      case 'delivered': return '#06C167';
+      default: return '#8E8E93';
     }
   };
 
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Chef Header */}
+        {/* Header */}
         <View style={styles.header}>
           <View style={styles.chefInfo}>
             <Image 
@@ -126,71 +162,68 @@ export default function ChefHome() {
               <Text style={styles.chefName}>Chef {user?.name || 'User'}</Text>
               <Text style={styles.chefSpecialty}>North Indian Cuisine</Text>
               <View style={styles.chefRating}>
-                <Star size={16} color="#FFD700" fill="#FFD700" />
-                <Text style={styles.rating}>4.8 (234 reviews)</Text>
+                <Star size={14} color="#FFCC02" fill="#FFCC02" />
+                <Text style={styles.rating}>{reviewStats.averageRating} ({reviewStats.totalReviews} reviews)</Text>
               </View>
             </View>
           </View>
           
-          <View style={styles.onlineToggle}>
-            <TouchableOpacity 
-              style={[styles.toggleButton, { backgroundColor: isOnline ? '#4CAF50' : '#F44336' }]}
-              onPress={() => setIsOnline(!isOnline)}
-            >
-              <Text style={styles.toggleText}>{isOnline ? 'Online' : 'Offline'}</Text>
-            </TouchableOpacity>
+          <TouchableOpacity 
+            style={[styles.onlineToggle, { backgroundColor: isOnline ? '#06C167' : '#8E8E93' }]}
+            onPress={() => setIsOnline(!isOnline)}
+          >
+            <Text style={styles.onlineText}>{isOnline ? 'Online' : 'Offline'}</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Stats Grid */}
+        <View style={styles.statsSection}>
+          <View style={styles.statsGrid}>
+            {CHEF_STATS.map(renderStatCard)}
           </View>
         </View>
 
         {/* Quick Actions */}
-        <View style={styles.quickActions}>
+        <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Actions</Text>
           <View style={styles.actionsGrid}>
             <TouchableOpacity 
               style={styles.actionCard}
               onPress={() => router.push('/(tabs)/chef-menu-management' as any)}
             >
-              <ChefHat size={24} color="#FF6B35" />
-              <Text style={styles.actionText}>Manage Menu</Text>
+              <ChefHat size={24} color="#000000" />
+              <Text style={styles.actionText}>Menu</Text>
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.actionCard}
               onPress={() => router.push('/(tabs)/chef-orders' as any)}
             >
-              <ShoppingBag size={24} color="#4CAF50" />
-              <Text style={styles.actionText}>View Orders</Text>
+              <ShoppingBag size={24} color="#000000" />
+              <Text style={styles.actionText}>Orders</Text>
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.actionCard}
               onPress={() => router.push('/(tabs)/chef-finances' as any)}
             >
-              <DollarSign size={24} color="#2196F3" />
-              <Text style={styles.actionText}>Finances & P/L</Text>
+              <BarChart3 size={24} color="#000000" />
+              <Text style={styles.actionText}>Analytics</Text>
             </TouchableOpacity>
             <TouchableOpacity 
               style={styles.actionCard}
               onPress={() => router.push('/(tabs)/chef-profile' as any)}
             >
-              <Users size={24} color="#2196F3" />
-              <Text style={styles.actionText}>Edit Profile</Text>
+              <Users size={24} color="#000000" />
+              <Text style={styles.actionText}>Profile</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-        {/* Performance Stats */}
-        <View style={styles.statsSection}>
-          <Text style={styles.sectionTitle}>Today's Performance</Text>
-          <View style={styles.statsGrid}>
-            {CHEF_STATS.map(renderStatCard)}
-          </View>
-        </View>
-
         {/* Recent Orders */}
-        <View style={styles.recentOrders}>
+        <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Recent Orders</Text>
             <TouchableOpacity onPress={() => router.push('/(tabs)/chef-orders' as any)}>
-              <Text style={styles.viewAllText}>View All</Text>
+              <Text style={styles.viewAllText}>View all</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.ordersContainer}>
@@ -198,40 +231,48 @@ export default function ChefHome() {
           </View>
         </View>
 
-        {/* Menu Highlights */}
-        <View style={styles.menuHighlights}>
+        {/* Reviews & Responses */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Customer Reviews</Text>
+            <TouchableOpacity>
+              <Text style={styles.viewAllText}>View all</Text>
+            </TouchableOpacity>
+          </View>
+          
+          {pendingResponses > 0 && (
+            <View style={styles.pendingResponsesAlert}>
+              <MessageCircle size={16} color="#FF6B35" />
+              <Text style={styles.pendingResponsesText}>
+                {pendingResponses} review{pendingResponses > 1 ? 's' : ''} waiting for your response
+              </Text>
+            </View>
+          )}
+
+          <View style={styles.reviewsContainer}>
+            {recentReviews.length > 0 ? (
+              recentReviews.map(renderReviewCard)
+            ) : (
+              <View style={styles.noReviews}>
+                <Star size={32} color="#EEEEEE" />
+                <Text style={styles.noReviewsText}>No reviews yet</Text>
+                <Text style={styles.noReviewsSubtext}>Start cooking to receive your first review!</Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* Popular Dishes */}
+        <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Popular Dishes</Text>
             <TouchableOpacity onPress={() => router.push('/(tabs)/chef-menu-management' as any)}>
-              <Text style={styles.viewAllText}>Manage Menu</Text>
+              <Text style={styles.viewAllText}>Manage menu</Text>
             </TouchableOpacity>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.menuScroll}>
             {MENU_HIGHLIGHTS.map(renderMenuCard)}
           </ScrollView>
-        </View>
-
-        {/* Weekly Summary */}
-        <View style={styles.weeklySummary}>
-          <Text style={styles.sectionTitle}>This Week's Summary</Text>
-          <View style={styles.summaryCard}>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Total Revenue</Text>
-              <Text style={styles.summaryValue}>₹15,240</Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Orders Completed</Text>
-              <Text style={styles.summaryValue}>89</Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Customer Rating</Text>
-              <Text style={styles.summaryValue}>4.8 ⭐</Text>
-            </View>
-            <View style={styles.summaryRow}>
-              <Text style={styles.summaryLabel}>Repeat Customers</Text>
-              <Text style={styles.summaryValue}>67%</Text>
-            </View>
-          </View>
         </View>
       </ScrollView>
     </View>
@@ -241,21 +282,15 @@ export default function ChefHome() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: COLORS.background.primary,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    padding: 20,
-    borderBottomLeftRadius: 20,
-    borderBottomRightRadius: 20,
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    backgroundColor: COLORS.background.primary,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.xl,
   },
   chefInfo: {
     flexDirection: 'row',
@@ -263,239 +298,294 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   chefImage: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
-    marginRight: 15,
-    borderWidth: 3,
-    borderColor: '#FF6B35',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    marginRight: SPACING.lg,
   },
   chefDetails: {
     flex: 1,
   },
   chefName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    marginBottom: 4,
+    fontSize: FONT_SIZES.xl,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+    marginBottom: SPACING.xs,
   },
   chefSpecialty: {
-    fontSize: 14,
-    color: '#FF6B35',
-    fontWeight: '500',
-    marginBottom: 4,
+    fontSize: FONT_SIZES.md,
+    color: COLORS.text.secondary,
+    marginBottom: SPACING.xs,
   },
   chefRating: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   rating: {
-    marginLeft: 4,
-    fontSize: 14,
-    color: '#2C3E50',
+    marginLeft: SPACING.xs,
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.primary,
     fontWeight: '500',
   },
   onlineToggle: {
-    alignItems: 'center',
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm,
+    borderRadius: BORDER_RADIUS.xxl,
   },
-  toggleButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  toggleText: {
-    color: '#FFFFFF',
-    fontSize: 14,
+  onlineText: {
+    color: COLORS.text.white,
+    fontSize: FONT_SIZES.sm,
     fontWeight: '600',
   },
-  quickActions: {
-    padding: 20,
+  statsSection: {
+    paddingHorizontal: SPACING.lg,
+    marginBottom: SPACING.xl,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    marginBottom: 15,
+  statsGrid: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+  },
+  statCard: {
+    flex: 1,
+    backgroundColor: COLORS.background.primary,
+    padding: SPACING.lg,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    ...SHADOWS.subtle,
+  },
+  statIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: SPACING.sm,
+  },
+  statValue: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+    marginBottom: SPACING.xs,
+  },
+  statLabel: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.text.secondary,
+    textAlign: 'center',
+    marginBottom: SPACING.xs,
+  },
+  statChange: {
+    fontSize: FONT_SIZES.xs,
+    fontWeight: '600',
+  },
+  section: {
+    paddingHorizontal: SPACING.lg,
+    marginBottom: SPACING.xl,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: SPACING.lg,
+  },
+  sectionTitle: {
+    fontSize: FONT_SIZES.xl,
+    fontWeight: '600',
+    color: COLORS.text.primary,
   },
   viewAllText: {
-    fontSize: 14,
-    color: '#FF6B35',
-    fontWeight: '600',
+    fontSize: FONT_SIZES.md,
+    color: COLORS.text.secondary,
+    fontWeight: '500',
   },
   actionsGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
+    gap: SPACING.md,
   },
   actionCard: {
-    backgroundColor: '#FFFFFF',
-    width: '48%',
-    margin: '1%',
-    padding: 15,
-    borderRadius: 12,
+    flex: 1,
+    backgroundColor: COLORS.background.primary,
+    padding: SPACING.lg,
+    borderRadius: BORDER_RADIUS.md,
     alignItems: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    ...SHADOWS.subtle,
   },
   actionText: {
-    marginTop: 8,
-    fontSize: 13,
-    color: '#2C3E50',
-    textAlign: 'center',
+    marginTop: SPACING.sm,
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.primary,
     fontWeight: '500',
   },
-  statsSection: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  statCard: {
-    backgroundColor: '#FFFFFF',
-    width: '48%',
-    padding: 15,
-    borderRadius: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  statIconContainer: {
-    width: 48,
-    height: 48,
-    backgroundColor: '#FFF5F0',
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  statInfo: {
-    alignItems: 'flex-start',
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 11,
-    color: '#7F8C8D',
-    marginBottom: 4,
-  },
-  statChange: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  recentOrders: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
   ordersContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    gap: SPACING.sm,
   },
   orderCard: {
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    backgroundColor: COLORS.background.primary,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.lg,
+    ...SHADOWS.subtle,
   },
   orderHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: SPACING.sm,
   },
   orderId: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#2C3E50',
+    fontSize: FONT_SIZES.md,
+    fontWeight: '600',
+    color: COLORS.text.primary,
   },
   statusBadge: {
-    paddingHorizontal: 8,
+    paddingHorizontal: SPACING.sm,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: BORDER_RADIUS.sm,
   },
   statusText: {
-    color: '#FFFFFF',
-    fontSize: 10,
+    color: COLORS.text.white,
+    fontSize: FONT_SIZES.xs,
     fontWeight: '600',
     textTransform: 'capitalize',
   },
   customerName: {
-    fontSize: 14,
-    color: '#2C3E50',
+    fontSize: FONT_SIZES.md,
+    color: COLORS.text.primary,
     fontWeight: '500',
-    marginBottom: 4,
+    marginBottom: SPACING.xs,
   },
   orderItems: {
-    fontSize: 12,
-    color: '#7F8C8D',
-    marginBottom: 4,
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.secondary,
+    marginBottom: SPACING.sm,
+  },
+  orderFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   orderAmount: {
-    fontSize: 14,
-    color: '#FF6B35',
-    fontWeight: 'bold',
+    fontSize: FONT_SIZES.md,
+    fontWeight: '600',
+    color: COLORS.text.primary,
   },
-  menuHighlights: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+  orderTime: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.secondary,
+  },
+  pendingResponsesAlert: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF5F0',
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    marginBottom: SPACING.lg,
+    gap: SPACING.sm,
+  },
+  pendingResponsesText: {
+    fontSize: FONT_SIZES.sm,
+    color: '#FF6B35',
+    fontWeight: '500',
+  },
+  reviewsContainer: {
+    gap: SPACING.md,
+  },
+  reviewCard: {
+    backgroundColor: COLORS.background.primary,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.lg,
+    ...SHADOWS.subtle,
+  },
+  reviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.sm,
+  },
+  reviewRating: {
+    flexDirection: 'row',
+    gap: 2,
+  },
+  reviewTime: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.text.secondary,
+  },
+  reviewText: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.primary,
+    lineHeight: 18,
+    marginBottom: SPACING.sm,
+  },
+  reviewCustomer: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.secondary,
+    marginBottom: SPACING.sm,
+  },
+  respondButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    backgroundColor: COLORS.background.secondary,
+    borderRadius: BORDER_RADIUS.xxl,
+    gap: SPACING.xs,
+  },
+  respondButtonText: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.primary,
+    fontWeight: '500',
+  },
+  noReviews: {
+    alignItems: 'center',
+    paddingVertical: SPACING.xl,
+  },
+  noReviewsText: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+    marginTop: SPACING.md,
+    marginBottom: SPACING.xs,
+  },
+  noReviewsSubtext: {
+    fontSize: FONT_SIZES.md,
+    color: COLORS.text.secondary,
+    textAlign: 'center',
+  },
+  menuScroll: {
+    marginLeft: -SPACING.lg,
+    paddingLeft: SPACING.lg,
   },
   menuCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    marginRight: 15,
-    width: 160,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    backgroundColor: COLORS.background.primary,
+    borderRadius: BORDER_RADIUS.md,
+    marginRight: SPACING.md,
+    width: 140,
+    ...SHADOWS.subtle,
   },
   menuImage: {
     width: '100%',
-    height: 100,
-    borderTopLeftRadius: 12,
-    borderTopRightRadius: 12,
+    height: 80,
+    borderTopLeftRadius: BORDER_RADIUS.md,
+    borderTopRightRadius: BORDER_RADIUS.md,
   },
   menuInfo: {
-    padding: 12,
+    padding: SPACING.md,
   },
   menuName: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    marginBottom: 4,
+    fontSize: FONT_SIZES.sm,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+    marginBottom: SPACING.xs,
   },
   menuPrice: {
-    fontSize: 14,
-    color: '#FF6B35',
-    fontWeight: '600',
-    marginBottom: 4,
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.primary,
+    fontWeight: '500',
+    marginBottom: SPACING.xs,
   },
   menuOrders: {
-    fontSize: 11,
-    color: '#7F8C8D',
-    marginBottom: 8,
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.text.secondary,
+    marginBottom: SPACING.sm,
   },
   menuStatus: {
     alignItems: 'flex-start',
@@ -503,58 +593,29 @@ const styles = StyleSheet.create({
   availableStatus: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#E8F5E8',
-    paddingHorizontal: 8,
+    backgroundColor: '#F0F9FF',
+    paddingHorizontal: SPACING.sm,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: BORDER_RADIUS.sm,
     gap: 4,
   },
   availableText: {
-    fontSize: 10,
-    color: '#4CAF50',
-    fontWeight: '600',
+    fontSize: FONT_SIZES.xs,
+    color: '#06C167',
+    fontWeight: '500',
   },
   unavailableStatus: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFEBEE',
-    paddingHorizontal: 8,
+    backgroundColor: COLORS.background.secondary,
+    paddingHorizontal: SPACING.sm,
     paddingVertical: 4,
-    borderRadius: 12,
+    borderRadius: BORDER_RADIUS.sm,
     gap: 4,
   },
   unavailableText: {
-    fontSize: 10,
-    color: '#F44336',
-    fontWeight: '600',
-  },
-  weeklySummary: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-  },
-  summaryCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 20,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  summaryLabel: {
-    fontSize: 14,
-    color: '#7F8C8D',
-  },
-  summaryValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#2C3E50',
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.text.secondary,
+    fontWeight: '500',
   },
 });

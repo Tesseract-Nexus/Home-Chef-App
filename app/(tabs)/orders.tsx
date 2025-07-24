@@ -39,15 +39,7 @@ export default function Orders() {
 
   // Check for orders that need countdown timer
   useEffect(() => {
-    const recentOrder = orders.find(order => 
-      order.status === 'payment_confirmed' && 
-      order.canCancelFree &&
-      (Date.now() - order.placedAt.getTime()) < 30000
-    );
-    
-    if (recentOrder && !showCountdownTimer) {
-      setShowCountdownTimer(recentOrder.id);
-    }
+    // Only show countdown from notifications or direct triggers, not auto-show
   }, [orders, showCountdownTimer]);
 
   // Simulate earning tokens when order is completed

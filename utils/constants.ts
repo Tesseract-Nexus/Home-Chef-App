@@ -1,47 +1,53 @@
-// App-wide constants
+// App-wide constants matching Uber Eats design system
 export const COLORS = {
-  primary: '#FF6B35',
-  primaryLight: '#FFF5F0',
-  primaryDark: '#E55A2B',
+  primary: '#000000',
+  primaryLight: '#F6F6F6',
+  primaryDark: '#000000',
   
-  secondary: '#2196F3',
-  secondaryLight: '#E3F2FD',
-  secondaryDark: '#1976D2',
+  secondary: '#EEEEEE',
+  secondaryLight: '#F6F6F6',
+  secondaryDark: '#CCCCCC',
   
-  success: '#4CAF50',
+  success: '#057E3E',
   successLight: '#E8F5E8',
-  successDark: '#388E3C',
+  successDark: '#046C37',
   
-  warning: '#FF9800',
-  warningLight: '#FFF3E0',
-  warningDark: '#F57C00',
+  warning: '#F59E0B',
+  warningLight: '#FEF3C7',
+  warningDark: '#D97706',
   
-  danger: '#F44336',
-  dangerLight: '#FFEBEE',
-  dangerDark: '#D32F2F',
+  danger: '#DC2626',
+  dangerLight: '#FEE2E2',
+  dangerDark: '#B91C1C',
   
-  info: '#00BCD4',
-  infoLight: '#E0F7FA',
-  infoDark: '#0097A7',
+  info: '#3B82F6',
+  infoLight: '#DBEAFE',
+  infoDark: '#1D4ED8',
   
   text: {
-    primary: '#2C3E50',
-    secondary: '#7F8C8D',
-    light: '#BDC3C7',
+    primary: '#000000',
+    secondary: '#545454',
+    tertiary: '#8E8E93',
     white: '#FFFFFF',
+    disabled: '#AEAEB2',
   },
   
   background: {
     primary: '#FFFFFF',
-    secondary: '#F8F9FA',
-    light: '#FAFBFC',
+    secondary: '#F6F6F6',
+    tertiary: '#EEEEEE',
+    overlay: 'rgba(0, 0, 0, 0.4)',
   },
   
   border: {
-    light: '#E0E0E0',
-    medium: '#BDBDBD',
-    dark: '#757575',
+    light: '#EEEEEE',
+    medium: '#D1D1D6',
+    dark: '#8E8E93',
   },
+  
+  // Uber Eats specific colors
+  accent: '#06C167', // Green for success states
+  rating: '#FFCC02', // Yellow for ratings
 };
 
 export const SPACING = {
@@ -55,7 +61,7 @@ export const SPACING = {
 };
 
 export const BORDER_RADIUS = {
-  sm: 6,
+  sm: 4,
   md: 8,
   lg: 12,
   xl: 16,
@@ -64,14 +70,14 @@ export const BORDER_RADIUS = {
 };
 
 export const FONT_SIZES = {
-  xs: 10,
-  sm: 12,
-  md: 14,
-  lg: 16,
-  xl: 18,
-  xxl: 20,
-  xxxl: 24,
-  display: 32,
+  xs: 11,
+  sm: 13,
+  md: 15,
+  lg: 17,
+  xl: 19,
+  xxl: 22,
+  xxxl: 28,
+  display: 34,
 };
 
 export const FONT_WEIGHTS = {
@@ -81,34 +87,39 @@ export const FONT_WEIGHTS = {
   bold: '700' as const,
 };
 
+// Uber Eats style shadows - very subtle
 export const SHADOWS = {
+  none: {
+    elevation: 0,
+    shadowOpacity: 0,
+  },
+  subtle: {
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
   small: {
     elevation: 2,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowRadius: 3,
   },
   medium: {
     elevation: 4,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-  },
-  large: {
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.2,
-    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
   },
 };
 
 export const ANIMATION_DURATION = {
-  fast: 200,
-  normal: 300,
-  slow: 500,
+  fast: 150,
+  normal: 250,
+  slow: 350,
 };
 
 // User roles
@@ -128,24 +139,6 @@ export const ORDER_STATUS = {
   DELIVERING: 'delivering',
   DELIVERED: 'delivered',
   CANCELLED: 'cancelled',
-} as const;
-
-// Chef statuses
-export const CHEF_STATUS = {
-  PENDING: 'pending',
-  APPROVED: 'approved',
-  REJECTED: 'rejected',
-  ACTIVE: 'active',
-  INACTIVE: 'inactive',
-} as const;
-
-// Payment statuses
-export const PAYMENT_STATUS = {
-  PENDING: 'pending',
-  PROCESSING: 'processing',
-  COMPLETED: 'completed',
-  FAILED: 'failed',
-  REFUNDED: 'refunded',
 } as const;
 
 // App configuration

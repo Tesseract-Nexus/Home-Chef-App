@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { X, Clock, TriangleAlert as AlertTriangle } from 'lucide-react-native';
+import { X, Clock, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle } from 'lucide-react-native';
 import { useOrderManagement } from '@/hooks/useOrderManagement';
 import { getResponsiveDimensions } from '@/utils/responsive';
+import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES } from '@/utils/constants';
 
 interface OrderCountdownTimerProps {
   orderId: string;
@@ -19,7 +20,6 @@ export const OrderCountdownTimer: React.FC<OrderCountdownTimerProps> = ({
   onComplete,
 }) => {
   const [timeLeft, setTimeLeft] = useState(30);
-  const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const { cancelOrder, confirmOrderAfterTimer } = useOrderManagement();
   const { isWeb, isDesktop } = getResponsiveDimensions();
@@ -29,9 +29,11 @@ export const OrderCountdownTimer: React.FC<OrderCountdownTimerProps> = ({
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearInterval(timer);
-          // Confirm order and send to chef
-          confirmOrderAfterTimer(orderId);
-          onComplete();
+          // Defer state updates to avoid render phase updates
+          setTimeout(() => {
+            confirmOrderAfterTimer(orderId);
+            onComplete();
+          }, 0);
           return 0;
         }
         return prev - 1;
@@ -44,23 +46,37 @@ export const OrderCountdownTimer: React.FC<OrderCountdownTimerProps> = ({
   const handleCancelOrder = async () => {
     setCancelling(true);
     try {
-      await cancelOrder(orderId, 'Customer cancelled within free window');
-      onCancel();
+      const success = await cancelOrder(orderId, 'Customer cancelled within free window');
+      if (success) {
+        onCancel();
+      } else {
+        Alert.alert('Error', 'Failed to cancel order. Please try again.');
+      }
     } catch (error) {
       console.error('Failed to cancel order:', error);
+      Alert.alert('Error', 'Failed to cancel order. Please try again.');
     } finally {
       setCancelling(false);
     }
   };
 
   const confirmCancel = () => {
-    handleCancelOrder();
+    if (cancelling) return;
+    
+    Alert.alert(
+      'Cancel Order',
+      `Are you sure you want to cancel this order? You can cancel for free within the ${timeLeft}-second window.`,
+      [
+        { text: 'Keep Order', style: 'cancel' },
+        { text: 'Cancel Order', style: 'destructive', onPress: handleCancelOrder }
+      ]
+    );
   };
 
   const getTimerColor = () => {
-    if (timeLeft > 20) return '#4CAF50';
-    if (timeLeft > 10) return '#FF9800';
-    return '#F44336';
+    if (timeLeft > 20) return COLORS.text.primary;
+    if (timeLeft > 10) return COLORS.text.secondary;
+    return COLORS.text.primary;
   };
 
   const getProgressPercentage = () => {
@@ -71,27 +87,39 @@ export const OrderCountdownTimer: React.FC<OrderCountdownTimerProps> = ({
     <View style={[styles.container, isWeb && styles.webContainer]}>
       <View style={[styles.timerCard, isDesktop && styles.desktopTimerCard]}>
         <View style={styles.timerHeader}>
-          <View style={styles.timerIconContainer}>
-            <Clock size={24} color={getTimerColor()} />
-          </View>
-          <View style={styles.timerInfo}>
-            <Text style={[styles.timerTitle, isDesktop && styles.desktopTimerTitle]}>
-              Free Cancellation Window
-            </Text>
-            <Text style={[styles.timerSubtitle, isDesktop && styles.desktopTimerSubtitle]}>
-              Cancel within 30 seconds for free
-            </Text>
+          <View style={styles.headerLeft}>
+            <View style={styles.iconContainer}>
+              <Clock size={20} color={COLORS.text.primary} />
+            </View>
+            <View style={styles.timerInfo}>
+              <Text style={[styles.timerTitle, isDesktop && styles.desktopTimerTitle]}>
+                Free Cancellation Window
+              </Text>
+              <Text style={[styles.timerSubtitle, isDesktop && styles.desktopTimerSubtitle]}>
+                Cancel within 30 seconds for free
+              </Text>
+            </View>
           </View>
           <TouchableOpacity 
-            style={[styles.cancelButton, { backgroundColor: getTimerColor() }]}
-            onPress={confirmCancel}
+            style={styles.closeButton}
+            onPress={() => {
+              // Just close the modal without cancelling
+              onComplete();
+            }}
             disabled={cancelling}
           >
-            <X size={20} color="#FFFFFF" />
+            <X size={20} color={COLORS.text.primary} />
           </TouchableOpacity>
         </View>
 
         <View style={styles.countdownSection}>
+          <View style={styles.timeDisplay}>
+            <Text style={styles.timeNumber}>
+              {timeLeft}
+            </Text>
+            <Text style={styles.timeLabel}>seconds left</Text>
+          </View>
+          
           <View style={styles.progressBarContainer}>
             <View style={styles.progressBarBackground}>
               <View 
@@ -99,27 +127,40 @@ export const OrderCountdownTimer: React.FC<OrderCountdownTimerProps> = ({
                   styles.progressBarFill, 
                   { 
                     width: `${getProgressPercentage()}%`,
-                    backgroundColor: getTimerColor()
+                    backgroundColor: COLORS.text.primary
                   }
                 ]} 
               />
             </View>
           </View>
-          
-          <View style={styles.timeDisplay}>
-            <Text style={[styles.timeNumber, { color: getTimerColor() }]}>
-              {timeLeft}
-            </Text>
-            <Text style={styles.timeLabel}>seconds left</Text>
-          </View>
         </View>
 
         <View style={styles.warningSection}>
-          <AlertTriangle size={16} color="#FF9800" />
+          <View style={styles.warningIcon}>
+            <AlertTriangle size={16} color={COLORS.warning} />
+          </View>
           <Text style={styles.warningText}>
             After 30 seconds, cancellation will incur a 40% penalty (₹{Math.round(orderTotal * 0.4)})
           </Text>
         </View>
+        
+        <TouchableOpacity 
+          style={[styles.cancelOrderButton, cancelling && styles.disabledButton]}
+          onPress={confirmCancel}
+          disabled={cancelling}
+        >
+          <Text style={styles.cancelOrderButtonText}>
+            {cancelling ? 'Cancelling...' : 'Cancel Order'}
+          </Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={styles.keepOrderButton}
+          onPress={() => onComplete()}
+          disabled={cancelling}
+        >
+          <Text style={styles.keepOrderButtonText}>Keep Order</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -127,18 +168,19 @@ export const OrderCountdownTimer: React.FC<OrderCountdownTimerProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    padding: 20,
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    padding: SPACING.xl,
     justifyContent: 'center',
     alignItems: 'center',
   },
   webContainer: {
-    padding: 40,
+    padding: SPACING.xl * 2,
   },
   timerCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
+    backgroundColor: COLORS.background.primary,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.xl,
     elevation: 10,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 5 },
@@ -148,89 +190,132 @@ const styles = StyleSheet.create({
     maxWidth: 400,
   },
   desktopTimerCard: {
-    padding: 30,
+    padding: SPACING.xl * 1.5,
     maxWidth: 500,
   },
   timerHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    justifyContent: 'space-between',
+    marginBottom: SPACING.xl,
   },
-  timerIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#F8F9FA',
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: COLORS.background.secondary,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: SPACING.md,
   },
   timerInfo: {
     flex: 1,
   },
   timerTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    marginBottom: 2,
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+    marginBottom: SPACING.xs,
   },
   desktopTimerTitle: {
-    fontSize: 18,
+    fontSize: FONT_SIZES.xl,
   },
   timerSubtitle: {
-    fontSize: 12,
-    color: '#7F8C8D',
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.secondary,
   },
   desktopTimerSubtitle: {
-    fontSize: 14,
+    fontSize: FONT_SIZES.md,
   },
-  cancelButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  closeButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: COLORS.background.secondary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   countdownSection: {
-    marginBottom: 16,
+    alignItems: 'center',
+    marginBottom: SPACING.xl,
+  },
+  timeDisplay: {
+    alignItems: 'center',
+    marginBottom: SPACING.lg,
+  },
+  timeNumber: {
+    fontSize: 64,
+    fontWeight: '700',
+    color: COLORS.text.primary,
+    marginBottom: SPACING.xs,
+  },
+  timeLabel: {
+    fontSize: FONT_SIZES.md,
+    color: COLORS.text.secondary,
+    fontWeight: '500',
   },
   progressBarContainer: {
-    marginBottom: 16,
+    width: '100%',
   },
   progressBarBackground: {
-    height: 8,
-    backgroundColor: '#E0E0E0',
-    borderRadius: 4,
+    height: 4,
+    backgroundColor: COLORS.background.secondary,
+    borderRadius: 2,
     overflow: 'hidden',
   },
   progressBarFill: {
     height: '100%',
-    borderRadius: 4,
-  },
-  timeDisplay: {
-    alignItems: 'center',
-  },
-  timeNumber: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  timeLabel: {
-    fontSize: 14,
-    color: '#7F8C8D',
+    borderRadius: 2,
   },
   warningSection: {
     flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF3E0',
-    padding: 12,
-    borderRadius: 8,
-    gap: 8,
+    alignItems: 'flex-start',
+    backgroundColor: COLORS.background.secondary,
+    padding: SPACING.lg,
+    borderRadius: BORDER_RADIUS.md,
+    marginBottom: SPACING.lg,
+  },
+  warningIcon: {
+    marginRight: SPACING.md,
+    marginTop: 2,
   },
   warningText: {
-    fontSize: 12,
-    color: '#F57C00',
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.secondary,
     flex: 1,
-    lineHeight: 16,
+    lineHeight: 18,
+  },
+  cancelOrderButton: {
+    backgroundColor: COLORS.text.primary,
+    paddingVertical: SPACING.lg,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  disabledButton: {
+    backgroundColor: COLORS.text.disabled,
+  },
+  cancelOrderButtonText: {
+    color: COLORS.text.white,
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '600',
+  },
+  keepOrderButton: {
+    backgroundColor: 'transparent',
+    paddingVertical: SPACING.lg,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border.medium,
+  },
+  keepOrderButtonText: {
+    color: COLORS.text.primary,
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '600',
   },
 });

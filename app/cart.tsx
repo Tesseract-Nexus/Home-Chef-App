@@ -2,13 +2,49 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Alert, Modal, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { ArrowLeft, Plus, Minus, Trash2, MapPin, Clock, CreditCard, Tag } from 'lucide-react-native';
+import { ArrowLeft, Plus, Minus, Trash2, MapPin, Clock, CreditCard, Tag, X, Smartphone, Building2, Banknote, Check } from 'lucide-react-native';
 import { useCart } from '@/hooks/useCart';
 import { useAddresses } from '@/hooks/useAddresses';
 import { useOrderManagement } from '@/hooks/useOrderManagement';
 import { OrderCountdownTimer } from '@/components/OrderCountdownTimer';
-import { ResponsiveContainer } from '@/components/ui/ResponsiveContainer';
 import { getResponsiveDimensions } from '@/utils/responsive';
+import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES, SHADOWS } from '@/utils/constants';
+import { useToast } from '@/hooks/useToast';
+
+const PAYMENT_METHODS = [
+  {
+    id: 'upi',
+    title: 'UPI',
+    subtitle: 'PhonePe, GPay, Paytm, BHIM',
+    icon: Smartphone,
+    color: '#FF6B35',
+    popular: true,
+  },
+  {
+    id: 'card',
+    title: 'Credit/Debit Card',
+    subtitle: 'Visa, Mastercard, RuPay',
+    icon: CreditCard,
+    color: '#4CAF50',
+    popular: true,
+  },
+  {
+    id: 'netbanking',
+    title: 'Net Banking',
+    subtitle: 'All major banks supported',
+    icon: Building2,
+    color: '#2196F3',
+    popular: false,
+  },
+  {
+    id: 'cod',
+    title: 'Cash on Delivery',
+    subtitle: 'Pay when you receive',
+    icon: Banknote,
+    color: '#9C27B0',
+    popular: false,
+  },
+];
 
 export default function CartScreen() {
   const router = useRouter();
@@ -32,10 +68,13 @@ export default function CartScreen() {
   const [showCountdownTimer, setShowCountdownTimer] = useState(false);
   const [placedOrderId, setPlacedOrderId] = useState<string | null>(null);
   
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('upi'); // Default to UPI
   const [promoCode, setPromoCode] = useState('');
   const [promoDiscount, setPromoDiscount] = useState(0);
   const [deliveryInstructions, setDeliveryInstructions] = useState('');
   const { isWeb, isDesktop } = getResponsiveDimensions();
+  const { showSuccess, showError, showInfo } = useToast();
 
   const handleApplyPromo = () => {
     // Simple promo code logic
@@ -51,38 +90,44 @@ export default function CartScreen() {
         ? Math.min(discount, cartTotal) 
         : Math.round(cartTotal * (discount / 100));
       setPromoDiscount(discountAmount);
-      Alert.alert('Promo Applied!', `You saved ₹${discountAmount}`);
+      showSuccess('Promo Applied!', `You saved ₹${discountAmount}`);
     } else {
-      Alert.alert('Invalid Promo Code', 'Please enter a valid promo code');
+      showError('Invalid Promo Code', 'Please enter a valid promo code');
       setPromoDiscount(0);
     }
   };
 
-  const handleProceedToPayment = async () => {
+  const handleProceedToPayment = () => {
     if (cartItems.length === 0) {
-      Alert.alert('Empty Cart', 'Please add items to your cart first');
+      showError('Empty Cart', 'Please add items to your cart first');
       return;
     }
 
     if (!defaultAddress) {
-      Alert.alert('No Address', 'Please add a delivery address first', [
-        { text: 'Add Address', onPress: () => router.push('/addresses' as any) },
-        { text: 'Cancel', style: 'cancel' }
-      ]);
+      showError('No Address', 'Please add a delivery address first');
+      router.push('/(tabs)/addresses' as any);
       return;
     }
 
     if (cartTotal < (currentChef?.minOrder || 0)) {
-      Alert.alert(
-        'Minimum Order Not Met', 
-        `Minimum order amount is ₹${currentChef?.minOrder}. Add ₹${(currentChef?.minOrder || 0) - cartTotal} more to proceed.`
-      );
+      showError('Minimum Order Not Met', `Minimum order amount is ₹${currentChef?.minOrder}. Add ₹${(currentChef?.minOrder || 0) - cartTotal} more to proceed.`);
       return;
     }
 
+    // Show payment method selection modal
+    setShowPaymentModal(true);
+  };
+
+  const handlePaymentMethodSelected = async () => {
+    if (!selectedPaymentMethod) {
+      showError('Payment Method Required', 'Please select a payment method');
+      return;
+    }
+
+    setShowPaymentModal(false);
+
     try {
-      // Show loading state
-      Alert.alert('Processing Payment...', 'Please wait while we process your payment.');
+      showInfo('Processing Payment...', 'Please wait while we process your payment.');
       
       // Simulate payment processing delay
       await new Promise(resolve => setTimeout(resolve, 2000));
@@ -112,34 +157,113 @@ export default function CartScreen() {
       // Place the order
       const orderId = await placeOrder(orderData);
       
-      // Show countdown timer immediately
+      // Clear cart first
+      clearCart();
+      
+      // Show countdown timer immediately after payment
       setPlacedOrderId(orderId);
       setShowCountdownTimer(true);
-      
-      // Clear cart after successful order placement
-      clearCart();
     } catch (error) {
-      Alert.alert('Error', 'Failed to place order. Please try again.');
+      showError('Error', 'Failed to place order. Please try again.');
     }
   };
 
   const handleCountdownComplete = () => {
     setShowCountdownTimer(false);
     setPlacedOrderId(null);
-    // Navigate to orders page to track the order
-    router.push('/(tabs)/orders' as any);
+    // Show success message and navigate to orders
+    showSuccess('Order Confirmed! 🎉', 'Your order has been sent to the chef for preparation.');
+    setTimeout(() => {
+      router.push('/(tabs)/orders' as any);
+    }, 1000);
   };
 
   const handleCountdownCancel = () => {
     setShowCountdownTimer(false);
     setPlacedOrderId(null);
-    // Show success message and stay on cart page
-    Alert.alert(
-      'Order Cancelled Successfully! ✅',
-      `Your order has been cancelled and full refund of ₹${finalTotal} will be processed immediately.`,
-      [{ text: 'OK' }]
-    );
+    // Show success message and navigate to home
+    showSuccess('Order Cancelled Successfully! ✅', 'Your order has been cancelled and full refund will be processed immediately.');
+    setTimeout(() => {
+      router.push('/(tabs)/home' as any);
+    }, 1000);
   };
+
+  const renderPaymentMethod = (method: typeof PAYMENT_METHODS[0]) => (
+    <TouchableOpacity
+      key={method.id}
+      style={[
+        styles.paymentMethodCard,
+        selectedPaymentMethod === method.id && styles.selectedPaymentMethod
+      ]}
+      onPress={() => setSelectedPaymentMethod(method.id)}
+    >
+      <View style={styles.paymentMethodLeft}>
+        <View style={[styles.paymentIcon, { backgroundColor: method.color + '20' }]}>
+          <method.icon size={24} color={method.color} />
+        </View>
+        <View style={styles.paymentInfo}>
+          <View style={styles.paymentTitleRow}>
+            <Text style={styles.paymentTitle}>{method.title}</Text>
+            {method.popular && (
+              <View style={styles.popularBadge}>
+                <Text style={styles.popularText}>Popular</Text>
+              </View>
+            )}
+          </View>
+          <Text style={styles.paymentSubtitle}>{method.subtitle}</Text>
+        </View>
+      </View>
+      <View style={styles.radioButton}>
+        {selectedPaymentMethod === method.id && (
+          <View style={styles.radioSelected}>
+            <Check size={12} color="#FFFFFF" />
+          </View>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+
+  const PaymentMethodModal = () => (
+    <Modal visible={showPaymentModal} animationType="slide" presentationStyle="pageSheet">
+      <SafeAreaView style={styles.modalContainer}>
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>Select Payment Method</Text>
+          <TouchableOpacity onPress={() => setShowPaymentModal(false)}>
+            <X size={24} color={COLORS.text.primary} />
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView style={styles.modalContent}>
+          <View style={styles.orderSummaryCard}>
+            <Text style={styles.orderSummaryTitle}>Order Summary</Text>
+            <View style={styles.summaryRow}>
+              <Text style={styles.summaryLabel}>Total Amount</Text>
+              <Text style={styles.summaryAmount}>₹{finalTotal}</Text>
+            </View>
+            <View style={styles.deliveryTimeInfo}>
+              <Clock size={16} color="#4CAF50" />
+              <Text style={styles.deliveryTimeText}>Estimated delivery: 45-60 mins</Text>
+            </View>
+          </View>
+
+          <View style={styles.paymentMethodsSection}>
+            <Text style={styles.paymentSectionTitle}>Choose Payment Method</Text>
+            {PAYMENT_METHODS.map(renderPaymentMethod)}
+          </View>
+
+          <TouchableOpacity 
+            style={[styles.confirmPaymentButton, !selectedPaymentMethod && styles.disabledButton]}
+            onPress={handlePaymentMethodSelected}
+            disabled={!selectedPaymentMethod}
+          >
+            <Text style={styles.confirmPaymentButtonText}>
+              Pay ₹{finalTotal}
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </SafeAreaView>
+    </Modal>
+  );
 
   const renderCartItem = (item: typeof cartItems[0], index: number) => (
     <View key={`${item.menuItem.id}-${index}`} style={styles.cartItem}>
@@ -189,27 +313,27 @@ export default function CartScreen() {
 
   if (cartItems.length === 0) {
     return (
-      <ResponsiveContainer style={styles.container}>
+      <View style={[styles.container, isWeb && styles.webContainer]}>
         <SafeAreaView style={styles.safeArea}>
-        <View style={[styles.header, isWeb && styles.webHeader]}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-            <ArrowLeft size={24} color="#2C3E50" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Your Cart</Text>
-        </View>
-        
-        <View style={styles.emptyCart}>
-          <Text style={styles.emptyCartTitle}>Your cart is empty</Text>
-          <Text style={styles.emptyCartText}>Add some delicious items to get started!</Text>
-          <TouchableOpacity 
-            style={styles.browseButton}
-            onPress={() => router.push('/(tabs)/home' as any)}
-          >
-            <Text style={styles.browseButtonText}>Browse Chefs</Text>
-          </TouchableOpacity>
-        </View>
+          <View style={[styles.header, isWeb && styles.webHeader]}>
+            <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+              <ArrowLeft size={24} color={COLORS.text.primary} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Your Cart</Text>
+          </View>
+          
+          <View style={styles.emptyCart}>
+            <Text style={styles.emptyCartTitle}>Your cart is empty</Text>
+            <Text style={styles.emptyCartText}>Add some delicious items to get started!</Text>
+            <TouchableOpacity 
+              style={styles.browseButton}
+              onPress={() => router.push('/(tabs)/home' as any)}
+            >
+              <Text style={styles.browseButtonText}>Browse Chefs</Text>
+            </TouchableOpacity>
+          </View>
         </SafeAreaView>
-      </ResponsiveContainer>
+      </View>
     );
   }
 
@@ -223,7 +347,7 @@ export default function CartScreen() {
       <SafeAreaView style={styles.safeArea}>
       <View style={[styles.header, isWeb && styles.webHeader]}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <ArrowLeft size={24} color="#2C3E50" />
+          <ArrowLeft size={24} color={COLORS.text.primary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Your Cart ({itemCount} items)</Text>
         <TouchableOpacity onPress={clearCart}>
@@ -396,6 +520,8 @@ export default function CartScreen() {
           />
         </Modal>
       )}
+
+      <PaymentMethodModal />
       </SafeAreaView>
     </View>
   );
@@ -404,7 +530,7 @@ export default function CartScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: COLORS.background.primary,
   },
   webContainer: {
     minHeight: '100vh',
@@ -426,95 +552,89 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    backgroundColor: COLORS.background.primary,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.lg,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: COLORS.border.light,
   },
   webHeader: {
-    paddingHorizontal: 40,
-    paddingVertical: 20,
-    marginHorizontal: 20,
-    marginTop: 20,
-    borderRadius: 16,
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
+    paddingHorizontal: SPACING.xl,
     borderBottomWidth: 0,
   },
-  webSection: {
-    marginHorizontal: 0,
-    borderRadius: 16,
-    marginVertical: 10,
-  },
   backButton: {
-    padding: 8,
-    marginRight: 12,
+    padding: SPACING.sm,
+    marginRight: SPACING.md,
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2C3E50',
+    fontSize: FONT_SIZES.xl,
+    fontWeight: '600',
+    color: COLORS.text.primary,
     flex: 1,
   },
   clearCartText: {
-    fontSize: 14,
-    color: '#F44336',
-    fontWeight: '600',
+    fontSize: FONT_SIZES.md,
+    color: COLORS.text.secondary,
+    fontWeight: '500',
   },
   emptyCart: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 40,
+    paddingHorizontal: SPACING.xl * 2,
   },
   emptyCartTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    marginBottom: 12,
+    fontSize: FONT_SIZES.xxxl,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+    marginBottom: SPACING.md,
   },
   emptyCartText: {
-    fontSize: 16,
-    color: '#7F8C8D',
+    fontSize: FONT_SIZES.lg,
+    color: COLORS.text.secondary,
     textAlign: 'center',
-    marginBottom: 30,
+    marginBottom: SPACING.xl * 2,
   },
   browseButton: {
-    backgroundColor: '#FF6B35',
-    paddingHorizontal: 30,
-    paddingVertical: 15,
-    borderRadius: 25,
+    backgroundColor: COLORS.text.primary,
+    paddingHorizontal: SPACING.xl * 2,
+    paddingVertical: SPACING.lg,
+    borderRadius: BORDER_RADIUS.xxl,
   },
   browseButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
+    color: COLORS.text.white,
+    fontSize: FONT_SIZES.lg,
     fontWeight: '600',
   },
   chefSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    padding: 20,
-    marginBottom: 10,
+    backgroundColor: COLORS.background.primary,
+    padding: SPACING.xl,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border.light,
   },
   chefImage: {
     width: 50,
     height: 50,
-    borderRadius: 25,
-    marginRight: 15,
+    borderRadius: BORDER_RADIUS.xxl,
+    marginRight: SPACING.lg,
   },
   chefInfo: {
     flex: 1,
   },
   chefName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    marginBottom: 4,
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+    marginBottom: SPACING.xs,
   },
   chefSpecialty: {
-    fontSize: 14,
-    color: '#FF6B35',
-    marginBottom: 4,
+    fontSize: FONT_SIZES.md,
+    color: COLORS.text.secondary,
   },
   chefMeta: {
     flexDirection: 'row',
@@ -535,15 +655,14 @@ const styles = StyleSheet.create({
     color: '#7F8C8D',
   },
   cartSection: {
-    backgroundColor: '#FFFFFF',
-    padding: 20,
-    marginBottom: 10,
+    backgroundColor: COLORS.background.primary,
+    padding: SPACING.xl,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    marginBottom: 15,
+    fontSize: FONT_SIZES.xl,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+    marginBottom: SPACING.lg,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -787,25 +906,21 @@ const styles = StyleSheet.create({
   checkoutSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    backgroundColor: COLORS.background.primary,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.lg,
     borderTopWidth: 1,
-    borderTopColor: '#E0E0E0',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    borderTopColor: COLORS.border.light,
+    ...SHADOWS.small,
   },
   webCheckoutSection: {
     maxWidth: 800,
     alignSelf: 'center',
     width: '100%',
-    marginHorizontal: 20,
-    borderRadius: 16,
+    marginHorizontal: SPACING.xl,
+    borderRadius: BORDER_RADIUS.lg,
     borderTopWidth: 0,
-    marginBottom: 20,
+    marginBottom: SPACING.xl,
   },
   checkoutInfo: {
     flex: 1,
@@ -823,26 +938,186 @@ const styles = StyleSheet.create({
   checkoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FF6B35',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-    gap: 8,
+    backgroundColor: COLORS.text.primary,
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.lg,
+    borderRadius: BORDER_RADIUS.md,
+    gap: SPACING.sm,
   },
   webCheckoutButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingHorizontal: SPACING.xl * 1.5,
+    paddingVertical: SPACING.xl,
   },
   disabledCheckoutButton: {
-    backgroundColor: '#BDC3C7',
+    backgroundColor: '#CCCCCC',
   },
   checkoutButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
+    color: COLORS.text.white,
+    fontSize: FONT_SIZES.lg,
     fontWeight: '600',
   },
   webCheckoutButtonText: {
-    fontSize: 18,
+    fontSize: FONT_SIZES.xl,
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: COLORS.background.primary,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border.light,
+  },
+  modalTitle: {
+    fontSize: FONT_SIZES.xl,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+  },
+  modalContent: {
+    flex: 1,
+    padding: SPACING.lg,
+  },
+  orderSummaryCard: {
+    backgroundColor: COLORS.background.secondary,
+    borderRadius: BORDER_RADIUS.lg,
+    padding: SPACING.lg,
+    marginBottom: SPACING.xl,
+  },
+  orderSummaryTitle: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+    marginBottom: SPACING.md,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+  },
+  summaryLabel: {
+    fontSize: FONT_SIZES.md,
+    color: COLORS.text.secondary,
+  },
+  summaryAmount: {
+    fontSize: FONT_SIZES.xl,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+  },
+  deliveryTimeInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.background.primary,
+    padding: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    gap: SPACING.sm,
+  },
+  deliveryTimeText: {
+    fontSize: FONT_SIZES.sm,
+    color: '#4CAF50',
+    fontWeight: '500',
+  },
+  paymentMethodsSection: {
+    marginBottom: SPACING.xl,
+  },
+  paymentSectionTitle: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+    marginBottom: SPACING.lg,
+  },
+  paymentMethodCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: SPACING.lg,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border.light,
+    marginBottom: SPACING.md,
+    backgroundColor: COLORS.background.primary,
+  },
+  selectedPaymentMethod: {
+    borderColor: COLORS.text.primary,
+    backgroundColor: COLORS.background.secondary,
+  },
+  paymentMethodLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  paymentIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: SPACING.lg,
+  },
+  paymentInfo: {
+    flex: 1,
+  },
+  paymentTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.xs,
+  },
+  paymentTitle: {
+    fontSize: FONT_SIZES.md,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+    marginRight: SPACING.sm,
+  },
+  popularBadge: {
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 2,
+    borderRadius: BORDER_RADIUS.sm,
+  },
+  popularText: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.text.white,
+    fontWeight: '600',
+  },
+  paymentSubtitle: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.secondary,
+  },
+  radioButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: COLORS.border.medium,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  radioSelected: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: COLORS.text.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmPaymentButton: {
+    backgroundColor: COLORS.text.primary,
+    paddingVertical: SPACING.lg,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    marginTop: SPACING.lg,
+    marginBottom: SPACING.xl,
+  },
+  disabledButton: {
+    backgroundColor: COLORS.text.disabled,
+  },
+  confirmPaymentButtonText: {
+    color: COLORS.text.white,
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '600',
   },
 });

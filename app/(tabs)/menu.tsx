@@ -1,459 +1,807 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal, TextInput, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, CreditCard as Edit, Trash2, Camera, X } from 'lucide-react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { getResponsiveDimensions } from '@/utils/responsive';
+import { ArrowLeft, Star, Clock, Plus, Minus, ShoppingCart, X, MapPin, ChevronDown } from 'lucide-react-native';
+import { useCart, SAMPLE_CHEF, MenuItem } from '@/hooks/useCart';
+import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES, SHADOWS } from '@/utils/constants';
+import { useToast } from '@/hooks/useToast';
 
-const SAMPLE_MENU_ITEMS = [
-  {
-    id: 1,
-    name: 'Butter Chicken',
-    category: 'Main Course',
-    price: 250,
-    description: 'Rich and creamy tomato-based curry with tender chicken pieces',
-    image: 'https://images.pexels.com/photos/2474661/pexels-photo-2474661.jpeg',
-    available: true,
-    prepTime: '30 mins',
-  },
-  {
-    id: 2,
-    name: 'Dal Makhani',
-    category: 'Vegetarian',
-    price: 180,
-    description: 'Creamy lentil curry slow-cooked with butter and cream',
-    image: 'https://images.pexels.com/photos/5677607/pexels-photo-5677607.jpeg',
-    available: true,
-    prepTime: '25 mins',
-  },
-  {
-    id: 3,
-    name: 'Paneer Tikka',
-    category: 'Appetizers',
-    price: 220,
-    description: 'Marinated cottage cheese grilled to perfection with spices',
-    image: 'https://images.pexels.com/photos/4079520/pexels-photo-4079520.jpeg',
-    available: false,
-    prepTime: '20 mins',
-  },
-];
+const MENU_CATEGORIES = ['All', 'Appetizers', 'Main Course', 'Rice', 'Breads', 'Beverages'];
 
-const CATEGORIES = ['All', 'Appetizers', 'Main Course', 'Vegetarian', 'Beverages', 'Desserts'];
+const SPICE_LEVEL_CONFIG = {
+  mild: { color: COLORS.success, icon: '🟢', label: 'Mild', description: 'Light spices, family-friendly' },
+  medium: { color: COLORS.warning, icon: '🟡', label: 'Medium', description: 'Balanced heat, most popular' },
+  hot: { color: COLORS.danger, icon: '🔴', label: 'Hot', description: 'Spicy kick, for spice lovers' }
+};
 
-export default function Menu() {
+export default function ChefMenuScreen() {
+  const { id } = useLocalSearchParams();
+  const router = useRouter();
+  const { addToCart, cartItems, itemCount, currentChef, canAddFromDifferentChef } = useCart();
+  
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [menuItems, setMenuItems] = useState(SAMPLE_MENU_ITEMS);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [editingItem, setEditingItem] = useState<typeof SAMPLE_MENU_ITEMS[0] | null>(null);
+  const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
+  const [quantity, setQuantity] = useState(1);
+  const [specialInstructions, setSpecialInstructions] = useState('');
+  const [selectedSpiceLevel, setSelectedSpiceLevel] = useState<'mild' | 'medium' | 'hot'>('medium');
+  const [showItemModal, setShowItemModal] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
-  const filteredItems = selectedCategory === 'All' 
-    ? menuItems 
-    : menuItems.filter(item => item.category === selectedCategory);
+  const { isWeb, isDesktop } = getResponsiveDimensions();
+  const chef = SAMPLE_CHEF;
+  const { showSuccess, showError } = useToast();
 
-  const toggleAvailability = (id: number) => {
-    setMenuItems(items => 
-      items.map(item => 
-        item.id === id ? { ...item, available: !item.available } : item
-      )
+  const filteredMenu = selectedCategory === 'All' 
+    ? chef.menu 
+    : chef.menu.filter(item => item.category === selectedCategory);
+
+  const availableMenu = filteredMenu.filter(item => item.available);
+
+  const getItemQuantityInCart = (itemId: string) => {
+    const cartItem = cartItems.find(item => item.menuItem.id === itemId);
+    return cartItem?.quantity || 0;
+  };
+
+  const handleAddToCart = (menuItem: MenuItem, qty: number = 1, instructions?: string) => {
+    if (!canAddFromDifferentChef(chef.id)) {
+      // Handle different chef scenario
+      showError('Different chef', 'Please clear your cart to order from a different chef');
+      return;
+    }
+    
+    addToCart(chef, menuItem, qty, instructions);
+    showSuccess('Added to cart', `${menuItem.name} has been added to your cart`);
+  };
+
+  const handleQuickAdd = (menuItem: MenuItem) => {
+    if (!canAddFromDifferentChef(chef.id)) {
+      showError('Different chef', 'Please clear your cart to order from a different chef');
+      return;
+    }
+    addToCart(chef, menuItem, 1);
+    showSuccess('Added to cart', `${menuItem.name} has been added to your cart`);
+  };
+
+  const openItemModal = (item: MenuItem) => {
+    if (isProcessing) return; // Prevent opening while processing
+    
+    setSelectedItem(item);
+    setQuantity(getItemQuantityInCart(item.id) || 1);
+    setSelectedSpiceLevel(item.spiceLevel);
+    setSpecialInstructions('');
+    setShowItemModal(true);
+  };
+
+  const handleModalAddToCart = async () => {
+    if (isProcessing || !selectedItem) return;
+    
+    setIsProcessing(true);
+    
+    try {
+      const customizedItem = {
+        ...selectedItem,
+        spiceLevel: selectedSpiceLevel
+      };
+      
+      handleAddToCart(customizedItem, quantity, specialInstructions);
+      
+      // Close modal and reset state
+      setShowItemModal(false);
+      setSelectedItem(null);
+      setQuantity(1);
+      setSpecialInstructions('');
+      setSelectedSpiceLevel('medium');
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleCloseModal = () => {
+    if (selectedItem) {
+      setShowItemModal(false);
+      setSelectedItem(null);
+      setQuantity(1);
+      setSpecialInstructions('');
+      setSelectedSpiceLevel('medium');
+    }
+  };
+
+  const renderMenuItem = (item: MenuItem) => {
+    const cartQuantity = getItemQuantityInCart(item.id);
+    const spiceConfig = SPICE_LEVEL_CONFIG[item.spiceLevel];
+
+    return (
+      <TouchableOpacity 
+        key={item.id}
+        style={[styles.menuItemCard, !item.available && styles.unavailableItem]}
+        onPress={() => openItemModal(item)}
+        disabled={!item.available}
+      >
+        <View style={styles.itemContent}>
+          <View style={styles.itemHeader}>
+            <View style={styles.itemTitleSection}>
+              <Text style={styles.itemName}>{item.name}</Text>
+              <Text style={styles.itemPrice}>₹{item.price}</Text>
+            </View>
+          </View>
+          
+          <Text style={styles.itemDescription} numberOfLines={2}>
+            {item.description}
+          </Text>
+
+          <View style={styles.itemMeta}>
+            <View style={styles.ratingContainer}>
+              <Star size={12} color={COLORS.rating} fill={COLORS.rating} />
+              <Text style={styles.rating}>{item.rating}</Text>
+              <Text style={styles.reviewCount}>({item.reviewCount})</Text>
+            </View>
+            <Text style={styles.metaDivider}>•</Text>
+            <View style={styles.prepTime}>
+              <Clock size={12} color={COLORS.text.tertiary} />
+              <Text style={styles.prepTimeText}>{item.preparationTime} min</Text>
+            </View>
+          </View>
+
+          <View style={styles.spiceLevelContainer}>
+            <Text style={styles.spiceIcon}>{spiceConfig.icon}</Text>
+            <Text style={styles.spiceText}>{spiceConfig.label}</Text>
+          </View>
+        </View>
+
+        <View style={styles.itemImageContainer}>
+          <Image source={{ uri: item.image }} style={styles.itemImage} />
+          {!item.available && (
+            <View style={styles.unavailableOverlay}>
+              <Text style={styles.unavailableText}>Out of Stock</Text>
+            </View>
+          )}
+          <View style={styles.vegIndicator}>
+            <View style={[styles.vegDot, { backgroundColor: item.isVeg ? COLORS.success : COLORS.danger }]} />
+          </View>
+          {item.available && (
+            <TouchableOpacity 
+              style={styles.quickAddButton}
+              onPress={(e) => {
+                e.stopPropagation();
+                handleQuickAdd(item);
+              }}
+            >
+              <Plus size={16} color={COLORS.text.white} />
+            </TouchableOpacity>
+          )}
+        </View>
+      </TouchableOpacity>
     );
   };
 
-  const renderMenuItem = (item: typeof SAMPLE_MENU_ITEMS[0]) => (
-    <View key={item.id} style={[styles.menuItem, !item.available && styles.unavailableItem]}>
-      <Image source={{ uri: item.image }} style={styles.itemImage} />
-      <View style={styles.itemContent}>
-        <View style={styles.itemHeader}>
-          <Text style={styles.itemName}>{item.name}</Text>
-          <Text style={styles.itemPrice}>₹{item.price}</Text>
-        </View>
-        <Text style={styles.itemCategory}>{item.category}</Text>
-        <Text style={styles.itemDescription}>{item.description}</Text>
-        <Text style={styles.prepTime}>Prep time: {item.prepTime}</Text>
-        
-        <View style={styles.itemActions}>
-          <TouchableOpacity 
-            style={[styles.availabilityButton, { backgroundColor: item.available ? '#4CAF50' : '#F44336' }]}
-            onPress={() => toggleAvailability(item.id)}
-          >
-            <Text style={styles.availabilityButtonText}>
-              {item.available ? 'Available' : 'Unavailable'}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.actionButton}
-            onPress={() => setEditingItem(item)}
-          >
-            <Edit size={16} color="#FF6B35" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
-            <Trash2 size={16} color="#F44336" />
-          </TouchableOpacity>
-        </View>
-      </View>
-    </View>
-  );
-
-  const AddItemModal = () => (
-    <Modal visible={showAddModal} animationType="slide" presentationStyle="pageSheet">
+  const ItemDetailModal = () => (
+    <Modal 
+      visible={showItemModal} 
+      animationType="slide" 
+      presentationStyle="pageSheet"
+      onRequestClose={handleCloseModal}
+    >
       <SafeAreaView style={styles.modalContainer}>
         <View style={styles.modalHeader}>
-          <Text style={styles.modalTitle}>Add New Dish</Text>
-          <TouchableOpacity onPress={() => setShowAddModal(false)}>
-            <X size={24} color="#2C3E50" />
+          <TouchableOpacity onPress={handleCloseModal}>
+            <X size={24} color={COLORS.text.primary} />
           </TouchableOpacity>
         </View>
-        
-        <ScrollView style={styles.modalContent}>
-          <TouchableOpacity style={styles.imageUpload}>
-            <Camera size={32} color="#7F8C8D" />
-            <Text style={styles.imageUploadText}>Add Photo</Text>
-          </TouchableOpacity>
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Dish Name</Text>
-            <TextInput style={styles.input} placeholder="Enter dish name" />
-          </View>
+        {selectedItem && (
+          <ScrollView style={styles.modalContent}>
+            <Image source={{ uri: selectedItem.image }} style={styles.modalImage} />
+            
+            <View style={styles.modalItemInfo}>
+              <Text style={styles.modalItemName}>{selectedItem.name}</Text>
+              <Text style={styles.modalItemDescription}>{selectedItem.description}</Text>
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Category</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-              {CATEGORIES.slice(1).map((category, index) => (
-                <TouchableOpacity key={index} style={styles.categoryChip}>
-                  <Text style={styles.categoryChipText}>{category}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </View>
+              <View style={styles.quantitySection}>
+                <Text style={styles.quantityLabel}>Quantity</Text>
+                <View style={styles.quantityControls}>
+                  <TouchableOpacity 
+                    style={styles.quantityButton}
+                    onPress={() => {
+                      if (!isProcessing) {
+                        setQuantity(Math.max(1, quantity - 1));
+                      }
+                    }}
+                    disabled={isProcessing}
+                  >
+                    <Minus size={18} color={COLORS.text.primary} />
+                  </TouchableOpacity>
+                  <Text style={styles.quantityText}>{quantity}</Text>
+                  <TouchableOpacity 
+                    style={styles.quantityButton}
+                    onPress={() => {
+                      if (!isProcessing) {
+                        setQuantity(quantity + 1);
+                      }
+                    }}
+                    disabled={isProcessing}
+                  >
+                    <Plus size={18} color={COLORS.text.primary} />
+                  </TouchableOpacity>
+                </View>
+              </View>
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Price (₹)</Text>
-            <TextInput 
-              style={styles.input} 
-              placeholder="Enter price" 
-              keyboardType="numeric"
-            />
-          </View>
+              <View style={styles.spiceLevelSection}>
+                <Text style={styles.spiceLevelLabel}>Spice Level</Text>
+                <View style={styles.spiceLevelOptions}>
+                  {Object.entries(SPICE_LEVEL_CONFIG).map(([level, config]) => (
+                    <TouchableOpacity
+                      key={level}
+                      style={[
+                        styles.spiceLevelOption,
+                        selectedSpiceLevel === level && styles.selectedSpiceLevel
+                      ]}
+                      onPress={() => {
+                        if (!isProcessing) {
+                          setSelectedSpiceLevel(level as 'mild' | 'medium' | 'hot');
+                        }
+                      }}
+                      disabled={isProcessing}
+                    >
+                      <Text style={styles.spiceLevelIcon}>{config.icon}</Text>
+                      <Text style={styles.spiceLevelOptionText}>{config.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Description</Text>
-            <TextInput 
-              style={[styles.input, styles.textArea]} 
-              placeholder="Describe your dish..." 
-              multiline 
-              numberOfLines={3}
-            />
-          </View>
+              <View style={styles.instructionsSection}>
+                <Text style={styles.instructionsLabel}>Special Instructions</Text>
+                <TextInput
+                  style={styles.instructionsInput}
+                  value={specialInstructions}
+                  onChangeText={(text) => {
+                    if (!isProcessing) {
+                      setSpecialInstructions(text);
+                    }
+                  }}
+                  placeholder="Add cooking instructions..."
+                  multiline
+                  numberOfLines={3}
+                  placeholderTextColor={COLORS.text.tertiary}
+                  editable={!isProcessing}
+                />
+              </View>
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Preparation Time</Text>
-            <TextInput style={styles.input} placeholder="e.g., 30 mins" />
-          </View>
-
-          <TouchableOpacity style={styles.addButton}>
-            <Text style={styles.addButtonText}>Add to Menu</Text>
-          </TouchableOpacity>
-        </ScrollView>
+              <TouchableOpacity 
+                style={[
+                  styles.modalAddButton,
+                  isProcessing && styles.disabledModalButton
+                ]} 
+                onPress={handleModalAddToCart}
+                disabled={isProcessing}
+              >
+                <Text style={styles.modalAddButtonText}>
+                  {isProcessing 
+                    ? 'Adding to cart...' 
+                    : `Add ${quantity} to order • ₹${selectedItem.price * quantity}`
+                  }
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        )}
       </SafeAreaView>
     </Modal>
   );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>My Menu</Text>
-        <TouchableOpacity 
-          style={styles.addFab}
-          onPress={() => setShowAddModal(true)}
-        >
-          <Plus size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Category Filter */}
-      <ScrollView 
-        horizontal 
-        showsHorizontalScrollIndicator={false} 
-        style={styles.categoryFilter}
-      >
-        {CATEGORIES.map((category, index) => (
-          <TouchableOpacity
-            key={index}
-            style={[
-              styles.categoryButton,
-              selectedCategory === category && styles.activeCategoryButton
-            ]}
-            onPress={() => setSelectedCategory(category)}
-          >
-            <Text style={[
-              styles.categoryButtonText,
-              selectedCategory === category && styles.activeCategoryButtonText
-            ]}>
-              {category}
-            </Text>
+    <View style={[styles.container, isWeb && styles.webContainer]}>
+      <SafeAreaView style={styles.safeArea}>
+        {/* Header */}
+        <View style={[styles.header, isWeb && styles.webHeader]}>
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+            <ArrowLeft size={24} color={COLORS.text.primary} />
           </TouchableOpacity>
-        ))}
-      </ScrollView>
-
-      <ScrollView showsVerticalScrollIndicator={false} style={styles.menuList}>
-        {filteredItems.length > 0 ? (
-          filteredItems.map(renderMenuItem)
-        ) : (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>No items in this category</Text>
-            <TouchableOpacity 
-              style={styles.emptyStateButton}
-              onPress={() => setShowAddModal(true)}
-            >
-              <Text style={styles.emptyStateButtonText}>Add First Item</Text>
-            </TouchableOpacity>
+          <View style={styles.headerInfo}>
+            <Text style={styles.headerTitle}>{chef.name}</Text>
+            <View style={styles.headerMeta}>
+              <View style={styles.ratingContainer}>
+                <Star size={14} color={COLORS.rating} fill={COLORS.rating} />
+                <Text style={styles.rating}>{chef.rating}</Text>
+              </View>
+              <Text style={styles.metaDivider}>•</Text>
+              <Text style={styles.deliveryTime}>{chef.deliveryTime}</Text>
+              <Text style={styles.metaDivider}>•</Text>
+              <Text style={styles.distance}>{chef.distance}</Text>
+            </View>
           </View>
-        )}
-      </ScrollView>
+          {itemCount > 0 && (
+            <TouchableOpacity 
+              style={styles.cartButton}
+              onPress={() => router.push('/cart' as any)}
+            >
+              <ShoppingCart size={20} color={COLORS.text.primary} />
+              <View style={styles.cartBadge}>
+                <Text style={styles.cartBadgeText}>{itemCount}</Text>
+              </View>
+            </TouchableOpacity>
+          )}
+        </View>
 
-      <AddItemModal />
-    </SafeAreaView>
+        {/* Category Filter */}
+        <View style={styles.categorySection}>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false}
+            style={styles.categoryFilter}
+            contentContainerStyle={styles.categoryContent}
+          >
+            {MENU_CATEGORIES.map((category) => (
+              <TouchableOpacity
+                key={category}
+                style={[
+                  styles.categoryButton,
+                  selectedCategory === category && styles.activeCategoryButton
+                ]}
+                onPress={() => setSelectedCategory(category)}
+              >
+                <Text style={[
+                  styles.categoryButtonText,
+                  selectedCategory === category && styles.activeCategoryButtonText
+                ]}>
+                  {category}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Menu Items */}
+        <ScrollView 
+          showsVerticalScrollIndicator={false} 
+          style={[styles.menuList, isWeb && styles.webMenuList]}
+          contentContainerStyle={isWeb ? styles.webMenuContent : styles.mobileMenuContent}
+        >
+          {availableMenu.length > 0 ? (
+            availableMenu.map(renderMenuItem)
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>No items available</Text>
+              <Text style={styles.emptyStateSubtext}>Try selecting a different category</Text>
+            </View>
+          )}
+        </ScrollView>
+
+        <ItemDetailModal />
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: COLORS.background.primary,
+  },
+  webContainer: {
+    minHeight: '100vh',
+  },
+  safeArea: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    backgroundColor: COLORS.background.primary,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.lg,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: COLORS.border.light,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#2C3E50',
+  webHeader: {
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
+    paddingHorizontal: SPACING.xl,
   },
-  addFab: {
-    backgroundColor: '#FF6B35',
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  backButton: {
+    padding: SPACING.sm,
+    marginRight: SPACING.md,
+  },
+  headerInfo: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: FONT_SIZES.xl,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+    marginBottom: SPACING.xs,
+  },
+  headerMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  ratingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  rating: {
+    marginLeft: SPACING.xs,
+    fontSize: FONT_SIZES.sm,
+    fontWeight: '500',
+    color: COLORS.text.primary,
+  },
+  metaDivider: {
+    marginHorizontal: SPACING.sm,
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.tertiary,
+  },
+  deliveryTime: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.secondary,
+  },
+  distance: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.secondary,
+  },
+  cartButton: {
+    position: 'relative',
+    padding: SPACING.sm,
+    backgroundColor: COLORS.background.secondary,
+    borderRadius: BORDER_RADIUS.md,
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    backgroundColor: COLORS.text.primary,
+    borderRadius: BORDER_RADIUS.round,
+    minWidth: 18,
+    height: 18,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  cartBadgeText: {
+    color: COLORS.text.white,
+    fontSize: FONT_SIZES.xs,
+    fontWeight: '600',
+  },
+  categorySection: {
+    backgroundColor: COLORS.background.primary,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border.light,
+  },
   categoryFilter: {
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 15,
-    paddingLeft: 20,
+    paddingVertical: SPACING.lg,
+  },
+  categoryContent: {
+    paddingHorizontal: SPACING.lg,
   },
   categoryButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 20,
-    marginRight: 12,
-    backgroundColor: '#F8F9FA',
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    marginRight: SPACING.md,
+    backgroundColor: COLORS.background.secondary,
+    borderRadius: BORDER_RADIUS.xxl,
+    borderWidth: 1,
+    borderColor: COLORS.border.light,
   },
   activeCategoryButton: {
-    backgroundColor: '#FF6B35',
+    backgroundColor: COLORS.text.primary,
+    borderColor: COLORS.text.primary,
   },
   categoryButtonText: {
-    fontSize: 14,
-    color: '#7F8C8D',
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.primary,
     fontWeight: '500',
   },
   activeCategoryButtonText: {
-    color: '#FFFFFF',
+    color: COLORS.text.white,
   },
   menuList: {
     flex: 1,
-    padding: 20,
   },
-  menuItem: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    marginBottom: 15,
-    overflow: 'hidden',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+  webMenuList: {
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
+  },
+  mobileMenuContent: {
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.lg,
+  },
+  webMenuContent: {
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.xl,
+  },
+  menuItemCard: {
+    backgroundColor: COLORS.background.primary,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border.light,
+    paddingVertical: SPACING.xl,
+    flexDirection: 'row',
   },
   unavailableItem: {
-    opacity: 0.6,
-  },
-  itemImage: {
-    width: '100%',
-    height: 160,
-    resizeMode: 'cover',
+    opacity: 0.5,
   },
   itemContent: {
-    padding: 15,
+    flex: 1,
+    marginRight: SPACING.lg,
   },
   itemHeader: {
+    marginBottom: SPACING.sm,
+  },
+  itemTitleSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 5,
+    alignItems: 'flex-start',
   },
   itemName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2C3E50',
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '600',
+    color: COLORS.text.primary,
     flex: 1,
+    marginRight: SPACING.md,
   },
   itemPrice: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FF6B35',
-  },
-  itemCategory: {
-    fontSize: 12,
-    color: '#7F8C8D',
-    marginBottom: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '600',
+    color: COLORS.text.primary,
   },
   itemDescription: {
-    fontSize: 14,
-    color: '#555',
+    fontSize: FONT_SIZES.md,
+    color: COLORS.text.secondary,
     lineHeight: 20,
-    marginBottom: 8,
+    marginBottom: SPACING.md,
   },
-  prepTime: {
-    fontSize: 12,
-    color: '#7F8C8D',
-    marginBottom: 15,
-  },
-  itemActions: {
+  itemMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    marginBottom: SPACING.sm,
   },
-  availabilityButton: {
-    flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 6,
+  ratingContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
-  availabilityButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
+  rating: {
+    marginLeft: SPACING.xs,
+    fontSize: FONT_SIZES.sm,
+    fontWeight: '500',
+    color: COLORS.text.primary,
+  },
+  reviewCount: {
+    marginLeft: SPACING.xs,
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.tertiary,
+  },
+  prepTime: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  prepTimeText: {
+    marginLeft: SPACING.xs,
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.tertiary,
+  },
+  spiceLevelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  spiceIcon: {
+    fontSize: 12,
+    marginRight: SPACING.xs,
+  },
+  spiceText: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.tertiary,
+  },
+  itemImageContainer: {
+    position: 'relative',
+  },
+  itemImage: {
+    width: 120,
+    height: 120,
+    borderRadius: BORDER_RADIUS.md,
+    resizeMode: 'cover',
+  },
+  unavailableOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: BORDER_RADIUS.md,
+  },
+  unavailableText: {
+    color: COLORS.text.white,
+    fontSize: FONT_SIZES.sm,
     fontWeight: '600',
   },
-  actionButton: {
-    padding: 8,
-    borderRadius: 6,
-    backgroundColor: '#F8F9FA',
+  vegIndicator: {
+    position: 'absolute',
+    top: SPACING.sm,
+    left: SPACING.sm,
+    width: 16,
+    height: 16,
+    borderRadius: BORDER_RADIUS.sm,
+    backgroundColor: COLORS.background.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border.medium,
+  },
+  vegDot: {
+    width: 8,
+    height: 8,
+    borderRadius: BORDER_RADIUS.sm,
+  },
+  quickAddButton: {
+    position: 'absolute',
+    bottom: SPACING.sm,
+    right: SPACING.sm,
+    backgroundColor: COLORS.text.primary,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
   },
   emptyState: {
     alignItems: 'center',
-    paddingVertical: 60,
+    paddingVertical: SPACING.xxxl * 2,
   },
   emptyStateText: {
-    fontSize: 16,
-    color: '#7F8C8D',
-    marginBottom: 20,
-  },
-  emptyStateButton: {
-    backgroundColor: '#FF6B35',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  emptyStateButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: FONT_SIZES.xl,
     fontWeight: '600',
+    color: COLORS.text.primary,
+    marginBottom: SPACING.sm,
+  },
+  emptyStateSubtext: {
+    fontSize: FONT_SIZES.md,
+    color: COLORS.text.secondary,
+    textAlign: 'center',
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: COLORS.background.primary,
   },
   modalHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.lg,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2C3E50',
+    borderBottomColor: COLORS.border.light,
   },
   modalContent: {
     flex: 1,
-    padding: 20,
   },
-  imageUpload: {
-    height: 200,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+  modalImage: {
+    width: '100%',
+    height: 250,
+    resizeMode: 'cover',
+  },
+  modalItemInfo: {
+    padding: SPACING.xl,
+  },
+  modalItemName: {
+    fontSize: FONT_SIZES.xxl,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+    marginBottom: SPACING.md,
+  },
+  modalItemDescription: {
+    fontSize: FONT_SIZES.md,
+    color: COLORS.text.secondary,
+    lineHeight: 22,
+    marginBottom: SPACING.xl,
+  },
+  quantitySection: {
+    marginBottom: SPACING.xl,
+  },
+  quantityLabel: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+    marginBottom: SPACING.md,
+  },
+  quantityControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.background.secondary,
+    borderRadius: BORDER_RADIUS.xxl,
+    paddingHorizontal: SPACING.md,
+    alignSelf: 'flex-start',
+  },
+  quantityButton: {
+    padding: SPACING.md,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 20,
-    borderWidth: 2,
-    borderColor: '#E0E0E0',
-    borderStyle: 'dashed',
   },
-  imageUploadText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#7F8C8D',
-  },
-  formGroup: {
-    marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
+  quantityText: {
+    fontSize: FONT_SIZES.lg,
     fontWeight: '600',
-    color: '#2C3E50',
-    marginBottom: 8,
+    color: COLORS.text.primary,
+    paddingHorizontal: SPACING.lg,
   },
-  input: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    borderRadius: 8,
+  spiceLevelSection: {
+    marginBottom: SPACING.xl,
+  },
+  spiceLevelLabel: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+    marginBottom: SPACING.md,
+  },
+  spiceLevelOptions: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+  },
+  spiceLevelOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    backgroundColor: COLORS.background.secondary,
+    borderRadius: BORDER_RADIUS.xxl,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
-    fontSize: 16,
-    color: '#2C3E50',
+    borderColor: COLORS.border.light,
+    gap: SPACING.sm,
   },
-  textArea: {
-    height: 80,
-    textAlignVertical: 'top',
+  selectedSpiceLevel: {
+    backgroundColor: COLORS.text.primary,
+    borderColor: COLORS.text.primary,
   },
-  categoryChip: {
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: '#FF6B35',
-  },
-  categoryChipText: {
-    color: '#FF6B35',
+  spiceLevelIcon: {
     fontSize: 14,
+  },
+  spiceLevelOptionText: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.primary,
     fontWeight: '500',
   },
-  addButton: {
-    backgroundColor: '#FF6B35',
-    paddingVertical: 15,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 30,
+  instructionsSection: {
+    marginBottom: SPACING.xl,
   },
-  addButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
+  instructionsLabel: {
+    fontSize: FONT_SIZES.lg,
     fontWeight: '600',
+    color: COLORS.text.primary,
+    marginBottom: SPACING.md,
+  },
+  instructionsInput: {
+    backgroundColor: COLORS.background.secondary,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.lg,
+    fontSize: FONT_SIZES.md,
+    color: COLORS.text.primary,
+    textAlignVertical: 'top',
+    minHeight: 80,
+    borderWidth: 1,
+    borderColor: COLORS.border.light,
+  },
+  modalAddButton: {
+    backgroundColor: COLORS.text.primary,
+    paddingVertical: SPACING.lg,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    marginTop: SPACING.xl,
+  },
+  modalAddButtonText: {
+    color: COLORS.text.white,
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '600',
+  },
+  disabledModalButton: {
+    backgroundColor: COLORS.text.disabled,
+    opacity: 0.6,
   },
 });

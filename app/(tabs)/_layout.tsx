@@ -9,7 +9,8 @@ import { useRouter, usePathname } from 'expo-router';
 import { isFeatureEnabled } from '@/config/featureFlags';
 import { Avatar } from '@/components/ui/Avatar';
 import { getResponsiveDimensions } from '@/utils/responsive';
-import { COLORS, SPACING, BORDER_RADIUS, SHADOWS, FONT_SIZES } from '@/utils/constants';
+import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES } from '@/utils/constants';
+import { NotificationBell } from '@/components/ui/NotificationBell';
 
 function CustomHeader() {
   const [sidebarVisible, setSidebarVisible] = useState(false);
@@ -119,12 +120,13 @@ function CustomHeader() {
       <View style={[styles.header, isWeb && styles.webHeader]}>
         <TouchableOpacity 
           style={styles.menuButton}
-          onPress={() => setSidebarVisible(true)}
+          onPress={() => setSidebarVisible(!sidebarVisible)}
         >
-          <Menu size={24} color="#2C3E50" />
+          <Menu size={24} color={COLORS.text.primary} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, isWeb && styles.webHeaderTitle]}>{getPageTitle()}</Text>
         <View style={styles.headerRight}>
+          <NotificationBell />
         </View>
       </View>
 
@@ -147,9 +149,9 @@ function CustomHeader() {
                   <Avatar 
                     source={{ uri: 'https://images.pexels.com/photos/1674752/pexels-photo-1674752.jpeg' }}
                     name={user?.name}
-                    size="large"
+                    size="medium"
                     showBorder
-                    borderColor={COLORS.text.white}
+                    borderColor={COLORS.border.light}
                   />
                   <View style={styles.profileInfo}>
                     <Text style={styles.userName}>{user?.name || 'User'}</Text>
@@ -161,7 +163,7 @@ function CustomHeader() {
                   style={styles.closeButton}
                   onPress={() => setSidebarVisible(false)}
                 >
-                  <X size={24} color="#FFFFFF" />
+                  <X size={24} color={COLORS.text.tertiary} />
                 </TouchableOpacity>
               </View>
 
@@ -176,8 +178,8 @@ function CustomHeader() {
                       onPress={() => handleNavigation(item.route)}
                     >
                       <item.icon 
-                        size={20} 
-                        color={isActive ? '#FF6B35' : '#7F8C8D'} 
+                        size={22} 
+                        color={isActive ? COLORS.text.primary : COLORS.text.secondary} 
                       />
                       <Text style={[
                         styles.menuItemText,
@@ -196,7 +198,7 @@ function CustomHeader() {
                   style={styles.logoutButton}
                   onPress={handleLogout}
                 >
-                  <LogOut size={20} color="#F44336" />
+                  <LogOut size={22} color={COLORS.text.secondary} />
                   <Text style={styles.logoutText}>Logout</Text>
                 </TouchableOpacity>
               </View>
@@ -262,25 +264,26 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     backgroundColor: COLORS.background.primary,
     paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
+    paddingVertical: SPACING.lg,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border.light,
-    ...SHADOWS.small,
   },
   webHeader: {
+    maxWidth: 1200,
+    alignSelf: 'center',
+    width: '100%',
     paddingHorizontal: SPACING.xl,
-    paddingVertical: SPACING.lg,
   },
   menuButton: {
     padding: SPACING.sm,
   },
   headerTitle: {
-    fontSize: FONT_SIZES.xl,
-    fontWeight: '700',
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '600',
     color: COLORS.text.primary,
   },
   webHeaderTitle: {
-    fontSize: FONT_SIZES.xxl,
+    fontSize: FONT_SIZES.xl,
   },
   headerRight: {
     width: 40,
@@ -301,25 +304,26 @@ const styles = StyleSheet.create({
   },
   modalBackground: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: COLORS.background.overlay,
   },
   webModalBackground: {
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    backgroundColor: COLORS.background.overlay,
   },
   sidebar: {
     backgroundColor: COLORS.background.primary,
-    ...SHADOWS.large,
   },
   webSidebar: {
-    borderTopLeftRadius: BORDER_RADIUS.lg,
-    borderBottomLeftRadius: BORDER_RADIUS.lg,
+    borderLeftWidth: 1,
+    borderLeftColor: COLORS.border.light,
   },
   sidebarContent: {
     flex: 1,
   },
   sidebarHeader: {
-    backgroundColor: COLORS.primary,
-    paddingBottom: SPACING.xl,
+    backgroundColor: COLORS.background.primary,
+    paddingVertical: SPACING.xl,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border.light,
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
@@ -328,7 +332,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: SPACING.xl,
-    paddingTop: SPACING.xl,
     flex: 1,
   },
   profileInfo: {
@@ -336,57 +339,51 @@ const styles = StyleSheet.create({
     marginLeft: SPACING.lg,
   },
   userName: {
-    fontSize: FONT_SIZES.xl,
-    fontWeight: '700',
-    color: COLORS.text.white,
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '600',
+    color: COLORS.text.primary,
     marginBottom: SPACING.xs,
   },
   userRole: {
-    fontSize: FONT_SIZES.md,
-    color: COLORS.primaryLight,
-    fontWeight: '600',
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.secondary,
+    fontWeight: '500',
     marginBottom: SPACING.xs,
   },
   userEmail: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.primaryLight,
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.text.tertiary,
   },
   closeButton: {
     padding: SPACING.md,
-    marginTop: SPACING.sm,
   },
   menuContainer: {
     flex: 1,
-    paddingTop: SPACING.xl,
+    paddingTop: SPACING.lg,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: SPACING.xl,
     paddingVertical: SPACING.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.background.secondary,
   },
   activeMenuItem: {
-    backgroundColor: COLORS.primaryLight,
-    borderRightWidth: 3,
-    borderRightColor: COLORS.primary,
+    backgroundColor: COLORS.background.secondary,
   },
   menuItemText: {
     marginLeft: SPACING.lg,
     fontSize: FONT_SIZES.lg,
-    fontWeight: '600',
+    fontWeight: '500',
     color: COLORS.text.secondary,
   },
   activeMenuItemText: {
-    color: COLORS.primary,
+    color: COLORS.text.primary,
     fontWeight: '600',
   },
   sidebarFooter: {
     borderTopWidth: 1,
     borderTopColor: COLORS.border.light,
-    paddingTop: SPACING.xl,
-    paddingBottom: SPACING.xl,
+    paddingVertical: SPACING.xl,
   },
   logoutButton: {
     flexDirection: 'row',
@@ -397,7 +394,7 @@ const styles = StyleSheet.create({
   logoutText: {
     marginLeft: SPACING.lg,
     fontSize: FONT_SIZES.lg,
-    color: COLORS.danger,
-    fontWeight: '600',
+    color: COLORS.text.secondary,
+    fontWeight: '500',
   },
 });

@@ -40,7 +40,7 @@ interface AuthContextType {
   isLoading: boolean;
   login: (email: string, password: string, role: UserRole) => Promise<void>;
   loginWithOTP: (phoneNumber: string, otp: string, role: UserRole) => Promise<void>;
-  socialLogin: (provider: 'google' | 'facebook', role: UserRole) => Promise<void>;
+  socialLogin: (provider: 'google' | 'facebook' | 'instagram', role: UserRole) => Promise<void>;
   register: (userData: RegisterData) => Promise<void>;
   logout: () => void;
   updateProfile: (data: Partial<User>) => Promise<void>;
@@ -130,7 +130,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
-  const socialLogin = async (provider: 'google' | 'facebook' | 'instagram' | 'twitter', role: UserRole) => {
+  const socialLogin = async (provider: 'google' | 'facebook' | 'instagram', role: UserRole) => {
     setIsLoading(true);
     try {
       const mockToken = `mock-${provider}-token`;

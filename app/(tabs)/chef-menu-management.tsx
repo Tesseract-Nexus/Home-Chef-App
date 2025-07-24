@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Modal, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, CreditCard as Edit, Trash2, Camera, X, Save, Eye, EyeOff, Clock, Star, Flame } from 'lucide-react-native';
+import { Plus, CreditCard as Edit3, Trash2, Camera, X, Save, Eye, EyeOff, Clock, Star, Filter } from 'lucide-react-native';
+import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES, SHADOWS } from '@/utils/constants';
 
 const MENU_CATEGORIES = [
-  'Appetizers', 'Main Course', 'Rice', 'Breads', 'Beverages', 'Desserts', 'Snacks', 'Soups'
+  'All', 'Appetizers', 'Main Course', 'Rice', 'Breads', 'Beverages', 'Desserts'
 ];
 
 const SPICE_LEVELS = [
@@ -219,68 +220,52 @@ export default function ChefMenuManagement() {
   };
 
   const renderMenuItem = (item: MenuItem) => {
-    const spiceConfig = SPICE_LEVELS.find(s => s.id === item.spiceLevel);
-
     return (
-      <View key={item.id} style={[styles.menuItemCard, !item.available && styles.unavailableItem]}>
-        <Image source={{ uri: item.image }} style={styles.itemImage} />
-        
+      <View key={item.id} style={styles.menuItemCard}>
         <View style={styles.itemContent}>
           <View style={styles.itemHeader}>
-            <View style={styles.itemTitleSection}>
-              <Text style={styles.itemName}>{item.name}</Text>
-              <View style={styles.itemMeta}>
-                <View style={styles.vegIndicator}>
-                  <View style={[styles.vegDot, { backgroundColor: item.isVeg ? '#4CAF50' : '#F44336' }]} />
-                </View>
-                <View style={styles.spiceIndicator}>
-                  <Text style={styles.spiceEmoji}>{spiceConfig?.emoji}</Text>
-                </View>
-                <View style={styles.ratingContainer}>
-                  <Star size={12} color="#FFD700" fill="#FFD700" />
-                  <Text style={styles.rating}>{item.rating}</Text>
-                </View>
-              </View>
-            </View>
+            <Text style={styles.itemName}>{item.name}</Text>
             <Text style={styles.itemPrice}>₹{item.price}</Text>
           </View>
-
+          
           <Text style={styles.itemDescription} numberOfLines={2}>{item.description}</Text>
           
-          <View style={styles.itemDetails}>
-            <View style={styles.detailItem}>
-              <Clock size={12} color="#666" />
-              <Text style={styles.detailText}>{item.preparationTime} min</Text>
+          <View style={styles.itemMeta}>
+            <View style={styles.vegIndicator}>
+              <View style={[styles.vegDot, { backgroundColor: item.isVeg ? '#06C167' : '#EF4444' }]} />
             </View>
             <Text style={styles.categoryText}>{item.category}</Text>
+            <Text style={styles.prepTime}>{item.preparationTime} min</Text>
           </View>
 
           <View style={styles.itemActions}>
             <TouchableOpacity 
-              style={[styles.availabilityButton, { backgroundColor: item.available ? '#4CAF50' : '#F44336' }]}
+              style={[styles.availabilityButton, { backgroundColor: item.available ? '#06C167' : '#8E8E93' }]}
               onPress={() => toggleAvailability(item.id)}
             >
-              {item.available ? <Eye size={14} color="#FFFFFF" /> : <EyeOff size={14} color="#FFFFFF" />}
+              {item.available ? <Eye size={12} color="#FFFFFF" /> : <EyeOff size={12} color="#FFFFFF" />}
               <Text style={styles.availabilityText}>
                 {item.available ? 'Available' : 'Hidden'}
               </Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
-              style={styles.editButton}
+              style={styles.actionButton}
               onPress={() => handleEditItem(item)}
             >
-              <Edit size={14} color="#2196F3" />
+              <Edit3 size={14} color={COLORS.text.secondary} />
             </TouchableOpacity>
             
             <TouchableOpacity 
-              style={styles.deleteButton}
+              style={styles.actionButton}
               onPress={() => handleDeleteItem(item.id)}
             >
-              <Trash2 size={14} color="#F44336" />
+              <Trash2 size={14} color={COLORS.text.secondary} />
             </TouchableOpacity>
           </View>
         </View>
+        
+        <Image source={{ uri: item.image }} style={styles.itemImage} />
       </View>
     );
   };
@@ -478,16 +463,17 @@ export default function ChefMenuManagement() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Menu Management</Text>
-        <TouchableOpacity style={styles.addFab} onPress={handleAddItem}>
-          <Plus size={24} color="#FFFFFF" />
+        <TouchableOpacity style={styles.addButton} onPress={handleAddItem}>
+          <Plus size={20} color={COLORS.text.primary} />
         </TouchableOpacity>
       </View>
 
       {/* Category Filter */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryFilter}>
+      <View style={styles.categorySection}>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryFilter}>
         {['All', ...MENU_CATEGORIES].map((category) => (
           <TouchableOpacity
             key={category}
@@ -505,9 +491,10 @@ export default function ChefMenuManagement() {
             </Text>
           </TouchableOpacity>
         ))}
-      </ScrollView>
+        </ScrollView>
+      </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} style={styles.menuList}>
+      <ScrollView showsVerticalScrollIndicator={false} style={styles.content}>
         {filteredItems.length > 0 ? (
           filteredItems.map(renderMenuItem)
         ) : (
@@ -521,225 +508,380 @@ export default function ChefMenuManagement() {
       </ScrollView>
 
       <AddItemModal />
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: COLORS.background.primary,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    backgroundColor: COLORS.background.primary,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.lg,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#2C3E50',
+    fontSize: FONT_SIZES.xxl,
+    fontWeight: '600',
+    color: COLORS.text.primary,
   },
-  addFab: {
-    backgroundColor: '#FF6B35',
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+  addButton: {
+    backgroundColor: COLORS.background.secondary,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  categoryFilter: {
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 8,
-    paddingLeft: 20,
+  categorySection: {
+    backgroundColor: COLORS.background.primary,
+    paddingVertical: SPACING.md,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: COLORS.border.light,
+  },
+  categoryFilter: {
+    paddingLeft: SPACING.lg,
   },
   categoryButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-    marginRight: 6,
-    backgroundColor: '#F8F9FA',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm,
+    borderRadius: BORDER_RADIUS.xxl,
+    marginRight: SPACING.md,
+    backgroundColor: COLORS.background.secondary,
   },
   activeCategoryButton: {
-    backgroundColor: '#FF6B35',
-    borderColor: '#FF6B35',
+    backgroundColor: COLORS.text.primary,
   },
   categoryButtonText: {
-    fontSize: 12,
-    color: '#7F8C8D',
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.primary,
     fontWeight: '500',
   },
   activeCategoryButtonText: {
-    color: '#FFFFFF',
+    color: COLORS.text.white,
   },
-  menuList: {
+  content: {
     flex: 1,
-    padding: 20,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.lg,
   },
   menuItemCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    marginBottom: 16,
-    overflow: 'hidden',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  unavailableItem: {
-    opacity: 0.6,
-  },
-  itemImage: {
-    width: '100%',
-    height: 160,
-    resizeMode: 'cover',
+    flexDirection: 'row',
+    backgroundColor: COLORS.background.primary,
+    borderRadius: BORDER_RADIUS.md,
+    padding: SPACING.lg,
+    marginBottom: SPACING.md,
+    ...SHADOWS.subtle,
   },
   itemContent: {
-    padding: 16,
+    flex: 1,
+    marginRight: SPACING.lg,
   },
   itemHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
-  },
-  itemTitleSection: {
-    flex: 1,
-    marginRight: 12,
+    alignItems: 'center',
+    marginBottom: SPACING.sm,
   },
   itemName: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    marginBottom: 6,
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+    flex: 1,
+  },
+  itemPrice: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+  },
+  itemDescription: {
+    fontSize: FONT_SIZES.md,
+    color: COLORS.text.secondary,
+    lineHeight: 20,
+    marginBottom: SPACING.md,
   },
   itemMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    marginBottom: SPACING.md,
+    gap: SPACING.md,
   },
   vegIndicator: {
-    width: 16,
-    height: 16,
-    borderRadius: 2,
-    borderWidth: 1,
-    borderColor: '#4CAF50',
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: SPACING.xs,
   },
   vegDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  spiceIndicator: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  spiceEmoji: {
-    fontSize: 12,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-  },
-  rating: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#2C3E50',
-  },
-  itemPrice: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FF6B35',
-  },
-  itemDescription: {
-    fontSize: 14,
-    color: '#666',
-    lineHeight: 20,
-    marginBottom: 12,
-  },
-  itemDetails: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-  },
-  detailItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  detailText: {
-    fontSize: 12,
-    color: '#666',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
   },
   categoryText: {
-    fontSize: 12,
-    color: '#7F8C8D',
-    backgroundColor: '#F8F9FA',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.secondary,
+  },
+  prepTime: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.secondary,
   },
   itemActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: SPACING.sm,
   },
   availabilityButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: BORDER_RADIUS.xxl,
+    gap: SPACING.xs,
+  },
+  availabilityText: {
+    color: COLORS.text.white,
+    fontSize: FONT_SIZES.xs,
+    fontWeight: '600',
+  },
+  actionButton: {
+    padding: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+    backgroundColor: COLORS.background.secondary,
+  },
+  itemImage: {
+    width: 80,
+    height: 80,
+    borderRadius: BORDER_RADIUS.md,
+    resizeMode: 'cover',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: SPACING.xxxl * 2,
+  },
+  emptyStateText: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+    marginBottom: SPACING.lg,
+  },
+  emptyStateButton: {
+    backgroundColor: COLORS.text.primary,
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.md,
+    borderRadius: BORDER_RADIUS.xxl,
+  },
+  emptyStateButtonText: {
+    color: COLORS.text.white,
+    fontSize: FONT_SIZES.md,
+    fontWeight: '500',
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: COLORS.background.primary,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border.light,
+  },
+  modalTitle: {
+    fontSize: FONT_SIZES.xl,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+  },
+  modalContent: {
+    flex: 1,
+    padding: SPACING.lg,
+  },
+  imageUpload: {
+    height: 120,
+    backgroundColor: COLORS.background.secondary,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: SPACING.lg,
+    borderWidth: 2,
+    borderColor: COLORS.border.light,
+    borderStyle: 'dashed',
+  },
+  imageUploadText: {
+    marginTop: SPACING.sm,
+    fontSize: FONT_SIZES.md,
+    color: COLORS.text.secondary,
+  },
+  formGroup: {
+    marginBottom: SPACING.lg,
+  },
+  formRow: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+  },
+  halfWidth: {
+    flex: 1,
+  },
+  formLabel: {
+    fontSize: FONT_SIZES.md,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+    marginBottom: SPACING.sm,
+  },
+  formInput: {
+    backgroundColor: COLORS.background.secondary,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    fontSize: FONT_SIZES.md,
+    color: COLORS.text.primary,
+    borderWidth: 1,
+    borderColor: COLORS.border.light,
+  },
+  textArea: {
+    height: 80,
+    textAlignVertical: 'top',
+  },
+  categoryChip: {
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    backgroundColor: COLORS.background.secondary,
+    borderRadius: BORDER_RADIUS.xxl,
+    marginRight: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.border.light,
+  },
+  selectedCategoryChip: {
+    backgroundColor: COLORS.text.primary,
+    borderColor: COLORS.text.primary,
+  },
+  categoryChipText: {
+    color: COLORS.text.primary,
+    fontSize: FONT_SIZES.sm,
+    fontWeight: '500',
+  },
+  selectedCategoryChipText: {
+    color: COLORS.text.white,
+  },
+  dietaryToggle: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
+  dietaryOption: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
-    borderRadius: 8,
-    gap: 4,
+    backgroundColor: COLORS.background.secondary,
+    paddingVertical: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border.light,
+    gap: SPACING.sm,
   },
-  availabilityText: {
-    color: '#FFFFFF',
-    fontSize: 12,
+  selectedDietary: {
+    borderColor: COLORS.text.primary,
+    backgroundColor: COLORS.background.primary,
+  },
+  vegEmoji: {
+    fontSize: 16,
+  },
+  nonVegEmoji: {
+    fontSize: 16,
+  },
+  dietaryText: {
+    fontSize: FONT_SIZES.md,
+    color: COLORS.text.primary,
+    fontWeight: '500',
+  },
+  selectedDietaryText: {
+    color: COLORS.text.primary,
     fontWeight: '600',
   },
-  editButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: '#E3F2FD',
+  spiceLevelContainer: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
   },
-  deleteButton: {
-    padding: 8,
-    borderRadius: 8,
-    backgroundColor: '#FFEBEE',
-  },
-  emptyState: {
+  spiceOption: {
+    flex: 1,
     alignItems: 'center',
-    paddingVertical: 60,
+    backgroundColor: COLORS.background.secondary,
+    paddingVertical: SPACING.md,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border.light,
   },
-  emptyStateText: {
-    fontSize: 16,
-    color: '#7F8C8D',
-    marginBottom: 20,
+  selectedSpiceOption: {
+    borderColor: COLORS.text.primary,
+    backgroundColor: COLORS.background.primary,
   },
-  emptyStateButton: {
-    backgroundColor: '#FF6B35',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
+  addItemContainer: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+    marginBottom: SPACING.md,
   },
-  emptyStateButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
+  addItemInput: {
+    flex: 1,
+    backgroundColor: COLORS.background.secondary,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+    borderWidth: 1,
+    borderColor: COLORS.border.light,
+    fontSize: FONT_SIZES.sm,
+  },
+  addItemButton: {
+    backgroundColor: COLORS.text.primary,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.sm,
+  },
+  tag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.background.secondary,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    borderRadius: BORDER_RADIUS.sm,
+    gap: SPACING.xs,
+  },
+  allergenTag: {
+    backgroundColor: '#FEE2E2',
+  },
+  tagText: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.text.primary,
+    fontWeight: '500',
+  },
+  allergenTagText: {
+    color: '#EF4444',
+  },
+  saveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.text.primary,
+    paddingVertical: SPACING.lg,
+    borderRadius: BORDER_RADIUS.md,
+    gap: SPACING.sm,
+    marginTop: SPACING.lg,
+    marginBottom: SPACING.xl,
+  },
+  saveButtonText: {
+    color: COLORS.text.white,
+    fontSize: FONT_SIZES.lg,
     fontWeight: '600',
   },
   modalContainer: {

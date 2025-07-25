@@ -3,8 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal, Tex
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { getResponsiveDimensions } from '@/utils/responsive';
-import { ArrowLeft, Star, Clock, Plus, Minus, ShoppingCart, X, MapPin, ChevronDown } from 'lucide-react-native';
-import { Bell, BellOff } from 'lucide-react-native';
+import { ArrowLeft, Star, Clock, Plus, Minus, ShoppingCart, X, MapPin, ChevronDown, Bell, BellOff, Info, Share2, EyeOff, Flag } from 'lucide-react-native';
 import { useCart, SAMPLE_CHEF, MenuItem } from '@/hooks/useCart';
 import { useChefSubscriptions } from '@/hooks/useChefSubscriptions';
 import { COLORS, SPACING, FONT_SIZES, SHADOWS, BORDER_RADIUS } from '@/utils/constants';
@@ -31,6 +30,7 @@ export default function ChefMenuScreen() {
   const [selectedSpiceLevel, setSelectedSpiceLevel] = useState<'mild' | 'medium' | 'hot'>('medium');
   const [showItemModal, setShowItemModal] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showChefOptionsModal, setShowChefOptionsModal] = useState(false);
 
   const { isWeb, isDesktop } = getResponsiveDimensions();
   const chef = SAMPLE_CHEF;
@@ -348,6 +348,16 @@ export default function ChefMenuScreen() {
                 {isSubscribed ? 'Subscribed' : 'Subscribe'}
               </Text>
             </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.moreOptionsButton}
+              onPress={() => setShowChefOptionsModal(true)}
+            >
+              <View style={styles.threeDotIcon}>
+                <View style={styles.dot} />
+                <View style={styles.dot} />
+                <View style={styles.dot} />
+              </View>
+            </TouchableOpacity>
           </View>
           {itemCount > 0 && (
             <TouchableOpacity 
@@ -484,6 +494,26 @@ const styles = StyleSheet.create({
   },
   subscribedButtonText: {
     color: COLORS.text.white,
+  },
+  moreOptionsButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F6F6F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: SPACING.sm,
+  },
+  threeDotIcon: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  },
+  dot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: '#8E8E93',
   },
   ratingContainer: {
     flexDirection: 'row',
@@ -868,5 +898,365 @@ const styles = StyleSheet.create({
   disabledModalButton: {
     backgroundColor: COLORS.text.disabled,
     opacity: 0.6,
+  },
+  // Chef Options Bottom Sheet Styles
+  modalOverlay: {
+    flex: 1, 
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalBackground: {
+    flex: 1,
+  },
+  chefOptionsBottomSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingBottom: 34, // Safe area padding
+  },
+  handleBar: {
+    width: 36,
+    height: 4,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  chefOptionsHeader: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  chefOptionsName: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 4,
+  },
+  chefOptionsMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  chefOptionsRating: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#000000',
+    marginLeft: 4,
+  },
+  chefOptionsReviewCount: {
+    fontSize: 14,
+    color: '#8E8E93',
+  },
+  chefOptionsMetaDivider: {
+    marginHorizontal: 8,
+    fontSize: 14,
+    color: '#8E8E93',
+  },
+  chefOptionsDeliveryTime: {
+    fontSize: 14,
+    color: '#8E8E93',
+  },
+  chefOptionsDistance: {
+    fontSize: 14,
+    color: '#8E8E93',
+  },
+  chefOptionsLocationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    gap: 4,
+  },
+  chefOptionsLocation: {
+    fontSize: 14,
+    color: '#8E8E93',
+  },
+  chefOptionsSpecialty: {
+    fontSize: 14,
+    color: '#8E8E93',
+  },
+  chefOptionsContainer: {
+    paddingTop: 8,
+  },
+  chefOptionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    gap: 16,
+  },
+  chefOptionIcon: {
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chefOptionText: {
+    fontSize: 16,
+    color: '#545454',
+    fontWeight: '600',
+  },
+  chefReportOption: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    gap: 16,
+  },
+  chefReportContent: {
+    flex: 1,
+  },
+  chefReportTitle: {
+    fontSize: 16,
+    color: '#545454',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  chefReportSubtitle: {
+    fontSize: 14,
+    color: '#8E8E93',
+    lineHeight: 20,
+  },
+  // Chef Options Bottom Sheet Styles
+  modalOverlay: {
+    flex: 1, 
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalBackground: {
+    flex: 1,
+  },
+  chefOptionsBottomSheet: {
+    backgroundColor: COLORS.background.primary,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingBottom: 34, // Safe area padding
+  },
+  handleBar: {
+    width: 36,
+    height: 4,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  chefOptionsHeader: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  chefOptionsName: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 4,
+  },
+  chefOptionsMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  chefOptionsRating: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#000000',
+    marginLeft: 4,
+  },
+  chefOptionsReviewCount: {
+    fontSize: 14,
+    color: '#8E8E93',
+  },
+  chefOptionsMetaDivider: {
+    marginHorizontal: 8,
+    fontSize: 14,
+    color: '#8E8E93',
+  },
+  chefOptionsDeliveryTime: {
+    fontSize: 14,
+    color: '#8E8E93',
+  },
+  chefOptionsDistance: {
+    fontSize: 14,
+    color: '#8E8E93',
+  },
+  chefOptionsLocationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    gap: 4,
+  },
+  chefOptionsLocation: {
+    fontSize: 14,
+    color: '#8E8E93',
+  },
+  chefOptionsSpecialty: {
+    fontSize: 14,
+    color: '#8E8E93',
+  },
+  chefOptionsContainer: {
+    paddingTop: 8,
+  },
+  chefOptionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    gap: 16,
+  },
+  chefOptionIcon: {
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chefOptionText: {
+    fontSize: 16,
+    color: '#545454',
+    fontWeight: '600',
+  },
+  chefReportOption: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    gap: 16,
+  },
+  chefReportContent: {
+    flex: 1,
+  },
+  chefReportTitle: {
+    fontSize: 16,
+    color: '#545454',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  chefReportSubtitle: {
+    fontSize: 14,
+    color: '#8E8E93',
+    lineHeight: 20,
+  },
+  // Chef Options Bottom Sheet Styles
+  modalOverlay: {
+    flex: 1, 
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalBackground: {
+    flex: 1,
+  },
+  chefOptionsBottomSheet: {
+    backgroundColor: COLORS.background.primary,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingBottom: 34, // Safe area padding
+  },
+  handleBar: {
+    width: 36,
+    height: 4,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  chefOptionsHeader: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  chefOptionsName: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#000000',
+    marginBottom: 4,
+  },
+  chefOptionsMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  chefOptionsRating: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#000000',
+    marginLeft: 4,
+  },
+  chefOptionsReviewCount: {
+    fontSize: 14,
+    color: '#8E8E93',
+  },
+  chefOptionsMetaDivider: {
+    marginHorizontal: 8,
+    fontSize: 14,
+    color: '#8E8E93',
+  },
+  chefOptionsDeliveryTime: {
+    fontSize: 14,
+    color: '#8E8E93',
+  },
+  chefOptionsDistance: {
+    fontSize: 14,
+    color: '#8E8E93',
+  },
+  chefOptionsLocationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+    gap: 4,
+  },
+  chefOptionsLocation: {
+    fontSize: 14,
+    color: '#8E8E93',
+  },
+  chefOptionsSpecialty: {
+    fontSize: 14,
+    color: '#8E8E93',
+  },
+  chefOptionsContainer: {
+    paddingTop: 8,
+  },
+  chefOptionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    gap: 16,
+  },
+  chefOptionIcon: {
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  chefOptionText: {
+    fontSize: 16,
+    color: '#545454',
+    fontWeight: '600',
+  },
+  chefReportOption: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    gap: 16,
+  },
+  chefReportContent: {
+    flex: 1,
+  },
+  chefReportTitle: {
+    fontSize: 16,
+    color: '#545454',
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  chefReportSubtitle: {
+    fontSize: 14,
+    color: '#8E8E93',
+    lineHeight: 20,
   },
 });

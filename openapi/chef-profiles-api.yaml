@@ -1,0 +1,1252 @@
+openapi: 3.0.3
+info:
+  title: HomeChef - Chef Profiles API
+  description: |
+    Comprehensive API for managing chef profiles, customer collections, sharing, hiding, and reporting functionality in the HomeChef platform.
+    
+    ## Features
+    - **Chef Profile Management**: Complete chef information and details
+    - **Customer Collections**: Add/remove chefs from personal collections
+    - **Chef Sharing**: Share chef profiles via multiple methods
+    - **Chef Hiding**: Hide chefs from recommendations
+    - **Reporting System**: Report fraud or bad practices
+    - **Notification Integration**: Real-time updates for all actions
+    
+    ## Security
+    - JWT authentication required for all endpoints
+    - Role-based access control (Customer, Chef, Admin)
+    - Rate limiting on reporting endpoints
+    - Input validation and sanitization
+    
+  version: 1.0.0
+  contact:
+    name: HomeChef API Support
+    email: api-support@homechef.com
+    url: https://docs.homechef.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.homechef.com/v1
+    description: Production server
+  - url: https://staging-api.homechef.com/v1
+    description: Staging server
+  - url: http://localhost:3000/v1
+    description: Development server
+
+security:
+  - BearerAuth: []
+
+paths:
+  /chefs/{chefId}/profile:
+    get:
+      summary: Get chef profile details
+      description: Retrieve comprehensive information about a specific chef including business details, stats, and working hours
+      tags:
+        - Chef Profiles
+      parameters:
+        - name: chefId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Unique identifier for the chef
+          example: "chef_123"
+      responses:
+        '200':
+          description: Chef profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChefProfile'
+        '404':
+          description: Chef not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /customers/{customerId}/collections:
+    get:
+      summary: Get customer's chef collections
+      description: Retrieve all chefs added to customer's collection with notification preferences
+      tags:
+        - Collections
+      parameters:
+        - name: customerId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Customer's unique identifier
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number for pagination
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+          description: Number of items per page
+      responses:
+        '200':
+          description: Collections retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  collections:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ChefCollection'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      summary: Add chef to collection
+      description: Add a chef to customer's personal collection with notification preferences
+      tags:
+        - Collections
+      parameters:
+        - name: customerId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - chefId
+              properties:
+                chefId:
+                  type: string
+                  description: Chef's unique identifier
+                  example: "chef_123"
+                notificationPreferences:
+                  $ref: '#/components/schemas/NotificationPreferences'
+      responses:
+        '201':
+          description: Chef added to collection successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChefCollection'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Chef already in collection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /customers/{customerId}/collections/{chefId}:
+    delete:
+      summary: Remove chef from collection
+      description: Remove a chef from customer's personal collection
+      tags:
+        - Collections
+      parameters:
+        - name: customerId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: chefId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Chef removed from collection successfully
+        '404':
+          description: Chef not found in collection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    patch:
+      summary: Update collection preferences
+      description: Update notification preferences for a chef in customer's collection
+      tags:
+        - Collections
+      parameters:
+        - name: customerId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: chefId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotificationPreferences'
+      responses:
+        '200':
+          description: Preferences updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChefCollection'
+        '404':
+          description: Chef not found in collection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /customers/{customerId}/hidden-chefs:
+    get:
+      summary: Get customer's hidden chefs
+      description: Retrieve list of chefs hidden by the customer
+      tags:
+        - Chef Visibility
+      parameters:
+        - name: customerId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Hidden chefs retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  hiddenChefs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/HiddenChef'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      summary: Hide chef from recommendations
+      description: Hide a chef from customer's recommendations and search results
+      tags:
+        - Chef Visibility
+      parameters:
+        - name: customerId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - chefId
+              properties:
+                chefId:
+                  type: string
+                  description: Chef's unique identifier
+                  example: "chef_123"
+                reason:
+                  type: string
+                  description: Optional reason for hiding
+                  example: "Not interested in this cuisine"
+                  maxLength: 200
+      responses:
+        '201':
+          description: Chef hidden successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HiddenChef'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /customers/{customerId}/hidden-chefs/{chefId}:
+    delete:
+      summary: Unhide chef
+      description: Remove chef from hidden list and show in recommendations again
+      tags:
+        - Chef Visibility
+      parameters:
+        - name: customerId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: chefId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Chef unhidden successfully
+        '404':
+          description: Chef not found in hidden list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /chefs/{chefId}/share:
+    post:
+      summary: Share chef profile
+      description: Generate shareable link or share chef profile via specified method
+      tags:
+        - Chef Sharing
+      parameters:
+        - name: chefId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - method
+              properties:
+                method:
+                  type: string
+                  enum: [link, social, message]
+                  description: Sharing method
+                  example: "link"
+                platform:
+                  type: string
+                  enum: [whatsapp, telegram, facebook, twitter, instagram, email, sms]
+                  description: Specific platform for social/message sharing
+                  example: "whatsapp"
+                customMessage:
+                  type: string
+                  description: Custom message to include with share
+                  maxLength: 280
+                  example: "Check out this amazing chef!"
+      responses:
+        '200':
+          description: Share link generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  shareUrl:
+                    type: string
+                    format: uri
+                    description: Generated share URL
+                    example: "https://homechef.app/chef/chef_123?ref=share_abc123"
+                  shareText:
+                    type: string
+                    description: Pre-formatted share text
+                    example: "Check out Priya Sharma on HomeChef! Specializing in North Indian Cuisine. Rating: 4.8⭐ (234 reviews)"
+                  expiresAt:
+                    type: string
+                    format: date-time
+                    description: Share link expiration time
+                    example: "2024-02-15T10:30:00Z"
+        '400':
+          description: Invalid sharing method or parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Chef not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /reports/chefs:
+    get:
+      summary: Get chef reports (Admin only)
+      description: Retrieve all chef reports with filtering and pagination
+      tags:
+        - Reports
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, investigating, resolved, dismissed]
+          description: Filter by report status
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum: [incorrect_info, poor_quality, hygiene_issues, fake_reviews, pricing_issues, unavailable_items, other]
+          description: Filter by report category
+        - name: priority
+          in: query
+          schema:
+            type: string
+            enum: [low, medium, high, critical]
+          description: Filter by priority level
+        - name: chefId
+          in: query
+          schema:
+            type: string
+          description: Filter reports for specific chef
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [createdAt, updatedAt, priority]
+            default: createdAt
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+      responses:
+        '200':
+          description: Reports retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reports:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ChefReport'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+                  summary:
+                    type: object
+                    properties:
+                      totalReports:
+                        type: integer
+                      pendingReports:
+                        type: integer
+                      resolvedReports:
+                        type: integer
+                      criticalReports:
+                        type: integer
+        '403':
+          description: Access denied - Admin role required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      summary: Submit chef report
+      description: Submit a report about a chef for fraud or bad practices
+      tags:
+        - Reports
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - chefId
+                - category
+                - title
+                - description
+              properties:
+                chefId:
+                  type: string
+                  description: Chef's unique identifier
+                  example: "chef_123"
+                category:
+                  type: string
+                  enum: [incorrect_info, poor_quality, hygiene_issues, fake_reviews, pricing_issues, unavailable_items, other]
+                  description: Report category
+                  example: "incorrect_info"
+                title:
+                  type: string
+                  description: Brief title of the issue
+                  maxLength: 100
+                  example: "Menu prices don't match actual charges"
+                description:
+                  type: string
+                  description: Detailed description of the issue
+                  maxLength: 1000
+                  example: "The menu shows ₹250 for Butter Chicken but I was charged ₹300 during checkout"
+                evidence:
+                  $ref: '#/components/schemas/ReportEvidence'
+      responses:
+        '201':
+          description: Report submitted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChefReport'
+        '400':
+          description: Invalid report data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '429':
+          description: Too many reports submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /reports/chefs/{reportId}:
+    get:
+      summary: Get specific chef report
+      description: Retrieve details of a specific chef report
+      tags:
+        - Reports
+      parameters:
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Report retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChefReport'
+        '404':
+          description: Report not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    patch:
+      summary: Update report status (Admin only)
+      description: Update the status and resolution of a chef report
+      tags:
+        - Reports
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum: [pending, investigating, resolved, dismissed]
+                  description: New report status
+                  example: "resolved"
+                resolution:
+                  type: string
+                  description: Resolution details
+                  maxLength: 500
+                  example: "Issue verified and chef has been notified to update menu prices"
+                assignedTo:
+                  type: string
+                  description: Admin user ID assigned to handle the report
+                  example: "admin_456"
+                priority:
+                  type: string
+                  enum: [low, medium, high, critical]
+                  description: Updated priority level
+                internalNotes:
+                  type: string
+                  description: Internal notes for admin team
+                  maxLength: 1000
+      responses:
+        '200':
+          description: Report updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChefReport'
+        '400':
+          description: Invalid update data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Report not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Access denied - Admin role required
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /chefs/{chefId}/reports:
+    get:
+      summary: Get reports for specific chef
+      description: Retrieve all reports submitted for a specific chef
+      tags:
+        - Reports
+      parameters:
+        - name: chefId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, investigating, resolved, dismissed]
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        '200':
+          description: Chef reports retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reports:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ChefReport'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+                  chefInfo:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      name:
+                        type: string
+                      totalReports:
+                        type: integer
+                      resolvedReports:
+                        type: integer
+                      averageResolutionTime:
+                        type: string
+                        description: Average time to resolve reports
+                        example: "2.5 days"
+        '404':
+          description: Chef not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from authentication endpoint
+
+  schemas:
+    ChefProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique chef identifier
+          example: "chef_123"
+        name:
+          type: string
+          description: Chef's full name
+          example: "Priya Sharma"
+        email:
+          type: string
+          format: email
+          description: Chef's email address
+          example: "priya@homechef.com"
+        phone:
+          type: string
+          description: Chef's phone number
+          example: "+91 98765 43210"
+        image:
+          type: string
+          format: uri
+          description: Chef's profile image URL
+          example: "https://images.homechef.com/chefs/chef_123.jpg"
+        coverImage:
+          type: string
+          format: uri
+          description: Chef's cover image URL
+          example: "https://images.homechef.com/covers/chef_123_cover.jpg"
+        specialty:
+          type: string
+          description: Chef's main specialty
+          example: "North Indian Cuisine"
+        cuisineTypes:
+          type: array
+          items:
+            type: string
+          description: List of cuisine types the chef specializes in
+          example: ["north_indian", "punjabi", "mughlai"]
+        rating:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 5
+          description: Average rating
+          example: 4.8
+        reviewCount:
+          type: integer
+          minimum: 0
+          description: Total number of reviews
+          example: 234
+        location:
+          type: string
+          description: Chef's location/area
+          example: "Bandra West, Mumbai"
+        address:
+          type: string
+          description: Full address
+          example: "123 Linking Road, Bandra West, Mumbai 400050"
+        coordinates:
+          type: object
+          properties:
+            latitude:
+              type: number
+              format: float
+              example: 19.0596
+            longitude:
+              type: number
+              format: float
+              example: 72.8295
+        deliveryTime:
+          type: string
+          description: Estimated delivery time range
+          example: "45-60 min"
+        deliveryFee:
+          type: number
+          minimum: 0
+          description: Delivery fee in rupees
+          example: 25
+        minOrder:
+          type: number
+          minimum: 0
+          description: Minimum order amount in rupees
+          example: 200
+        isOpen:
+          type: boolean
+          description: Whether chef is currently accepting orders
+          example: true
+        description:
+          type: string
+          description: Chef's bio/description
+          example: "Passionate home chef specializing in authentic North Indian cuisine"
+        experience:
+          type: string
+          description: Years of cooking experience
+          example: "8 years"
+        certifications:
+          type: array
+          items:
+            type: string
+          description: List of certifications
+          example: ["FSSAI Certified", "Food Safety Training"]
+        workingHours:
+          type: object
+          additionalProperties:
+            type: object
+            properties:
+              start:
+                type: string
+                pattern: '^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$'
+                example: "10:00"
+              end:
+                type: string
+                pattern: '^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$'
+                example: "22:00"
+              isOpen:
+                type: boolean
+                example: true
+        socialMedia:
+          type: object
+          properties:
+            instagram:
+              type: string
+              example: "@priyaskitchen"
+            facebook:
+              type: string
+              example: "PriyasKitchenMumbai"
+            youtube:
+              type: string
+              example: "PriyasKitchenChannel"
+        businessInfo:
+          type: object
+          properties:
+            fssaiLicense:
+              type: string
+              example: "FSSAI12345678901234"
+            gstNumber:
+              type: string
+              example: "GST123456789"
+            businessType:
+              type: string
+              enum: [individual, partnership, company]
+              example: "individual"
+        stats:
+          type: object
+          properties:
+            totalOrders:
+              type: integer
+              example: 1247
+            repeatCustomers:
+              type: integer
+              example: 456
+            avgRating:
+              type: number
+              format: float
+              example: 4.8
+            responseTime:
+              type: string
+              example: "< 5 minutes"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2023-06-15T10:30:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2024-01-15T14:22:00Z"
+
+    ChefCollection:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique collection entry identifier
+          example: "collection_123"
+        userId:
+          type: string
+          description: Customer's unique identifier
+          example: "user_456"
+        chefId:
+          type: string
+          description: Chef's unique identifier
+          example: "chef_123"
+        chefName:
+          type: string
+          description: Chef's name (cached for performance)
+          example: "Priya Sharma"
+        chefImage:
+          type: string
+          format: uri
+          description: Chef's image URL (cached)
+          example: "https://images.homechef.com/chefs/chef_123.jpg"
+        addedAt:
+          type: string
+          format: date-time
+          description: When chef was added to collection
+          example: "2024-01-15T10:30:00Z"
+        notificationPreferences:
+          $ref: '#/components/schemas/NotificationPreferences'
+
+    NotificationPreferences:
+      type: object
+      properties:
+        newMenuItems:
+          type: boolean
+          description: Notify about new menu items
+          example: true
+        specialOffers:
+          type: boolean
+          description: Notify about special offers and discounts
+          example: true
+        statusUpdates:
+          type: boolean
+          description: Notify about chef status updates
+          example: false
+
+    HiddenChef:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique hidden entry identifier
+          example: "hidden_123"
+        userId:
+          type: string
+          description: Customer's unique identifier
+          example: "user_456"
+        chefId:
+          type: string
+          description: Chef's unique identifier
+          example: "chef_123"
+        hiddenAt:
+          type: string
+          format: date-time
+          description: When chef was hidden
+          example: "2024-01-15T10:30:00Z"
+        reason:
+          type: string
+          description: Optional reason for hiding
+          example: "Not interested in this cuisine"
+
+    ChefReport:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique report identifier
+          example: "report_123"
+        reporterId:
+          type: string
+          description: Reporter's unique identifier
+          example: "user_456"
+        reporterName:
+          type: string
+          description: Reporter's name
+          example: "John Doe"
+        chefId:
+          type: string
+          description: Chef's unique identifier
+          example: "chef_123"
+        chefName:
+          type: string
+          description: Chef's name
+          example: "Priya Sharma"
+        category:
+          type: string
+          enum: [incorrect_info, poor_quality, hygiene_issues, fake_reviews, pricing_issues, unavailable_items, other]
+          description: Report category
+          example: "incorrect_info"
+        title:
+          type: string
+          description: Brief title of the issue
+          example: "Menu prices don't match actual charges"
+        description:
+          type: string
+          description: Detailed description of the issue
+          example: "The menu shows ₹250 for Butter Chicken but I was charged ₹300"
+        evidence:
+          $ref: '#/components/schemas/ReportEvidence'
+        status:
+          type: string
+          enum: [pending, investigating, resolved, dismissed]
+          description: Current status of the report
+          example: "pending"
+        priority:
+          type: string
+          enum: [low, medium, high, critical]
+          description: Priority level
+          example: "medium"
+        assignedTo:
+          type: string
+          description: Admin user ID assigned to handle the report
+          example: "admin_789"
+        resolution:
+          type: string
+          description: Resolution details
+          example: "Issue verified and chef has been notified"
+        internalNotes:
+          type: string
+          description: Internal notes for admin team
+          example: "Verified with order #ORD123"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2024-01-15T10:30:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2024-01-15T14:22:00Z"
+
+    ReportEvidence:
+      type: object
+      properties:
+        images:
+          type: array
+          items:
+            type: string
+            format: uri
+          description: URLs of uploaded evidence images
+          example: ["https://images.homechef.com/evidence/img1.jpg"]
+        orderIds:
+          type: array
+          items:
+            type: string
+          description: Related order IDs as evidence
+          example: ["ORD123", "ORD456"]
+        additionalInfo:
+          type: string
+          description: Additional information or context
+          example: "This happened on multiple occasions"
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          description: Current page number
+          example: 1
+        limit:
+          type: integer
+          description: Items per page
+          example: 20
+        total:
+          type: integer
+          description: Total number of items
+          example: 150
+        totalPages:
+          type: integer
+          description: Total number of pages
+          example: 8
+        hasNext:
+          type: boolean
+          description: Whether there are more pages
+          example: true
+        hasPrev:
+          type: boolean
+          description: Whether there are previous pages
+          example: false
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: Error code
+              example: "CHEF_NOT_FOUND"
+            message:
+              type: string
+              description: Human-readable error message
+              example: "The specified chef could not be found"
+            details:
+              type: object
+              description: Additional error details
+              additionalProperties: true
+            timestamp:
+              type: string
+              format: date-time
+              example: "2024-01-15T10:30:00Z"
+            requestId:
+              type: string
+              description: Unique request identifier for debugging
+              example: "req_abc123"
+
+  responses:
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: "UNAUTHORIZED"
+              message: "Authentication token is required"
+              timestamp: "2024-01-15T10:30:00Z"
+
+    Forbidden:
+      description: Access denied
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: "FORBIDDEN"
+              message: "You don't have permission to access this resource"
+              timestamp: "2024-01-15T10:30:00Z"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: "INTERNAL_SERVER_ERROR"
+              message: "An unexpected error occurred"
+              timestamp: "2024-01-15T10:30:00Z"
+
+tags:
+  - name: Chef Profiles
+    description: Operations related to chef profile management
+  - name: Collections
+    description: Customer chef collections management
+  - name: Chef Visibility
+    description: Hide/unhide chefs from recommendations
+  - name: Chef Sharing
+    description: Share chef profiles via various methods
+  - name: Reports
+    description: Report fraud or bad practices
+
+# API Usage Examples
+x-code-samples:
+  - lang: 'JavaScript'
+    source: |
+      // Add chef to collection
+      const response = await fetch('/api/v1/customers/user_456/collections', {
+        method: 'POST',
+        headers: {
+          'Authorization': 'Bearer your-jwt-token',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          chefId: 'chef_123',
+          notificationPreferences: {
+            newMenuItems: true,
+            specialOffers: true,
+            statusUpdates: false
+          }
+        })
+      });
+      
+      const collection = await response.json();
+      console.log('Chef added to collection:', collection);
+
+  - lang: 'Python'
+    source: |
+      import requests
+      
+      # Report a chef
+      url = "https://api.homechef.com/v1/reports/chefs"
+      headers = {
+          "Authorization": "Bearer your-jwt-token",
+          "Content-Type": "application/json"
+      }
+      data = {
+          "chefId": "chef_123",
+          "category": "incorrect_info",
+          "title": "Menu prices don't match",
+          "description": "Charged more than menu price",
+          "evidence": {
+              "orderIds": ["ORD123"],
+              "additionalInfo": "Happened multiple times"
+          }
+      }
+      
+      response = requests.post(url, headers=headers, json=data)
+      report = response.json()
+      print(f"Report submitted: {report['id']}")
+
+  - lang: 'cURL'
+    source: |
+      # Get chef profile details
+      curl -X GET "https://api.homechef.com/v1/chefs/chef_123/profile" \
+        -H "Authorization: Bearer your-jwt-token" \
+        -H "Content-Type: application/json"

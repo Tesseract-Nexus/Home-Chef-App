@@ -14,6 +14,8 @@ import { ToastProvider } from '@/hooks/useToast';
 import { NotificationsProvider } from '@/hooks/useNotifications';
 import { ChefSubscriptionsProvider } from '@/hooks/useChefSubscriptions';
 import { WorkingHoursProvider } from '@/hooks/useWorkingHours';
+import { ChatOpsProvider } from '@/hooks/useChatOps';
+import { ChefProfilesProvider } from '@/hooks/useChefProfiles';
 import { BORDER_RADIUS } from '@/utils/constants';
 
 export default function RootLayout() {
@@ -32,6 +34,8 @@ export default function RootLayout() {
                   <ChefSubscriptionsProvider>
                     <OrderManagementProvider>
                      <WorkingHoursProvider>
+                       <ChatOpsProvider>
+                         <ChefProfilesProvider>
                   <Stack screenOptions={{ headerShown: false }}>
                     <Stack.Screen name="index" />
                     <Stack.Screen name="auth/login" />
@@ -43,6 +47,8 @@ export default function RootLayout() {
                     <Stack.Screen name="+not-found" />
                   </Stack>
                   <StatusBar style="auto" />
+                         </ChefProfilesProvider>
+                       </ChatOpsProvider>
                      </WorkingHoursProvider>
                     </OrderManagementProvider>
                   </ChefSubscriptionsProvider>

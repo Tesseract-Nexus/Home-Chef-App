@@ -6,6 +6,7 @@ import { StatusIndicator } from '@/components/ui/StatusIndicator';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ContactActions } from '@/components/ui/ContactActions';
 import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS, ICON_SIZES } from '@/utils/constants';
+import { ChatButton } from '@/components/ChatButton';
 
 const AVAILABLE_ORDERS = [
   {
@@ -420,6 +421,15 @@ export default function DeliveryOrdersScreen() {
             variant="horizontal"
             size="small"
           />
+          
+          {/* Chat with Customer/Chef */}
+          <ChatButton
+            orderId={order.id}
+            chatType="customer-delivery"
+            size="small"
+            variant="secondary"
+          />
+          
           <TouchableOpacity 
             style={[styles.acceptButton, isAccepted && styles.acceptedButton]}
             onPress={() => handleAcceptOrder(order.id)}

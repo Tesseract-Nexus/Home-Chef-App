@@ -12,6 +12,7 @@ import { getResponsiveDimensions, getLayoutStyles } from '@/utils/responsive';
 import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES, SHADOWS, ICON_SIZES } from '@/utils/constants';
 import { useToast } from '@/hooks/useToast';
 import { useChefSubscriptions } from '@/hooks/useChefSubscriptions';
+import { ChefProfileModal } from '@/components/ChefProfileModal';
 
 const FEATURED_CHEFS = [
   {
@@ -100,6 +101,8 @@ export default function CustomerHome() {
   const [refreshing, setRefreshing] = useState(false);
   const [favoriteChefs, setFavoriteChefs] = useState<number[]>([]);
   const [fadeAnim] = useState(new Animated.Value(0));
+  const [showChefModal, setShowChefModal] = useState(false);
+  const [selectedChef, setSelectedChef] = useState<typeof FEATURED_CHEFS[0] | null>(null);
   const { user } = useAuth();
   const router = useRouter();
   const { isWeb, isDesktop } = getResponsiveDimensions();
@@ -138,6 +141,11 @@ export default function CustomerHome() {
         showInfo('Removed from favorites', `${chef.name} has been removed from your favorites`);
       }
     }
+  };
+
+  const handleChefPress = (chef: typeof FEATURED_CHEFS[0]) => {
+    // Navigate directly to chef menu page
+    router.push(`/chef/${chef.id}/menu` as any);
   };
 
   const getFilteredChefs = () => {
@@ -183,11 +191,7 @@ export default function CustomerHome() {
     <TouchableOpacity 
       key={chef.id} 
       style={[styles.chefCard, !chef.isOpen && styles.closedChef]}
-      onPress={() => {
-        if (chef.isOpen) {
-          router.push(`/chef/${chef.id}/menu` as any);
-        }
-      }}
+      onPress={() => handleChefPress(chef)}
     >
       <View style={styles.chefImageContainer}>
         <Image source={{ uri: chef.image }} style={styles.chefImage} />
@@ -362,6 +366,28 @@ export default function CustomerHome() {
           <View style={styles.bottomSpacing} />
         </Animated.ScrollView>
       </SafeAreaView>
+      {/* Chef Profile Modal */}
+      {selectedChef && (
+        <ChefProfileModal
+          visible={showChefModal}
+          onClose={() => {
+            setShowChefModal(false);
+            setSelectedChef(null);
+          }}
+          chef={{
+            id: selectedChef.id.toString(),
+            name: selectedChef.name,
+            image: selectedChef.image,
+            specialty: selectedChef.specialty,
+            rating: selectedChef.rating,
+            reviewCount: selectedChef.reviewCount,
+            location: selectedChef.location,
+            distance: selectedChef.distance,
+            deliveryTime: selectedChef.deliveryTime,
+            isOpen: selectedChef.isOpen,
+          }}
+        />
+      )}
     </View>
   );
 }

@@ -7,6 +7,7 @@ import { TabNavigation } from '@/components/ui/TabNavigation';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ContactActions } from '@/components/ui/ContactActions';
 import { COLORS, SPACING, FONT_SIZES, SHADOWS, BORDER_RADIUS } from '@/utils/constants';
+import { ChatButton } from '@/components/ChatButton';
 
 const CHEF_ORDERS = [
   {
@@ -182,6 +183,18 @@ export default function ChefOrders() {
             </View>
           )}
         </View>
+        
+        {/* Chat with Delivery Partner */}
+        {(order.status === 'ready' || order.status === 'preparing') && order.deliveryType === 'third_party' && (
+          <View style={styles.chatSection}>
+            <ChatButton
+              orderId={order.id}
+              chatType="chef-delivery"
+              size="small"
+              variant="outline"
+            />
+          </View>
+        )}
       </View>
     );
   };
@@ -375,5 +388,9 @@ const styles = StyleSheet.create({
     color: '#06C167',
     fontSize: FONT_SIZES.sm,
     fontWeight: '600',
+  },
+  chatSection: {
+    marginTop: SPACING.md,
+    alignItems: 'center',
   },
 });

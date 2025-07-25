@@ -14,6 +14,7 @@ import { useReviews } from '@/hooks/useReviews';
 import { useOrderManagement } from '@/hooks/useOrderManagement';
 import { OrderCountdownTimer } from '@/components/OrderCountdownTimer';
 import { getResponsiveDimensions, getLayoutStyles } from '@/utils/responsive';
+import { ChatButton } from '@/components/ChatButton';
 
 const STATUS_CONFIG = {
   payment_confirmed: { color: '#4CAF50', text: 'Payment Confirmed', icon: CheckCircle },

@@ -300,7 +300,7 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    flexDirection: 'row',
+    flexDirection: 'row-reverse',
   },
   modalBackground: {
     flex: 1,
@@ -313,8 +313,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background.primary,
   },
   webSidebar: {
-    borderLeftWidth: 1,
-    borderLeftColor: COLORS.border.light,
+    borderRightWidth: 1,
+    borderRightColor: COLORS.border.light,
   },
   sidebarContent: {
     flex: 1,

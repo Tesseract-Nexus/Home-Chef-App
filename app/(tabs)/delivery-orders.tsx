@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { MapPin, Clock, DollarSign, Navigation, Phone, MessageCircle, ChevronDown, ChevronUp, Car, CloudRain, Sun, Cloud, Zap, AlertTriangle, CheckCircle } from 'lucide-react-native';
+import { MapPin, Clock, DollarSign, Navigation, Phone, MessageCircle, ChevronDown, ChevronUp, Car, CloudRain, Sun, Cloud, Zap, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle } from 'lucide-react-native';
+import { StatusIndicator } from '@/components/ui/StatusIndicator';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ContactActions } from '@/components/ui/ContactActions';
+import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS, ICON_SIZES } from '@/utils/constants';
 
 const AVAILABLE_ORDERS = [
   {
@@ -201,9 +205,11 @@ export default function DeliveryOrdersScreen() {
         <View style={styles.orderHeader}>
           <View style={styles.orderInfo}>
             <Text style={styles.orderId}>#{order.id}</Text>
-            <View style={[styles.priorityBadge, { backgroundColor: getPriorityColor(order.priority) }]}>
-              <Text style={styles.priorityText}>{order.priority.toUpperCase()}</Text>
-            </View>
+            <StatusIndicator 
+              status={order.priority} 
+              type="general"
+              size="small"
+            />
           </View>
           <Text style={styles.orderTime}>{order.orderTime}</Text>
         </View>
@@ -409,14 +415,11 @@ export default function DeliveryOrdersScreen() {
         </View>
 
         <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.contactButton}>
-            <Phone size={16} color="#FF6B35" />
-            <Text style={styles.contactButtonText}>Call</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.messageButton}>
-            <MessageCircle size={16} color="#2196F3" />
-            <Text style={styles.messageButtonText}>Message</Text>
-          </TouchableOpacity>
+          <ContactActions
+            phone="+91 98765 43210"
+            variant="horizontal"
+            size="small"
+          />
           <TouchableOpacity 
             style={[styles.acceptButton, isAccepted && styles.acceptedButton]}
             onPress={() => handleAcceptOrder(order.id)}
@@ -465,15 +468,15 @@ export default function DeliveryOrdersScreen() {
         {filteredOrders.length > 0 ? (
           filteredOrders.map(renderOrderCard)
         ) : (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>No orders available</Text>
-            <Text style={styles.emptyStateSubtext}>
-              {selectedFilter === 'all' 
+          <EmptyState
+            icon={Truck}
+            title="No orders available"
+            subtitle={
+              selectedFilter === 'all' 
                 ? 'Check back later for new delivery opportunities'
                 : `No ${selectedFilter} priority orders available`
-              }
-            </Text>
-          </View>
+            }
+          />
         )}
       </ScrollView>
     </SafeAreaView>
@@ -564,16 +567,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: 'bold',
     color: '#2C3E50',
-  },
-  priorityBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  priorityText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '600',
   },
   orderTime: {
     fontSize: 14,
@@ -693,34 +686,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
   },
-  contactButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF5F0',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    gap: 4,
-  },
-  contactButtonText: {
-    fontSize: 12,
-    color: '#FF6B35',
-    fontWeight: '600',
-  },
-  messageButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E3F2FD',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    gap: 4,
-  },
-  messageButtonText: {
-    fontSize: 12,
-    color: '#2196F3',
-    fontWeight: '600',
-  },
   acceptButton: {
     flex: 1,
     backgroundColor: '#4CAF50',
@@ -738,22 +703,6 @@ const styles = StyleSheet.create({
   },
   acceptedButtonText: {
     color: '#4CAF50',
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
-  emptyStateText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2C3E50',
-    marginBottom: 8,
-  },
-  emptyStateSubtext: {
-    fontSize: 14,
-    color: '#7F8C8D',
-    textAlign: 'center',
-    paddingHorizontal: 40,
   },
   expandButton: {
     backgroundColor: '#F8F9FA',

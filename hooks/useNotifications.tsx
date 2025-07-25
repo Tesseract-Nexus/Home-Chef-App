@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { Notification } from '@/components/ui/NotificationBell';
 
 export interface Notification {
   id: string;
@@ -92,7 +91,7 @@ export const NotificationsProvider: React.FC<NotificationsProviderProps> = ({ ch
   const addNotification = (notificationData: Omit<Notification, 'id' | 'timestamp'>) => {
     const newNotification: Notification = {
       ...notificationData,
-      id: Date.now().toString(),
+      id: `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       timestamp: new Date(),
     };
 

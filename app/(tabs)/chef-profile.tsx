@@ -1,8 +1,13 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Modal, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Camera, CreditCard as Edit, Save, X, Plus, Star, MapPin, Clock, Award, Users } from 'lucide-react-native';
+import { Camera, CreditCard as Edit, Save, X, Plus, Star, MapPin, Clock, Award, Users, Calendar, ChevronRight, Settings } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
+import { useWorkingHours } from '@/hooks/useWorkingHours';
+import { MetricCard } from '@/components/ui/MetricCard';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { getResponsiveDimensions } from '@/utils/responsive';
+import { COLORS, SPACING, FONT_SIZES, SHADOWS, ICON_SIZES } from '@/utils/constants';
 
 const CUISINE_CATEGORIES = [
   { id: 'north_indian', label: 'North Indian', emoji: '🍛' },
@@ -30,9 +35,21 @@ const DIETARY_PREFERENCES = [
 
 export default function ChefProfile() {
   const { user, updateProfile } = useAuth();
+  const { isWeb, isDesktop } = getResponsiveDimensions();
+  const { 
+    getCurrentWeekSchedule, 
+    getNextWeekSchedule, 
+    updateSchedule, 
+    requestScheduleChange, 
+    canEditCurrentWeek,
+    hasActiveOrders 
+  } = useWorkingHours();
   const [isEditing, setIsEditing] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showDietaryModal, setShowDietaryModal] = useState(false);
+  const [showWorkingHoursModal, setShowWorkingHoursModal] = useState(false);
+  const [showChangeRequestModal, setShowChangeRequestModal] = useState(false);
+  const [changeReason, setChangeReason] = useState('');
   
   const [profileData, setProfileData] = useState({
     name: user?.name || '',
@@ -57,6 +74,10 @@ export default function ChefProfile() {
     achievements: ['Top Rated Chef', '500+ Orders', 'Customer Favorite'],
   });
 
+  const currentWeekSchedule = getCurrentWeekSchedule(user?.id || '');
+  const nextWeekSchedule = getNextWeekSchedule(user?.id || '');
+  const [editingSchedule, setEditingSchedule] = useState<'current' | 'next'>('next');
+  const [tempSchedule, setTempSchedule] = useState(nextWeekSchedule?.schedule || []);
   const [stats] = useState({
     totalOrders: 847,
     rating: 4.8,
@@ -75,6 +96,69 @@ export default function ChefProfile() {
     }
   };
 
+  const handleWorkingHoursEdit = (weekType: 'current' | 'next') => {
+    setEditingSchedule(weekType);
+    const schedule = weekType === 'current' ? currentWeekSchedule : nextWeekSchedule;
+    setTempSchedule(schedule?.schedule || []);
+    setShowWorkingHoursModal(true);
+  };
+
+  const handleSaveWorkingHours = async () => {
+    if (!user) return;
+
+    const schedule = editingSchedule === 'current' ? currentWeekSchedule : nextWeekSchedule;
+    if (!schedule) return;
+
+    // If editing current week and has active orders, show change request modal
+    if (editingSchedule === 'current' && hasActiveOrders(user.id, schedule.weekStartDate)) {
+      setShowWorkingHoursModal(false);
+      setShowChangeRequestModal(true);
+      return;
+    }
+
+    // Update schedule directly for future weeks
+    const success = await updateSchedule(user.id, tempSchedule, schedule.weekStartDate);
+    if (success) {
+      setShowWorkingHoursModal(false);
+      Alert.alert('Success', 'Working hours updated successfully!');
+    } else {
+      Alert.alert('Error', 'Failed to update working hours. Please try again.');
+    }
+  };
+
+  const handleSubmitChangeRequest = async () => {
+    if (!user || !changeReason.trim()) {
+      Alert.alert('Error', 'Please provide a reason for the schedule change');
+      return;
+    }
+
+    const success = await requestScheduleChange(user.id, tempSchedule, changeReason.trim());
+    if (success) {
+      setShowChangeRequestModal(false);
+      setChangeReason('');
+      Alert.alert(
+        'Request Submitted',
+        'Your schedule change request has been sent to admin for approval. You will be notified once reviewed.'
+      );
+    } else {
+      Alert.alert('Error', 'Failed to submit request. Please try again.');
+    }
+  };
+
+  const toggleDayWorking = (dayIndex: number) => {
+    setTempSchedule(prev => prev.map((day, index) => 
+      index === dayIndex ? { ...day, isWorking: !day.isWorking } : day
+    ));
+  };
+
+  const updateDayHours = (dayIndex: number, field: 'start' | 'end', value: string) => {
+    setTempSchedule(prev => prev.map((day, index) => 
+      index === dayIndex 
+        ? { ...day, hours: { ...day.hours, [field]: value } }
+        : day
+    ));
+  };
+
   const toggleSpecialty = (specialtyId: string) => {
     setProfileData(prev => ({
       ...prev,
@@ -82,19 +166,6 @@ export default function ChefProfile() {
         ? prev.specialties.filter(id => id !== specialtyId)
         : [...prev.specialties, specialtyId]
     }));
-  };
-
-  const renderStatCard = (icon: any, label: string, value: string, color: string) => {
-    const IconComponent = icon;
-    return (
-      <View style={styles.statCard}>
-        <View style={[styles.statIcon, { backgroundColor: color + '20' }]}>
-          <IconComponent size={20} color={color} />
-        </View>
-        <Text style={styles.statValue}>{value}</Text>
-        <Text style={styles.statLabel}>{label}</Text>
-      </View>
-    );
   };
 
   const renderSpecialtyChip = (specialtyId: string, isSelected: boolean) => {
@@ -119,6 +190,18 @@ export default function ChefProfile() {
           {specialty.label}
         </Text>
       </TouchableOpacity>
+    );
+  };
+
+  const renderStatCard = (icon: any, label: string, value: string, color: string) => {
+    return (
+      <MetricCard
+        title={label}
+        value={value}
+        icon={icon}
+        color={color}
+        size="small"
+      />
     );
   };
 
@@ -204,7 +287,7 @@ export default function ChefProfile() {
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Chef Profile</Text>
           <TouchableOpacity 
-            style={styles.editButton}
+            style={[styles.editButton, isEditing && styles.editButtonActive]}
             onPress={() => isEditing ? handleSaveProfile() : setIsEditing(true)}
           >
             {isEditing ? (
@@ -269,18 +352,42 @@ export default function ChefProfile() {
 
         {/* Stats Grid */}
         <View style={styles.statsSection}>
-          <Text style={styles.sectionTitle}>Performance Stats</Text>
+          <SectionHeader title="Performance Stats" />
           <View style={styles.statsGrid}>
-            {renderStatCard(Award, 'Total Orders', stats.totalOrders.toString(), '#4CAF50')}
-            {renderStatCard(Star, 'Rating', stats.rating.toString(), '#FFD700')}
-            {renderStatCard(Users, 'Repeat Customers', stats.repeatCustomers.toString(), '#2196F3')}
-            {renderStatCard(Clock, 'Monthly Earnings', `₹${stats.monthlyEarnings.toLocaleString()}`, '#FF6B35')}
+            <MetricCard
+              title="Total Orders"
+              value={stats.totalOrders.toString()}
+              icon={Award}
+              color={COLORS.success}
+              size="small"
+            />
+            <MetricCard
+              title="Rating"
+              value={stats.rating.toString()}
+              icon={Star}
+              color={COLORS.rating}
+              size="small"
+            />
+            <MetricCard
+              title="Repeat Customers"
+              value={stats.repeatCustomers.toString()}
+              icon={Users}
+              color={COLORS.info}
+              size="small"
+            />
+            <MetricCard
+              title="Monthly Earnings"
+              value={`₹${stats.monthlyEarnings.toLocaleString()}`}
+              icon={Clock}
+              color={COLORS.primary}
+              size="small"
+            />
           </View>
         </View>
 
         {/* Bio Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>About Me</Text>
+          <SectionHeader title="About Me" />
           {isEditing ? (
             <TextInput
               style={styles.bioInput}
@@ -297,18 +404,12 @@ export default function ChefProfile() {
 
         {/* Specialties Section */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>My Specialties</Text>
-            {isEditing && (
-              <TouchableOpacity 
-                style={styles.addButton}
-                onPress={() => setShowCategoryModal(true)}
-              >
-                <Plus size={16} color="#FF6B35" />
-                <Text style={styles.addButtonText}>Edit</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+          <SectionHeader
+            title="My Specialties"
+            actionText={isEditing ? "Edit" : undefined}
+            actionIcon={isEditing ? Plus : undefined}
+            onActionPress={isEditing ? () => setShowCategoryModal(true) : undefined}
+          />
           <View style={styles.specialtiesContainer}>
             {profileData.specialties.map(specialtyId => 
               renderSpecialtyChip(specialtyId, true)
@@ -318,17 +419,12 @@ export default function ChefProfile() {
 
         {/* Dietary Preference */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Dietary Preference</Text>
-            {isEditing && (
-              <TouchableOpacity 
-                style={styles.addButton}
-                onPress={() => setShowDietaryModal(true)}
-              >
-                <Edit size={16} color="#FF6B35" />
-              </TouchableOpacity>
-            )}
-          </View>
+          <SectionHeader
+            title="Dietary Preference"
+            actionText={isEditing ? "Edit" : undefined}
+            actionIcon={isEditing ? Edit : undefined}
+            onActionPress={isEditing ? () => setShowDietaryModal(true) : undefined}
+          />
           <View style={styles.dietaryContainer}>
             {DIETARY_PREFERENCES.find(p => p.id === profileData.dietaryPreference) && (
               <View style={styles.dietaryChip}>
@@ -345,7 +441,7 @@ export default function ChefProfile() {
 
         {/* Business Details */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Business Details</Text>
+          <SectionHeader title="Business Details" />
           <View style={styles.businessGrid}>
             <View style={styles.businessItem}>
               <Text style={styles.businessLabel}>Experience</Text>
@@ -408,39 +504,113 @@ export default function ChefProfile() {
         </View>
 
         {/* Working Hours */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Working Hours</Text>
-          <View style={styles.workingHoursContainer}>
-            <View style={styles.timeRow}>
-              <Text style={styles.timeLabel}>Operating Hours:</Text>
-              <Text style={styles.timeValue}>
-                {profileData.workingHours.start} - {profileData.workingHours.end}
-              </Text>
-            </View>
-            <View style={styles.daysContainer}>
-              {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => (
-                <View
-                  key={day}
-                  style={[
-                    styles.dayChip,
-                    profileData.workingDays.includes(day) && styles.activeDayChip
-                  ]}
-                >
-                  <Text style={[
-                    styles.dayText,
-                    profileData.workingDays.includes(day) && styles.activeDayText
-                  ]}>
-                    {day.substring(0, 3)}
-                  </Text>
+        <View style={[styles.section, isWeb && styles.webSection]}>
+          <SectionHeader
+            title="Working Hours"
+            icon={Clock}
+            actionText="Manage"
+            actionIcon={Settings}
+            onActionPress={() => handleWorkingHoursEdit('next')}
+          />
+          
+          {/* Current Week Schedule */}
+          {currentWeekSchedule && (
+            <View style={[styles.scheduleCard, isWeb && styles.webScheduleCard]}>
+              <View style={styles.scheduleHeader}>
+                <View style={styles.scheduleHeaderLeft}>
+                  <Calendar size={16} color={COLORS.text.primary} />
+                  <Text style={styles.scheduleTitle}>This Week</Text>
+                  <View style={styles.weekDates}>
+                    <Text style={styles.weekDatesText}>
+                      {currentWeekSchedule.weekStartDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {currentWeekSchedule.weekEndDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </Text>
+                  </View>
                 </View>
-              ))}
+                <View style={styles.scheduleActions}>
+                  {canEditCurrentWeek(user?.id || '') ? (
+                    <TouchableOpacity 
+                      style={styles.editScheduleButton}
+                      onPress={() => handleWorkingHoursEdit('current')}
+                    >
+                      <Edit size={14} color={COLORS.text.white} />
+                      <Text style={styles.editScheduleText}>Edit</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={styles.lockedSchedule}>
+                      <Text style={styles.lockedText}>🔒 Locked</Text>
+                    </View>
+                  )}
+                </View>
+              </View>
+              <View style={[styles.daysContainer, isWeb && styles.webDaysContainer]}>
+                {currentWeekSchedule.schedule.map((day, index) => (
+                  <View key={day.day} style={[styles.dayChip, day.isWorking && styles.activeDayChip, isWeb && styles.webDayChip]}>
+                    <Text style={[styles.dayText, day.isWorking && styles.activeDayText]}>
+                      {day.day.substring(0, 3).toUpperCase()}
+                    </Text>
+                    {day.isWorking && (
+                      <>
+                        <Text style={styles.dayHours}>
+                          {day.hours.start}
+                        </Text>
+                        <Text style={styles.dayHours}>
+                          {day.hours.end}
+                        </Text>
+                      </>
+                    )}
+                  </View>
+                ))}
+              </View>
             </View>
-          </View>
+          )}
+
+          {/* Next Week Schedule */}
+          {nextWeekSchedule && (
+            <View style={[styles.scheduleCard, isWeb && styles.webScheduleCard]}>
+              <View style={styles.scheduleHeader}>
+                <View style={styles.scheduleHeaderLeft}>
+                  <Calendar size={16} color={COLORS.success} />
+                  <Text style={[styles.scheduleTitle, { color: COLORS.success }]}>Next Week</Text>
+                  <View style={[styles.weekDates, { backgroundColor: COLORS.success + '15' }]}>
+                    <Text style={[styles.weekDatesText, { color: COLORS.success }]}>
+                      {nextWeekSchedule.weekStartDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {nextWeekSchedule.weekEndDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity 
+                  style={[styles.editScheduleButton, { backgroundColor: COLORS.success }]}
+                  onPress={() => handleWorkingHoursEdit('next')}
+                >
+                  <Edit size={14} color={COLORS.text.white} />
+                  <Text style={styles.editScheduleText}>Edit</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={[styles.daysContainer, isWeb && styles.webDaysContainer]}>
+                {nextWeekSchedule.schedule.map((day, index) => (
+                  <View key={day.day} style={[styles.dayChip, day.isWorking && styles.activeDayChip, isWeb && styles.webDayChip]}>
+                    <Text style={[styles.dayText, day.isWorking && styles.activeDayText]}>
+                      {day.day.substring(0, 3).toUpperCase()}
+                    </Text>
+                    {day.isWorking && (
+                      <>
+                        <Text style={styles.dayHours}>
+                          {day.hours.start}
+                        </Text>
+                        <Text style={styles.dayHours}>
+                          {day.hours.end}
+                        </Text>
+                      </>
+                    )}
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
         </View>
 
         {/* Certificates & Achievements */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Certificates & Achievements</Text>
+         <SectionHeader title="Certificates & Achievements" />
           <View style={styles.certificatesContainer}>
             {profileData.certificates.map((cert, index) => (
               <View key={index} style={styles.certificateChip}>
@@ -461,6 +631,152 @@ export default function ChefProfile() {
 
       <CategoryModal />
       <DietaryModal />
+      
+      {/* Working Hours Modal */}
+      <Modal visible={showWorkingHoursModal} animationType="slide" presentationStyle="pageSheet">
+        <SafeAreaView style={[styles.modalContainer, isWeb && styles.webModalContainer]}>
+          <View style={styles.modalHeader}>
+            <View style={styles.modalTitleContainer}>
+              <Clock size={20} color={COLORS.text.primary} />
+              <Text style={styles.modalTitle}>
+                {editingSchedule === 'current' ? 'Current' : 'Next'} Week Schedule
+              </Text>
+            </View>
+            <TouchableOpacity onPress={() => setShowWorkingHoursModal(false)}>
+              <X size={24} color={COLORS.text.primary} />
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView style={[styles.modalContent, isWeb && styles.webModalContent]}>
+            {editingSchedule === 'current' && hasActiveOrders(user?.id || '', currentWeekSchedule?.weekStartDate || new Date()) && (
+              <View style={styles.warningCard}>
+                <View style={styles.warningHeader}>
+                  <View style={styles.warningIcon}>
+                    <Text style={styles.warningEmoji}>⚠️</Text>
+                  </View>
+                  <Text style={styles.warningTitle}>Admin Approval Required</Text>
+                </View>
+                <Text style={styles.warningText}>
+                  This week has active orders. Any changes will require admin approval to prevent customer disruption.
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.instructionsCard}>
+              <View style={styles.instructionsHeader}>
+                <Settings size={16} color={COLORS.text.primary} />
+                <Text style={styles.instructionsTitle}>Schedule Instructions</Text>
+              </View>
+              <Text style={styles.scheduleInstructions}>
+                Set your working hours for each day. Toggle days on/off and adjust timings as needed.
+              </Text>
+            </View>
+
+            <View style={[styles.scheduleEditContainer, isWeb && styles.webScheduleEditContainer]}>
+              {tempSchedule.map((day, index) => (
+                <View key={day.day} style={[styles.dayScheduleCard, isWeb && styles.webDayScheduleCard]}>
+                  <View style={styles.dayScheduleHeader}>
+                    <View style={styles.dayNameContainer}>
+                      <Text style={styles.dayName}>
+                        {day.day.charAt(0).toUpperCase() + day.day.slice(1)}
+                      </Text>
+                      <Text style={styles.dayDate}>
+                        {new Date(Date.now() + index * 24 * 60 * 60 * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      style={[styles.dayToggle, day.isWorking && styles.dayToggleActive]}
+                      onPress={() => toggleDayWorking(index)}
+                    >
+                      <Text style={[styles.dayToggleText, day.isWorking && styles.dayToggleTextActive]}>
+                        {day.isWorking ? 'Open' : 'Closed'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  
+                  {day.isWorking && (
+                    <View style={styles.timeInputs}>
+                      <View style={styles.timeInputGroup}>
+                        <Text style={styles.timeInputLabel}>Opens at</Text>
+                        <TextInput
+                          style={styles.timeInput}
+                          value={day.hours.start}
+                          onChangeText={(text) => updateDayHours(index, 'start', text)}
+                          placeholder="09:00"
+                        />
+                      </View>
+                      <View style={styles.timeInputGroup}>
+                        <Text style={styles.timeInputLabel}>Closes at</Text>
+                        <TextInput
+                          style={styles.timeInput}
+                          value={day.hours.end}
+                          onChangeText={(text) => updateDayHours(index, 'end', text)}
+                          placeholder="21:00"
+                        />
+                      </View>
+                    </View>
+                  )}
+                </View>
+              ))}
+            </View>
+
+            <TouchableOpacity style={[styles.saveScheduleButton, isWeb && styles.webSaveButton]} onPress={handleSaveWorkingHours}>
+              <Save size={20} color={COLORS.text.white} />
+              <Text style={styles.saveScheduleButtonText}>Save Schedule</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      {/* Change Request Modal */}
+      <Modal visible={showChangeRequestModal} animationType="slide" presentationStyle="pageSheet">
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Request Schedule Change</Text>
+            <TouchableOpacity onPress={() => setShowChangeRequestModal(false)}>
+              <X size={24} color="#2C3E50" />
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView style={styles.modalContent}>
+            <View style={styles.requestWarning}>
+              <Text style={styles.requestWarningTitle}>Admin Approval Required</Text>
+              <Text style={styles.requestWarningText}>
+                Since this week has active orders, your schedule change requires admin approval to ensure customer orders are not affected.
+              </Text>
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.formLabel}>Reason for Change *</Text>
+              <TextInput
+                style={[styles.formInput, styles.textArea]}
+                value={changeReason}
+                onChangeText={setChangeReason}
+                placeholder="Please explain why you need to change your working hours..."
+                multiline
+                numberOfLines={4}
+                maxLength={300}
+              />
+              <Text style={styles.characterCount}>{changeReason.length}/300</Text>
+            </View>
+
+            <View style={styles.requestButtons}>
+              <TouchableOpacity 
+                style={styles.cancelRequestButton}
+                onPress={() => setShowChangeRequestModal(false)}
+              >
+                <Text style={styles.cancelRequestButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.submitRequestButton}
+                onPress={handleSubmitChangeRequest}
+              >
+                <Text style={styles.submitRequestButtonText}>Submit Request</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -492,6 +808,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     gap: 6,
+    backgroundColor: '#FFF5F0',
+    borderWidth: 1,
+    borderColor: '#FF6B35',
+  },
+  editButtonActive: {
+    backgroundColor: '#FF6B35',
   },
   editButtonText: {
     color: '#FFFFFF',
@@ -586,54 +908,23 @@ const styles = StyleSheet.create({
   locationContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 4,
   },
   location: {
-    marginLeft: 4,
     fontSize: 14,
-    color: '#666',
+    color: '#7F8C8D',
   },
   statsSection: {
     backgroundColor: '#FFFFFF',
-    margin: 20,
+    marginHorizontal: 20,
+    marginBottom: 20,
     borderRadius: 16,
     padding: 20,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    marginBottom: 16,
   },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
-  },
-  statCard: {
-    width: '48%',
-    alignItems: 'center',
-    backgroundColor: '#F8F9FA',
-    paddingVertical: 16,
-    borderRadius: 12,
-  },
-  statIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#7F8C8D',
-    textAlign: 'center',
   },
   section: {
     backgroundColor: '#FFFFFF',
@@ -642,25 +933,10 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: '#FFF5F0',
-    borderRadius: 12,
-    gap: 4,
-  },
-  addButtonText: {
-    fontSize: 12,
-    color: '#FF6B35',
-    fontWeight: '600',
+  webSection: {
+    maxWidth: 800,
+    alignSelf: 'center',
+    width: '100%',
   },
   bioInput: {
     borderWidth: 1,
@@ -745,8 +1021,8 @@ const styles = StyleSheet.create({
   businessLabel: {
     fontSize: 12,
     color: '#7F8C8D',
-    marginBottom: 6,
     fontWeight: '600',
+    marginBottom: 4,
   },
   businessInput: {
     fontSize: 16,
@@ -761,52 +1037,120 @@ const styles = StyleSheet.create({
     color: '#2C3E50',
     fontWeight: '600',
   },
-  workingHoursContainer: {
-    backgroundColor: '#F8F9FA',
-    padding: 16,
+  scheduleCard: {
+    backgroundColor: COLORS.background.primary,
     borderRadius: 12,
+    padding: SPACING.xl,
+    marginBottom: SPACING.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border.light,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
-  timeRow: {
+  webScheduleCard: {
+    padding: SPACING.xl * 1.5,
+  },
+  scheduleHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: SPACING.lg,
   },
-  timeLabel: {
-    fontSize: 14,
-    color: '#7F8C8D',
+  scheduleHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+    flex: 1,
+  },
+  scheduleTitle: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+  },
+  weekDates: {
+    backgroundColor: COLORS.background.secondary,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  weekDatesText: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.text.secondary,
+    fontWeight: '500',
+  },
+  scheduleActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  editScheduleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.text.primary,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: 20,
+    gap: SPACING.xs,
+  },
+  editScheduleText: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.white,
     fontWeight: '600',
   },
-  timeValue: {
-    fontSize: 16,
-    color: '#2C3E50',
+  lockedSchedule: {
+    backgroundColor: COLORS.background.secondary,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: 20,
+  },
+  lockedText: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.secondary,
     fontWeight: '600',
   },
   daysContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: SPACING.sm,
+  },
+  webDaysContainer: {
+    gap: SPACING.md,
   },
   dayChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    flex: 1,
+    minWidth: 80,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.lg,
+    backgroundColor: COLORS.background.secondary,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: COLORS.border.light,
+    alignItems: 'center',
   },
   activeDayChip: {
-    backgroundColor: '#4CAF50',
-    borderColor: '#4CAF50',
+    backgroundColor: COLORS.text.primary,
+    borderColor: COLORS.text.primary,
+  },
+  webDayChip: {
+    minWidth: 100,
+    paddingVertical: SPACING.xl,
   },
   dayText: {
-    fontSize: 12,
-    color: '#7F8C8D',
-    fontWeight: '500',
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.secondary,
+    fontWeight: '600',
+    marginBottom: SPACING.xs,
   },
   activeDayText: {
-    color: '#FFFFFF',
+    color: COLORS.text.white,
     fontWeight: '600',
+  },
+  dayHours: {
+    fontSize: FONT_SIZES.xs,
+    color: COLORS.text.white,
+    fontWeight: '500',
   },
   certificatesContainer: {
     flexDirection: 'row',
@@ -850,6 +1194,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8F9FA',
   },
+  webModalContainer: {
+    maxWidth: 600,
+    alignSelf: 'center',
+    width: '100%',
+  },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -865,15 +1214,192 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#2C3E50',
   },
+  modalTitleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.sm,
+  },
   modalContent: {
     flex: 1,
     padding: 20,
+  },
+  webModalContent: {
+    paddingHorizontal: SPACING.xl * 2,
   },
   modalSubtitle: {
     fontSize: 16,
     color: '#7F8C8D',
     marginBottom: 20,
     textAlign: 'center',
+  },
+  warningCard: {
+    backgroundColor: '#FFF3E0',
+    borderLeftWidth: 4,
+    borderLeftColor: COLORS.warning,
+    padding: SPACING.xl,
+    borderRadius: 12,
+    marginBottom: SPACING.xl,
+  },
+  warningHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.md,
+    gap: SPACING.sm,
+  },
+  warningIcon: {
+    width: 32,
+    height: 32,
+    backgroundColor: COLORS.warning + '20',
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  warningEmoji: {
+    fontSize: 16,
+  },
+  warningTitle: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '600',
+    color: COLORS.warning,
+  },
+  warningText: {
+    fontSize: FONT_SIZES.md,
+    color: COLORS.warning,
+    lineHeight: 20,
+  },
+  instructionsCard: {
+    backgroundColor: COLORS.background.secondary,
+    padding: SPACING.lg,
+    borderRadius: 12,
+    marginBottom: SPACING.xl,
+  },
+  instructionsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: SPACING.sm,
+    gap: SPACING.sm,
+  },
+  instructionsTitle: {
+    fontSize: FONT_SIZES.md,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+  },
+  scheduleInstructions: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.secondary,
+    lineHeight: 18,
+  },
+  scheduleEditContainer: {
+    gap: SPACING.md,
+    marginBottom: SPACING.xl,
+  },
+  webScheduleEditContainer: {
+    gap: SPACING.lg,
+  },
+  dayScheduleCard: {
+    backgroundColor: COLORS.background.primary,
+    borderRadius: 12,
+    padding: SPACING.xl,
+    borderWidth: 1,
+    borderColor: COLORS.border.light,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  webDayScheduleCard: {
+    padding: SPACING.xl * 1.5,
+  },
+  dayScheduleHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: SPACING.lg,
+  },
+  dayNameContainer: {
+    flex: 1,
+  },
+  dayName: {
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '600',
+    color: COLORS.text.primary,
+    marginBottom: SPACING.xs,
+  },
+  dayDate: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.secondary,
+  },
+  dayToggle: {
+    backgroundColor: COLORS.background.secondary,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORS.border.light,
+  },
+  dayToggleActive: {
+    backgroundColor: COLORS.text.primary,
+    borderColor: COLORS.text.primary,
+  },
+  dayToggleText: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.secondary,
+    fontWeight: '600',
+  },
+  dayToggleTextActive: {
+    color: COLORS.text.white,
+  },
+  timeInputs: {
+    flexDirection: 'row',
+    gap: SPACING.lg,
+    backgroundColor: COLORS.background.secondary,
+    padding: SPACING.lg,
+    borderRadius: 12,
+  },
+  timeInputGroup: {
+    flex: 1,
+  },
+  timeInputLabel: {
+    fontSize: FONT_SIZES.sm,
+    color: COLORS.text.secondary,
+    marginBottom: SPACING.sm,
+    fontWeight: '600',
+  },
+  timeInput: {
+    backgroundColor: COLORS.background.primary,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.lg,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border.light,
+    fontSize: FONT_SIZES.lg,
+    color: COLORS.text.primary,
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  saveScheduleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: COLORS.text.primary,
+    paddingVertical: SPACING.xl,
+    borderRadius: 12,
+    gap: SPACING.sm,
+    marginBottom: SPACING.xl * 2,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  webSaveButton: {
+    paddingVertical: SPACING.xl * 1.5,
+  },
+  saveScheduleButtonText: {
+    color: COLORS.text.white,
+    fontSize: FONT_SIZES.lg,
+    fontWeight: '600',
   },
   categoryGrid: {
     flexDirection: 'row',
@@ -934,6 +1460,83 @@ const styles = StyleSheet.create({
   },
   selectedDietaryText: {
     color: '#2196F3',
+    fontWeight: '600',
+  },
+  requestWarning: {
+    backgroundColor: '#FFEBEE',
+    borderLeftWidth: 4,
+    borderLeftColor: '#F44336',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 20,
+  },
+  requestWarningTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#D32F2F',
+    marginBottom: 6,
+  },
+  requestWarningText: {
+    fontSize: 14,
+    color: '#D32F2F',
+    lineHeight: 20,
+  },
+  formGroup: {
+    marginBottom: 20,
+  },
+  formLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#2C3E50',
+    marginBottom: 8,
+  },
+  formInput: {
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: '#2C3E50',
+  },
+  textArea: {
+    textAlignVertical: 'top',
+    minHeight: 100,
+  },
+  characterCount: {
+    fontSize: 12,
+    color: '#7F8C8D',
+    textAlign: 'right',
+    marginTop: 4,
+  },
+  requestButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 20,
+  },
+  cancelRequestButton: {
+    flex: 1,
+    backgroundColor: '#F8F9FA',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  cancelRequestButtonText: {
+    color: '#7F8C8D',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  submitRequestButton: {
+    flex: 1,
+    backgroundColor: '#F44336',
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  submitRequestButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
     fontWeight: '600',
   },
 });

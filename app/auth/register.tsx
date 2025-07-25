@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@/hooks/useAuth';
 import { ChefHat, Upload, FileText, ArrowLeft } from 'lucide-react-native';
 import { getResponsiveDimensions } from '@/utils/responsive';
-import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES } from '@/utils/constants';
+import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '@/utils/constants';
 
 const INDIAN_STATES = [
   'Andhra Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Delhi', 'Goa', 'Gujarat',
@@ -159,9 +159,6 @@ export default function Register() {
               <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                 <ArrowLeft size={24} color={COLORS.text.primary} />
               </TouchableOpacity>
-             <TouchableOpacity style={styles.homeButton} onPress={() => router.push('/')}>
-               <Text style={styles.homeButtonText}>← Home</Text>
-             </TouchableOpacity>
               <Text style={[styles.title, isWeb && styles.webTitle]}>Create account</Text>
               <Text style={[styles.subtitle, isWeb && styles.webSubtitle]}>
                 Join HomeChef and start your food journey
@@ -196,7 +193,7 @@ export default function Register() {
                     onPress={() => router.push('/auth/delivery-onboarding')}
                   >
                     <Text style={styles.roleEmoji}>🚚</Text>
-                    <Text style={[styles.roleText, userType === 'delivery_partner' && styles.selectedRoleText]}>
+                    <Text style={styles.roleText}>
                       Delivery
                     </Text>
                   </TouchableOpacity>
@@ -209,7 +206,7 @@ export default function Register() {
                 <View style={styles.socialButtons}>
                 <TouchableOpacity
                   style={[styles.socialIconButton, isWeb && styles.webSocialIconButton]}
-                  onPress={() => handleSocialLogin('google')}
+                  onPress={() => {/* handleSocialLogin('google') */}}
                   disabled={isLoading}
                 >
                   <View style={styles.googleIcon}>
@@ -219,7 +216,7 @@ export default function Register() {
 
                 <TouchableOpacity
                   style={[styles.socialIconButton, isWeb && styles.webSocialIconButton]}
-                  onPress={() => handleSocialLogin('facebook')}
+                  onPress={() => {/* handleSocialLogin('facebook') */}}
                   disabled={isLoading}
                 >
                   <View style={styles.facebookIcon}>
@@ -229,7 +226,7 @@ export default function Register() {
 
                 <TouchableOpacity
                   style={[styles.socialIconButton, isWeb && styles.webSocialIconButton]}
-                  onPress={() => handleSocialLogin('instagram')}
+                  onPress={() => {/* handleSocialLogin('instagram') */}}
                   disabled={isLoading}
                 >
                   <View style={styles.instagramIcon}>
@@ -542,21 +539,6 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     padding: SPACING.sm,
     marginBottom: SPACING.lg,
-  },
-  homeButton: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    marginBottom: SPACING.lg,
-    backgroundColor: COLORS.background.secondary,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border.light,
-  },
-  homeButtonText: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.text.primary,
-    fontWeight: '500',
   },
   title: {
     fontSize: FONT_SIZES.xxxl,

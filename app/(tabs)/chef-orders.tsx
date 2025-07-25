@@ -2,7 +2,11 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Clock, Check, X, Phone, MessageCircle, MapPin, Star } from 'lucide-react-native';
-import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES, SHADOWS } from '@/utils/constants';
+import { StatusIndicator } from '@/components/ui/StatusIndicator';
+import { TabNavigation } from '@/components/ui/TabNavigation';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ContactActions } from '@/components/ui/ContactActions';
+import { COLORS, SPACING, FONT_SIZES, SHADOWS, BORDER_RADIUS } from '@/utils/constants';
 
 const CHEF_ORDERS = [
   {
@@ -123,9 +127,7 @@ export default function ChefOrders() {
       <View key={order.id} style={styles.orderCard}>
         <View style={styles.orderHeader}>
           <Text style={styles.orderId}>#{order.id}</Text>
-          <View style={[styles.statusBadge, { backgroundColor: statusConfig.color }]}>
-            <Text style={styles.statusText}>{statusConfig.text}</Text>
-          </View>
+          <StatusIndicator status={order.status} type="order" />
         </View>
 
         <Text style={styles.customerName}>{order.customerName}</Text>
@@ -191,45 +193,36 @@ export default function ChefOrders() {
       </View>
 
       {/* Tab Navigation */}
-      <View style={styles.tabSection}>
-        <View style={styles.tabContainer}>
-        <TouchableOpacity
-          style={[styles.tab, selectedTab === 'active' && styles.activeTab]}
-          onPress={() => setSelectedTab('active')}
-        >
-          <Text style={[styles.tabText, selectedTab === 'active' && styles.activeTabText]}>
-            Active ({activeOrders.length})
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, selectedTab === 'completed' && styles.activeTab]}
-          onPress={() => setSelectedTab('completed')}
-        >
-          <Text style={[styles.tabText, selectedTab === 'completed' && styles.activeTabText]}>
-            Completed ({completedOrders.length})
-          </Text>
-        </TouchableOpacity>
-        </View>
-      </View>
+      <TabNavigation
+        variant="pills"
+        tabs={[
+          { id: 'active', label: 'Active', count: activeOrders.length },
+          { id: 'completed', label: 'Completed', count: completedOrders.length },
+        ]}
+        selectedTab={selectedTab}
+        onTabChange={(tab) => setSelectedTab(tab as 'active' | 'completed')}
+      />
 
       <ScrollView showsVerticalScrollIndicator={false} style={styles.ordersList}>
         {selectedTab === 'active' ? (
           activeOrders.length > 0 ? (
             activeOrders.map(renderOrderCard)
           ) : (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>No active orders</Text>
-              <Text style={styles.emptyStateSubtext}>New orders will appear here</Text>
-            </View>
+            <EmptyState
+              icon={Clock}
+              title="No active orders"
+              subtitle="New orders will appear here"
+            />
           )
         ) : (
           completedOrders.length > 0 ? (
             completedOrders.map(renderOrderCard)
           ) : (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>No completed orders</Text>
-              <Text style={styles.emptyStateSubtext}>Completed orders will appear here</Text>
-            </View>
+            <EmptyState
+              icon={Check}
+              title="No completed orders"
+              subtitle="Completed orders will appear here"
+            />
           )
         )}
       </ScrollView>
@@ -252,34 +245,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.text.primary,
   },
-  tabSection: {
-    backgroundColor: COLORS.background.primary,
-    paddingHorizontal: SPACING.lg,
-    paddingBottom: SPACING.md,
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.background.secondary,
-    borderRadius: BORDER_RADIUS.md,
-    padding: 4,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: SPACING.md,
-    alignItems: 'center',
-    borderRadius: BORDER_RADIUS.sm,
-  },
-  activeTab: {
-    backgroundColor: COLORS.text.primary,
-  },
-  tabText: {
-    fontSize: FONT_SIZES.sm,
-    color: COLORS.text.secondary,
-    fontWeight: '600',
-  },
-  activeTabText: {
-    color: COLORS.text.white,
-  },
   ordersList: {
     flex: 1,
     paddingHorizontal: SPACING.lg,
@@ -301,16 +266,6 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.lg,
     fontWeight: '600',
     color: COLORS.text.primary,
-  },
-  statusBadge: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.sm,
-  },
-  statusText: {
-    color: COLORS.text.white,
-    fontSize: FONT_SIZES.xs,
-    fontWeight: '600',
   },
   customerName: {
     fontSize: FONT_SIZES.md,
@@ -420,20 +375,5 @@ const styles = StyleSheet.create({
     color: '#06C167',
     fontSize: FONT_SIZES.sm,
     fontWeight: '600',
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: SPACING.xxxl * 2,
-  },
-  emptyStateText: {
-    fontSize: FONT_SIZES.xl,
-    fontWeight: '600',
-    color: COLORS.text.primary,
-    marginBottom: SPACING.sm,
-  },
-  emptyStateSubtext: {
-    fontSize: FONT_SIZES.md,
-    color: COLORS.text.secondary,
-    textAlign: 'center',
   },
 });

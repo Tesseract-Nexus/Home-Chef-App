@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert,
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ArrowLeft, Upload, FileText, Check, X, Camera, Shield, TriangleAlert as AlertTriangle } from 'lucide-react-native';
+import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES } from '@/utils/constants';
 
 const REQUIRED_DOCUMENTS = [
   {

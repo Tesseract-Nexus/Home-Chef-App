@@ -4,8 +4,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { getResponsiveDimensions } from '@/utils/responsive';
 import { ArrowLeft, Star, Clock, Plus, Minus, ShoppingCart, X, MapPin, ChevronDown } from 'lucide-react-native';
+import { Bell, BellOff } from 'lucide-react-native';
 import { useCart, SAMPLE_CHEF, MenuItem } from '@/hooks/useCart';
-import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES, SHADOWS } from '@/utils/constants';
+import { useChefSubscriptions } from '@/hooks/useChefSubscriptions';
+import { COLORS, SPACING, FONT_SIZES, SHADOWS, BORDER_RADIUS } from '@/utils/constants';
 import { useToast } from '@/hooks/useToast';
 
 const MENU_CATEGORIES = ['All', 'Appetizers', 'Main Course', 'Rice', 'Breads', 'Beverages'];
@@ -20,6 +22,7 @@ export default function ChefMenuScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { addToCart, cartItems, itemCount, currentChef, canAddFromDifferentChef } = useCart();
+  const { subscribeToChef, unsubscribeFromChef, isSubscribedToChef } = useChefSubscriptions();
   
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
@@ -32,6 +35,7 @@ export default function ChefMenuScreen() {
   const { isWeb, isDesktop } = getResponsiveDimensions();
   const chef = SAMPLE_CHEF;
   const { showSuccess, showError } = useToast();
+  const isSubscribed = isSubscribedToChef(chef.id);
 
   const filteredMenu = selectedCategory === 'All' 
     ? chef.menu 
@@ -110,6 +114,19 @@ export default function ChefMenuScreen() {
     }
   };
 
+  const handleSubscriptionToggle = async () => {
+    try {
+      if (isSubscribed) {
+        await unsubscribeFromChef(chef.id);
+        showSuccess('Unsubscribed', `You will no longer receive notifications from ${chef.name}`);
+      } else {
+        await subscribeToChef(chef.id, chef.name, chef.image);
+        showSuccess('Subscribed!', `You'll now get notified about new dishes and offers from ${chef.name}`);
+      }
+    } catch (error) {
+      showError('Error', 'Failed to update subscription. Please try again.');
+    }
+  };
   const renderMenuItem = (item: MenuItem) => {
     const cartQuantity = getItemQuantityInCart(item.id);
     const spiceConfig = SPICE_LEVEL_CONFIG[item.spiceLevel];
@@ -314,6 +331,24 @@ export default function ChefMenuScreen() {
               <Text style={styles.distance}>{chef.distance}</Text>
             </View>
           </View>
+          <View style={styles.headerActions}>
+            <TouchableOpacity 
+              style={[styles.subscribeButton, isSubscribed && styles.subscribedButton]}
+              onPress={handleSubscriptionToggle}
+            >
+              {isSubscribed ? (
+                <BellOff size={16} color={COLORS.text.white} />
+              ) : (
+                <Bell size={16} color={COLORS.text.primary} />
+              )}
+              <Text style={[
+                styles.subscribeButtonText,
+                isSubscribed && styles.subscribedButtonText
+              ]}>
+                {isSubscribed ? 'Subscribed' : 'Subscribe'}
+              </Text>
+            </TouchableOpacity>
+          </View>
           {itemCount > 0 && (
             <TouchableOpacity 
               style={styles.cartButton}
@@ -419,6 +454,36 @@ const styles = StyleSheet.create({
   headerMeta: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: SPACING.md,
+  },
+  subscribeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
+    backgroundColor: COLORS.background.secondary,
+    borderRadius: BORDER_RADIUS.xxl,
+    borderWidth: 1,
+    borderColor: COLORS.border.medium,
+    gap: SPACING.sm,
+    minWidth: 100,
+    justifyContent: 'center',
+  },
+  subscribedButton: {
+    backgroundColor: COLORS.text.primary,
+    borderColor: COLORS.text.primary,
+  },
+  subscribeButtonText: {
+    fontSize: FONT_SIZES.md,
+    color: COLORS.text.primary,
+    fontWeight: '600',
+  },
+  subscribedButtonText: {
+    color: COLORS.text.white,
   },
   ratingContainer: {
     flexDirection: 'row',

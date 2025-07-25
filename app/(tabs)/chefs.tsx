@@ -4,9 +4,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Check, X, Eye, MapPin, Star, FileText } from 'lucide-react-native';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
 import { Avatar } from '@/components/ui/Avatar';
-import { StatusBadge } from '@/components/ui/StatusBadge';
+import { StatusIndicator } from '@/components/ui/StatusIndicator';
+import { TabNavigation } from '@/components/ui/TabNavigation';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ContactActions } from '@/components/ui/ContactActions';
 import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES } from '@/utils/constants';
 import { formatCurrency } from '@/utils/helpers';
 
@@ -109,13 +111,15 @@ export default function AdminChefsManagement() {
             </View>
           )}
         </View>
-        <StatusBadge status={chef.status} type="chef" />
+        <StatusIndicator status={chef.status} type="chef" />
       </View>
 
-      <View style={styles.contactInfo}>
-        <Text style={styles.contactText}>📞 {chef.phone}</Text>
-        <Text style={styles.contactText}>📧 {chef.email}</Text>
-      </View>
+      <ContactActions
+        phone={chef.phone}
+        email={chef.email}
+        variant="horizontal"
+        size="small"
+      />
 
       <View style={styles.documentsSection}>
         <Text style={styles.documentsTitle}>Documents Submitted</Text>
@@ -172,32 +176,29 @@ export default function AdminChefsManagement() {
       </View>
 
       {/* Tab Navigation */}
-      <View style={styles.tabContainer}>
-        {['pending', 'approved', 'rejected'].map((tab) => (
-          <TouchableOpacity
-            key={tab}
-            style={[styles.tab, selectedTab === tab && styles.activeTab]}
-            onPress={() => setSelectedTab(tab as typeof selectedTab)}
-          >
-            <Text style={[styles.tabText, selectedTab === tab && styles.activeTabText]}>
-              {tab.charAt(0).toUpperCase() + tab.slice(1)} ({chefs.filter(chef => chef.status === tab).length})
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
+      <TabNavigation
+        tabs={[
+          { id: 'pending', label: 'Pending', count: chefs.filter(chef => chef.status === 'pending').length },
+          { id: 'approved', label: 'Approved', count: chefs.filter(chef => chef.status === 'approved').length },
+          { id: 'rejected', label: 'Rejected', count: chefs.filter(chef => chef.status === 'rejected').length },
+        ]}
+        selectedTab={selectedTab}
+        onTabChange={(tab) => setSelectedTab(tab as typeof selectedTab)}
+      />
 
       <ScrollView showsVerticalScrollIndicator={false} style={styles.content}>
         {filteredChefs.length > 0 ? (
           filteredChefs.map(renderChefCard)
         ) : (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>No {selectedTab} applications</Text>
-            <Text style={styles.emptyStateSubtext}>
-              {selectedTab === 'pending' && 'New chef applications will appear here'}
-              {selectedTab === 'approved' && 'Approved chefs will be listed here'}
-              {selectedTab === 'rejected' && 'Rejected applications will be shown here'}
-            </Text>
-          </View>
+          <EmptyState
+            icon={ChefHat}
+            title={`No ${selectedTab} applications`}
+            subtitle={
+              selectedTab === 'pending' ? 'New chef applications will appear here' :
+              selectedTab === 'approved' ? 'Approved chefs will be listed here' :
+              'Rejected applications will be shown here'
+            }
+          />
         )}
       </ScrollView>
     </SafeAreaView>
@@ -220,28 +221,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
     color: COLORS.text.primary,
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: COLORS.background.primary,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: SPACING.lg,
-    alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-  activeTab: {
-    borderBottomColor: COLORS.primary,
-  },
-  tabText: {
-    fontSize: FONT_SIZES.md,
-    color: COLORS.text.secondary,
-    fontWeight: '600',
-  },
-  activeTabText: {
-    color: COLORS.primary,
   },
   content: {
     flex: 1,
@@ -297,18 +276,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.text.primary,
   },
-  contactInfo: {
-    marginBottom: SPACING.lg,
-    paddingVertical: SPACING.md,
-    paddingHorizontal: SPACING.md,
-    backgroundColor: COLORS.background.secondary,
-    borderRadius: BORDER_RADIUS.md,
-  },
-  contactText: {
-    fontSize: FONT_SIZES.md,
-    color: COLORS.text.primary,
-    marginBottom: SPACING.xs,
-  },
   documentsSection: {
     marginBottom: SPACING.lg,
   },
@@ -334,20 +301,5 @@ const styles = StyleSheet.create({
   actionButtons: {
     flexDirection: 'row',
     gap: SPACING.md,
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
-  emptyStateText: {
-    fontSize: FONT_SIZES.xl,
-    fontWeight: '600',
-    color: COLORS.text.primary,
-    marginBottom: SPACING.sm,
-  },
-  emptyStateSubtext: {
-    fontSize: FONT_SIZES.md,
-    color: COLORS.text.secondary,
-    textAlign: 'center',
   },
 });

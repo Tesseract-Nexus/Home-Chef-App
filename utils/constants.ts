@@ -1,29 +1,33 @@
 // App-wide constants matching Uber Eats design system
 export const COLORS = {
+  // Primary brand colors
   primary: '#000000',
-  primaryLight: '#F6F6F6',
+  primaryLight: '#F6F6F6', 
   primaryDark: '#000000',
   
+  // Secondary colors
   secondary: '#EEEEEE',
   secondaryLight: '#F6F6F6',
   secondaryDark: '#CCCCCC',
   
-  success: '#057E3E',
-  successLight: '#E8F5E8',
-  successDark: '#046C37',
+  // Status colors
+  success: '#06C167',
+  successLight: '#E8F5E8', 
+  successDark: '#057E3E',
   
   warning: '#F59E0B',
   warningLight: '#FEF3C7',
   warningDark: '#D97706',
   
   danger: '#DC2626',
-  dangerLight: '#FEE2E2',
+  dangerLight: '#FEE2E2', 
   dangerDark: '#B91C1C',
   
   info: '#3B82F6',
   infoLight: '#DBEAFE',
   infoDark: '#1D4ED8',
   
+  // Text colors
   text: {
     primary: '#000000',
     secondary: '#545454',
@@ -32,6 +36,7 @@ export const COLORS = {
     disabled: '#AEAEB2',
   },
   
+  // Background colors
   background: {
     primary: '#FFFFFF',
     secondary: '#F6F6F6',
@@ -39,17 +44,25 @@ export const COLORS = {
     overlay: 'rgba(0, 0, 0, 0.4)',
   },
   
+  // Border colors
   border: {
     light: '#EEEEEE',
     medium: '#D1D1D6',
     dark: '#8E8E93',
   },
   
-  // Uber Eats specific colors
-  accent: '#06C167', // Green for success states
-  rating: '#FFCC02', // Yellow for ratings
+  // Uber Eats specific colors  
+  accent: '#06C167',
+  rating: '#FFCC02',
+  
+  // Additional semantic colors
+  online: '#06C167',
+  offline: '#8E8E93',
+  urgent: '#FF3B30',
+  premium: '#FFD700',
 };
 
+// Consistent spacing scale
 export const SPACING = {
   xs: 4,
   sm: 8,
@@ -60,6 +73,7 @@ export const SPACING = {
   xxxl: 32,
 };
 
+// Border radius scale
 export const BORDER_RADIUS = {
   sm: 4,
   md: 8,
@@ -69,6 +83,7 @@ export const BORDER_RADIUS = {
   round: 50,
 };
 
+// Typography scale
 export const FONT_SIZES = {
   xs: 11,
   sm: 13,
@@ -80,6 +95,7 @@ export const FONT_SIZES = {
   display: 34,
 };
 
+// Font weights
 export const FONT_WEIGHTS = {
   normal: '400' as const,
   medium: '500' as const,
@@ -87,7 +103,7 @@ export const FONT_WEIGHTS = {
   bold: '700' as const,
 };
 
-// Uber Eats style shadows - very subtle
+// Uber Eats style shadows
 export const SHADOWS = {
   none: {
     elevation: 0,
@@ -114,15 +130,23 @@ export const SHADOWS = {
     shadowOpacity: 0.1,
     shadowRadius: 6,
   },
+  large: {
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+  },
 };
 
+// Animation durations
 export const ANIMATION_DURATION = {
   fast: 150,
   normal: 250,
   slow: 350,
 };
 
-// User roles
+// App constants
 export const USER_ROLES = {
   CUSTOMER: 'customer',
   CHEF: 'chef',
@@ -130,7 +154,6 @@ export const USER_ROLES = {
   DELIVERY_PARTNER: 'delivery_partner',
 } as const;
 
-// Order statuses
 export const ORDER_STATUS = {
   PENDING: 'pending',
   CONFIRMED: 'confirmed',
@@ -141,7 +164,27 @@ export const ORDER_STATUS = {
   CANCELLED: 'cancelled',
 } as const;
 
-// App configuration
+// Priority levels
+export const PRIORITY_LEVELS = {
+  LOW: 'low',
+  MEDIUM: 'medium', 
+  HIGH: 'high',
+  URGENT: 'urgent',
+  CRITICAL: 'critical',
+} as const;
+
+// Status types
+export const STATUS_TYPES = {
+  ACTIVE: 'active',
+  INACTIVE: 'inactive',
+  PENDING: 'pending',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+  COMPLETED: 'completed',
+  CANCELLED: 'cancelled',
+} as const;
+
+// App configuration constants
 export const APP_CONFIG = {
   MIN_ORDER_AMOUNT: 100,
   MAX_ORDER_AMOUNT: 5000,
@@ -150,3 +193,12 @@ export const APP_CONFIG = {
   SEARCH_DEBOUNCE_MS: 300,
   AUTO_LOGOUT_MINUTES: 30,
 };
+
+// Icon sizes for consistency
+export const ICON_SIZES = {
+  xs: 12,
+  sm: 16,
+  md: 20,
+  lg: 24,
+  xl: 32,
+} as const;

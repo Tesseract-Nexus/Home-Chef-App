@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, TextInput, Modal, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus, CreditCard as Edit3, Trash2, Camera, X, Save, Eye, EyeOff, Clock, Star, Filter } from 'lucide-react-native';
-import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES, SHADOWS } from '@/utils/constants';
+import { COLORS, SPACING, FONT_SIZES, SHADOWS, BORDER_RADIUS } from '@/utils/constants';
 
 const MENU_CATEGORIES = [
   'All', 'Appetizers', 'Main Course', 'Rice', 'Breads', 'Beverages', 'Desserts'
@@ -474,7 +474,7 @@ export default function ChefMenuManagement() {
       {/* Category Filter */}
       <View style={styles.categorySection}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.categoryFilter}>
-        {['All', ...MENU_CATEGORIES].map((category) => (
+        {MENU_CATEGORIES.map((category) => (
           <TouchableOpacity
             key={category}
             style={[
@@ -531,12 +531,14 @@ const styles = StyleSheet.create({
     color: COLORS.text.primary,
   },
   addButton: {
-    backgroundColor: COLORS.background.secondary,
+    backgroundColor: COLORS.background.primary,
     width: 40,
     height: 40,
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: COLORS.border.light,
   },
   categorySection: {
     backgroundColor: COLORS.background.primary,
@@ -555,7 +557,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background.secondary,
   },
   activeCategoryButton: {
-    backgroundColor: COLORS.text.primary,
+    backgroundColor: '#000000',
   },
   categoryButtonText: {
     fontSize: FONT_SIZES.sm,
@@ -639,7 +641,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.xxl,
+    borderRadius: 6,
     gap: SPACING.xs,
   },
   availabilityText: {
@@ -649,8 +651,8 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     padding: SPACING.sm,
-    borderRadius: BORDER_RADIUS.md,
-    backgroundColor: COLORS.background.secondary,
+    borderRadius: 6,
+    backgroundColor: '#F6F6F6',
   },
   itemImage: {
     width: 80,
@@ -669,15 +671,15 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.lg,
   },
   emptyStateButton: {
-    backgroundColor: COLORS.text.primary,
+    backgroundColor: '#000000',
     paddingHorizontal: SPACING.xl,
     paddingVertical: SPACING.md,
-    borderRadius: BORDER_RADIUS.xxl,
+    borderRadius: 20,
   },
   emptyStateButtonText: {
-    color: COLORS.text.white,
+    color: '#FFFFFF',
     fontSize: FONT_SIZES.md,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   modalContainer: {
     flex: 1,
@@ -750,23 +752,20 @@ const styles = StyleSheet.create({
   categoryChip: {
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
-    backgroundColor: COLORS.background.secondary,
-    borderRadius: BORDER_RADIUS.xxl,
+    backgroundColor: '#F6F6F6',
+    borderRadius: 20,
     marginRight: SPACING.sm,
-    borderWidth: 1,
-    borderColor: COLORS.border.light,
   },
   selectedCategoryChip: {
-    backgroundColor: COLORS.text.primary,
-    borderColor: COLORS.text.primary,
+    backgroundColor: '#000000',
   },
   categoryChipText: {
-    color: COLORS.text.primary,
+    color: '#000000',
     fontSize: FONT_SIZES.sm,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   selectedCategoryChipText: {
-    color: COLORS.text.white,
+    color: '#FFFFFF',
   },
   dietaryToggle: {
     flexDirection: 'row',
@@ -777,16 +776,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.background.secondary,
+    backgroundColor: '#F6F6F6',
     paddingVertical: SPACING.md,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border.light,
+    borderRadius: 8,
     gap: SPACING.sm,
   },
   selectedDietary: {
-    borderColor: COLORS.text.primary,
-    backgroundColor: COLORS.background.primary,
+    backgroundColor: '#000000',
   },
   vegEmoji: {
     fontSize: 16,
@@ -796,12 +792,12 @@ const styles = StyleSheet.create({
   },
   dietaryText: {
     fontSize: FONT_SIZES.md,
-    color: COLORS.text.primary,
-    fontWeight: '500',
+    color: '#000000',
+    fontWeight: '600',
   },
   selectedDietaryText: {
-    color: COLORS.text.primary,
-    fontWeight: '600',
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   spiceLevelContainer: {
     flexDirection: 'row',
@@ -810,15 +806,15 @@ const styles = StyleSheet.create({
   spiceOption: {
     flex: 1,
     alignItems: 'center',
-    backgroundColor: COLORS.background.secondary,
+    backgroundColor: '#F6F6F6',
     paddingVertical: SPACING.md,
-    borderRadius: BORDER_RADIUS.md,
-    borderWidth: 1,
-    borderColor: COLORS.border.light,
+    borderRadius: 8,
   },
   selectedSpiceOption: {
-    borderColor: COLORS.text.primary,
-    backgroundColor: COLORS.background.primary,
+    backgroundColor: '#000000',
+  },
+  spiceEmoji: {
+    fontSize: 16,
   },
   addItemContainer: {
     flexDirection: 'row',
@@ -836,10 +832,10 @@ const styles = StyleSheet.create({
     fontSize: FONT_SIZES.sm,
   },
   addItemButton: {
-    backgroundColor: COLORS.text.primary,
+    backgroundColor: '#000000',
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.md,
+    borderRadius: 6,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -851,243 +847,37 @@ const styles = StyleSheet.create({
   tag: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: COLORS.background.secondary,
+    backgroundColor: '#F6F6F6',
     paddingHorizontal: SPACING.sm,
     paddingVertical: SPACING.xs,
-    borderRadius: BORDER_RADIUS.sm,
+    borderRadius: 4,
     gap: SPACING.xs,
-  },
-  allergenTag: {
-    backgroundColor: '#FEE2E2',
-  },
-  tagText: {
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.text.primary,
-    fontWeight: '500',
-  },
-  allergenTagText: {
-    color: '#EF4444',
-  },
-  saveButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: COLORS.text.primary,
-    paddingVertical: SPACING.lg,
-    borderRadius: BORDER_RADIUS.md,
-    gap: SPACING.sm,
-    marginTop: SPACING.lg,
-    marginBottom: SPACING.xl,
-  },
-  saveButtonText: {
-    color: COLORS.text.white,
-    fontSize: FONT_SIZES.lg,
-    fontWeight: '600',
-  },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: '#F8F9FA',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-  },
-  modalContent: {
-    flex: 1,
-    padding: 20,
-  },
-  imageUpload: {
-    height: 200,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-    borderWidth: 2,
-    borderColor: '#E0E0E0',
-    borderStyle: 'dashed',
-  },
-  imageUploadText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#7F8C8D',
-  },
-  formGroup: {
-    marginBottom: 20,
-  },
-  formRow: {
-    flexDirection: 'row',
-    gap: 15,
-  },
-  halfWidth: {
-    flex: 1,
-  },
-  formLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#2C3E50',
-    marginBottom: 8,
-  },
-  formInput: {
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 15,
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    fontSize: 16,
-    color: '#2C3E50',
-  },
-  textArea: {
-    height: 80,
-    textAlignVertical: 'top',
-  },
-  categoryChip: {
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  selectedCategoryChip: {
-    backgroundColor: '#FF6B35',
-    borderColor: '#FF6B35',
-  },
-  categoryChipText: {
-    color: '#2C3E50',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  selectedCategoryChipText: {
-    color: '#FFFFFF',
-  },
-  dietaryToggle: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  dietaryOption: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    gap: 6,
-  },
-  selectedDietary: {
-    borderColor: '#4CAF50',
-    backgroundColor: '#F0F8FF',
-  },
-  vegEmoji: {
-    fontSize: 16,
-  },
-  nonVegEmoji: {
-    fontSize: 16,
-  },
-  dietaryText: {
-    fontSize: 14,
-    color: '#2C3E50',
-    fontWeight: '500',
-  },
-  selectedDietaryText: {
-    color: '#4CAF50',
-    fontWeight: '600',
-  },
-  spiceLevelContainer: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  spiceOption: {
-    flex: 1,
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  selectedSpiceOption: {
-    borderColor: '#FF6B35',
-    backgroundColor: '#FFF5F0',
-  },
-  addItemContainer: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 12,
-  },
-  addItemInput: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    fontSize: 14,
-  },
-  addItemButton: {
-    backgroundColor: '#FF6B35',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  tagsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  tag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E8F4FD',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 16,
-    gap: 6,
   },
   allergenTag: {
     backgroundColor: '#FFEBEE',
   },
   tagText: {
-    fontSize: 12,
-    color: '#2196F3',
-    fontWeight: '500',
+    fontSize: FONT_SIZES.xs,
+    color: '#000000',
+    fontWeight: '600',
   },
   allergenTagText: {
-    color: '#F44336',
+    color: '#D32F2F',
   },
   saveButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FF6B35',
-    paddingVertical: 16,
-    borderRadius: 12,
-    gap: 8,
-    marginTop: 20,
-    marginBottom: 30,
+    backgroundColor: '#000000',
+    paddingVertical: SPACING.lg,
+    borderRadius: 8,
+    gap: SPACING.sm,
+    marginTop: SPACING.lg,
+    marginBottom: SPACING.xl,
   },
   saveButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: FONT_SIZES.lg,
     fontWeight: '600',
   },
 });

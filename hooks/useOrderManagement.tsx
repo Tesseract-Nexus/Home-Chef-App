@@ -247,10 +247,6 @@ export const OrderManagementProvider: React.FC<OrderManagementProviderProps> = (
     }));
   };
 
-  // Expose sendOrderToChef for external use
-  const confirmOrderAfterTimer = (orderId: string) => {
-    sendOrderToChef(orderId);
-  };
   const cancelOrder = async (orderId: string, reason: string): Promise<boolean> => {
     const order = orders.find(o => o.id === orderId);
     if (!order) return false;
@@ -530,6 +526,11 @@ export const OrderManagementProvider: React.FC<OrderManagementProviderProps> = (
       console.error('Order placement error:', error);
       throw error; // Re-throw to be handled by the calling component
     }
+  };
+
+  // Expose sendOrderToChef for external use
+  const confirmOrderAfterTimer = (orderId: string) => {
+    sendOrderToChef(orderId);
   };
 
   const addTip = async (orderId: string, recipientType: 'chef' | 'delivery', amount: number, message?: string): Promise<boolean> => {

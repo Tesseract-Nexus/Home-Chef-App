@@ -1,72 +1,81 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal, TextInput } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image, Modal, TextInput, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { User, MapPin, Phone, Mail, Settings, Heart, CreditCard, CircleHelp as HelpCircle, LogOut, CreditCard as Edit, Camera, Star, Award, Truck, X } from 'lucide-react-native';
+import { User, MapPin, Phone, Mail, Settings, Heart, CreditCard, CircleHelp as HelpCircle, LogOut, CreditCard as Edit, Camera, Star, Award, Truck, X, Bell } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { useRewards } from '@/hooks/useRewards';
 import { useAddresses } from '@/hooks/useAddresses';
 import { useReviews } from '@/hooks/useReviews';
 import { isFeatureEnabled } from '@/config/featureFlags';
-
-const PROFILE_MENU_ITEMS = [
-  {
-    label: 'Edit Profile',
-    action: 'editProfile',
-    icon: Edit,
-    rightText: null,
-  },
-  {
-    label: 'Manage Addresses',
-    action: 'addresses',
-    icon: MapPin,
-    rightText: null,
-  },
-  {
-    label: 'Payment Methods',
-    action: 'payments',
-    icon: CreditCard,
-    rightText: null,
-  },
-  ...(isFeatureEnabled('ENABLE_REWARDS_SYSTEM') 
-    ? [{
-        label: 'Rewards & Tokens',
-        action: 'rewards',
-        icon: Award,
-        rightText: null,
-      }]
-    : []
-  ),
-  {
-    label: 'My Reviews',
-    action: 'reviews',
-    icon: Star,
-    rightText: null,
-  },
-  {
-    label: 'Settings',
-    action: 'settings',
-    icon: Settings,
-    rightText: null,
-  },
-  {
-    label: 'Help & Support',
-    action: 'support',
-    icon: HelpCircle,
-    rightText: null,
-  },
-];
+import { useChefSubscriptions } from '@/hooks/useChefSubscriptions';
 
 export default function Profile() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [showReviewsModal, setShowReviewsModal] = useState(false);
+  const [showSubscriptionsModal, setShowSubscriptionsModal] = useState(false);
   const [editedName, setEditedName] = useState('');
   const [editedPhone, setEditedPhone] = useState('');
   const { user, logout, updateProfile } = useAuth();
   const { rewards } = useRewards();
   const { addresses } = useAddresses();
   const { userReviews } = useReviews();
+  const { subscriptions, unsubscribeFromChef, updateNotificationPreferences } = useChefSubscriptions();
   const router = useRouter();
+
+  const PROFILE_MENU_ITEMS = [
+    {
+      label: 'Edit Profile',
+      action: 'editProfile',
+      icon: Edit,
+      rightText: null,
+    },
+    {
+      label: 'Manage Addresses',
+      action: 'addresses',
+      icon: MapPin,
+      rightText: null,
+    },
+    {
+      label: 'Payment Methods',
+      action: 'payments',
+      icon: CreditCard,
+      rightText: null,
+    },
+    {
+      label: 'Chef Subscriptions',
+      action: 'subscriptions',
+      icon: Bell,
+      rightText: subscriptions.length.toString(),
+    },
+    ...(isFeatureEnabled('ENABLE_REWARDS_SYSTEM') 
+      ? [{
+          label: 'Rewards & Tokens',
+          action: 'rewards',
+          icon: Award,
+          rightText: null,
+        }]
+      : []
+    ),
+    {
+      label: 'My Reviews',
+      action: 'reviews',
+      icon: Star,
+      rightText: null,
+    },
+    {
+      label: 'Settings',
+      action: 'settings',
+      icon: Settings,
+      rightText: null,
+    },
+    {
+      label: 'Help & Support',
+      action: 'support',
+      icon: HelpCircle,
+      rightText: null,
+    },
+  ];
 
   const PROFILE_STATS = [
     { label: 'Total Orders', value: '24', icon: Truck, color: '#FF6B35' },
@@ -96,6 +105,9 @@ export default function Profile() {
       case 'reviews':
         setShowReviewsModal(true);
         break;
+      case 'subscriptions':
+        setShowSubscriptionsModal(true);
+        break;
       case 'payments':
         router.push('/(tabs)/payment' as any);
         break;
@@ -120,6 +132,22 @@ export default function Profile() {
       setShowEditModal(false);
     } catch (error) {
       console.error('Failed to update profile:', error);
+    }
+  };
+
+  const handleUnsubscribe = async (chefId: string) => {
+    try {
+      await unsubscribeFromChef(chefId);
+    } catch (error) {
+      console.error('Failed to unsubscribe:', error);
+    }
+  };
+
+  const handleUpdatePreferences = async (chefId: string, preferences: any) => {
+    try {
+      await updateNotificationPreferences(chefId, preferences);
+    } catch (error) {
+      console.error('Failed to update preferences:', error);
     }
   };
 
@@ -266,6 +294,73 @@ export default function Profile() {
     </Modal>
   );
 
+  const SubscriptionsModal = () => (
+    <Modal visible={showSubscriptionsModal} animationType="slide" presentationStyle="pageSheet">
+      <SafeAreaView style={styles.modalContainer}>
+        <View style={styles.modalHeader}>
+          <Text style={styles.modalTitle}>Chef Subscriptions</Text>
+          <TouchableOpacity onPress={() => setShowSubscriptionsModal(false)}>
+            <X size={24} color="#2C3E50" />
+          </TouchableOpacity>
+        </View>
+        
+        <ScrollView style={styles.modalContent}>
+          {subscriptions.length > 0 ? (
+            subscriptions.map((subscription) => (
+              <View key={subscription.id} style={styles.subscriptionCard}>
+                <View style={styles.subscriptionHeader}>
+                  <Image source={{ uri: subscription.chefImage }} style={styles.subscriptionChefImage} />
+                  <View style={styles.subscriptionInfo}>
+                    <Text style={styles.subscriptionChefName}>{subscription.chefName}</Text>
+                    <Text style={styles.subscriptionDate}>
+                      Subscribed {subscription.subscribedAt.toLocaleDateString()}
+                    </Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.unsubscribeButton}
+                    onPress={() => handleUnsubscribe(subscription.chefId)}
+                  >
+                    <Text style={styles.unsubscribeText}>Unsubscribe</Text>
+                  </TouchableOpacity>
+                </View>
+                
+                <View style={styles.notificationPreferences}>
+                  <Text style={styles.preferencesTitle}>Notification Preferences</Text>
+                  {[
+                    { key: 'newMenuItems', label: 'New menu items' },
+                    { key: 'specialOffers', label: 'Special offers & discounts' },
+                    { key: 'announcements', label: 'General announcements' },
+                    { key: 'priceChanges', label: 'Price changes' },
+                  ].map((pref) => (
+                    <View key={pref.key} style={styles.preferenceRow}>
+                      <Text style={styles.preferenceLabel}>{pref.label}</Text>
+                      <Switch
+                        value={subscription.notificationPreferences[pref.key as keyof typeof subscription.notificationPreferences]}
+                        onValueChange={(value) => 
+                          handleUpdatePreferences(subscription.chefId, { [pref.key]: value })
+                        }
+                        trackColor={{ false: '#E0E0E0', true: '#FF6B35' }}
+                        thumbColor="#FFFFFF"
+                      />
+                    </View>
+                  ))}
+                </View>
+              </View>
+            ))
+          ) : (
+            <View style={styles.noSubscriptionsState}>
+              <Bell size={48} color="#BDC3C7" />
+              <Text style={styles.noSubscriptionsText}>No chef subscriptions</Text>
+              <Text style={styles.noSubscriptionsSubtext}>
+                Subscribe to your favorite chefs to get notified about new dishes and offers
+              </Text>
+            </View>
+          )}
+        </ScrollView>
+      </SafeAreaView>
+    </Modal>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -339,6 +434,7 @@ export default function Profile() {
 
       <EditProfileModal />
       <ReviewsModal />
+      <SubscriptionsModal />
     </SafeAreaView>
   );
 }
@@ -694,5 +790,91 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  subscriptionCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  subscriptionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  subscriptionChefImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    marginRight: 16,
+  },
+  subscriptionInfo: {
+    flex: 1,
+  },
+  subscriptionChefName: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: '#2C3E50',
+    marginBottom: 4,
+  },
+  subscriptionDate: {
+    fontSize: 13,
+    color: '#7F8C8D',
+  },
+  unsubscribeButton: {
+    backgroundColor: '#F8F9FA',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  unsubscribeText: {
+    fontSize: 13,
+    color: '#F44336',
+    fontWeight: '600',
+  },
+  notificationPreferences: {
+    backgroundColor: '#F8F9FA',
+    borderRadius: 12,
+    padding: 16,
+  },
+  preferencesTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#2C3E50',
+    marginBottom: 12,
+  },
+  preferenceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  preferenceLabel: {
+    fontSize: 15,
+    color: '#2C3E50',
+  },
+  noSubscriptionsState: {
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  noSubscriptionsText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2C3E50',
+    marginTop: 20,
+    marginBottom: 8,
+  },
+  noSubscriptionsSubtext: {
+    fontSize: 14,
+    color: '#7F8C8D',
+    textAlign: 'center',
+    paddingHorizontal: 40,
   },
 });

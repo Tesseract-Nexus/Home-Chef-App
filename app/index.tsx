@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ChefHat, Users, Truck, Star, ArrowRight, Play } from 'lucide-react-native';
 import { getResponsiveDimensions } from '@/utils/responsive';
-import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES } from '@/utils/constants';
+import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '@/utils/constants';
 
 const FEATURES = [
   {

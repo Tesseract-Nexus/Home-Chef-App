@@ -3,16 +3,10 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, Alert } fr
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TrendingUp, Users, ShoppingBag, DollarSign, ChefHat, Truck, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle, Clock, X, Eye, Settings, Download, Calendar } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
+import { MetricCard } from '@/components/ui/MetricCard';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { StatusIndicator } from '@/components/ui/StatusIndicator';
 import { PLATFORM_CONFIG } from '@/config/featureFlags';
-
-const DASHBOARD_STATS = [
-  { icon: DollarSign, label: 'Today\'s Revenue', value: '₹45,680', change: '+12%', color: '#4CAF50' },
-  { icon: ShoppingBag, label: 'Total Orders', value: '234', change: '+8%', color: '#2196F3' },
-  { icon: ChefHat, label: 'Active Chefs', value: '89', change: '+15%', color: '#FF6B35' },
-  { icon: Truck, label: 'Delivery Partners', value: '156', change: '+5%', color: '#9C27B0' },
-  { icon: Users, label: 'Active Customers', value: '2,456', change: '+18%', color: '#00BCD4' },
-  { icon: AlertTriangle, label: 'Pending Approvals', value: '12', change: '+3', color: '#FF9800' },
-];
 
 const PENDING_APPROVALS = [
   { type: 'chef', name: 'Sunita Devi', location: 'Delhi', count: 5 },
@@ -206,9 +200,56 @@ export default function AdminDashboard() {
 
         {/* Key Metrics */}
         <View style={styles.statsSection}>
-          <Text style={styles.sectionTitle}>Platform Overview</Text>
+          <SectionHeader title="Platform Overview" />
           <View style={styles.statsGrid}>
-            {DASHBOARD_STATS.map(renderStatCard)}
+            <MetricCard
+              title="Today's Revenue"
+              value="₹45,680"
+              icon={DollarSign}
+              color={COLORS.success}
+              change="+12%"
+              size="small"
+            />
+            <MetricCard
+              title="Total Orders"
+              value="234"
+              icon={ShoppingBag}
+              color={COLORS.info}
+              change="+8%"
+              size="small"
+            />
+            <MetricCard
+              title="Active Chefs"
+              value="89"
+              icon={ChefHat}
+              color={COLORS.primary}
+              change="+15%"
+              size="small"
+            />
+            <MetricCard
+              title="Delivery Partners"
+              value="156"
+              icon={Truck}
+              color={COLORS.secondary}
+              change="+5%"
+              size="small"
+            />
+            <MetricCard
+              title="Active Customers"
+              value="2,456"
+              icon={Users}
+              color={COLORS.info}
+              change="+18%"
+              size="small"
+            />
+            <MetricCard
+              title="Pending Approvals"
+              value="12"
+              icon={AlertTriangle}
+              color={COLORS.warning}
+              change="+3"
+              size="small"
+            />
           </View>
         </View>
 
@@ -269,18 +310,18 @@ export default function AdminDashboard() {
 
         {/* Pending Approvals */}
         <View style={styles.approvalsSection}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Pending Approvals</Text>
-            <TouchableOpacity>
-              <Text style={styles.viewAllText}>View All</Text>
-            </TouchableOpacity>
-          </View>
+          <SectionHeader
+            title="Pending Approvals"
+            actionText="View All"
+            onActionPress={() => {}}
+            showChevron
+          />
           {PENDING_APPROVALS.map(renderApprovalCard)}
         </View>
 
         {/* Quick Actions */}
         <View style={styles.quickActions}>
-          <Text style={styles.sectionTitle}>Quick Actions</Text>
+          <SectionHeader title="Quick Actions" />
           <View style={styles.actionsGrid}>
             <TouchableOpacity style={styles.actionCard}>
               <ChefHat size={24} color="#FF6B35" />
@@ -311,7 +352,7 @@ export default function AdminDashboard() {
 
         {/* Recent Activities */}
         <View style={styles.activitiesSection}>
-          <Text style={styles.sectionTitle}>Recent Activities</Text>
+          <SectionHeader title="Recent Activities" />
           <View style={styles.activitiesContainer}>
             {RECENT_ACTIVITIES.map(renderActivityItem)}
           </View>
@@ -319,7 +360,7 @@ export default function AdminDashboard() {
 
         {/* System Health */}
         <View style={styles.systemHealth}>
-          <Text style={styles.sectionTitle}>System Health</Text>
+          <SectionHeader title="System Health" />
           <View style={styles.healthGrid}>
             <View style={styles.healthCard}>
               <View style={styles.healthStatus}>
@@ -404,58 +445,10 @@ const styles = StyleSheet.create({
     color: '#2C3E50',
     marginBottom: 15,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  viewAllText: {
-    fontSize: 14,
-    color: '#FF6B35',
-    fontWeight: '600',
-  },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
-  },
-  statCard: {
-    backgroundColor: '#FFFFFF',
-    width: '48%',
-    padding: 16,
-    borderRadius: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  statIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  statInfo: {
-    alignItems: 'flex-start',
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#2C3E50',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: '#7F8C8D',
-    marginBottom: 4,
-  },
-  statChange: {
-    fontSize: 12,
-    fontWeight: '600',
   },
   revenueSection: {
     backgroundColor: '#FFFFFF',

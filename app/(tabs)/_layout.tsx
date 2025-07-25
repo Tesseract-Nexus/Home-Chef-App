@@ -9,7 +9,7 @@ import { useRouter, usePathname } from 'expo-router';
 import { isFeatureEnabled } from '@/config/featureFlags';
 import { Avatar } from '@/components/ui/Avatar';
 import { getResponsiveDimensions } from '@/utils/responsive';
-import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES } from '@/utils/constants';
+import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '@/utils/constants';
 import { NotificationBell } from '@/components/ui/NotificationBell';
 
 function CustomHeader() {

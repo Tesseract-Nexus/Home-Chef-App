@@ -3,6 +3,10 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Modal,
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Plus, X, Send, Paperclip, MessageCircle, Clock, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle, Star, Phone, Mail, Search, Filter } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
+import { StatusIndicator } from '@/components/ui/StatusIndicator';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ContactActions } from '@/components/ui/ContactActions';
+import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS, ICON_SIZES } from '@/utils/constants';
 
 interface SupportTicket {
   id: string;
@@ -322,13 +326,8 @@ export default function SupportScreen() {
           <View style={styles.ticketInfo}>
             <Text style={styles.ticketId}>#{ticket.id}</Text>
             <View style={styles.ticketMeta}>
-              <View style={[styles.priorityBadge, { backgroundColor: getPriorityColor(ticket.priority) }]}>
-                <Text style={styles.priorityText}>{ticket.priority.toUpperCase()}</Text>
-              </View>
-              <View style={[styles.statusBadge, { backgroundColor: getStatusColor(ticket.status) }]}>
-                <StatusIcon size={12} color="#FFFFFF" />
-                <Text style={styles.statusText}>{ticket.status.replace('_', ' ').toUpperCase()}</Text>
-              </View>
+              <StatusIndicator status={ticket.priority} type="general" size="small" />
+              <StatusIndicator status={ticket.status} type="general" size="small" />
             </View>
           </View>
           <Text style={styles.ticketTime}>
@@ -627,39 +626,25 @@ export default function SupportScreen() {
 
       {/* Support Info */}
       <View style={styles.supportInfo}>
-        <View style={styles.supportInfoCard}>
-          <Phone size={20} color="#4CAF50" />
-          <View style={styles.supportInfoText}>
-            <Text style={styles.supportInfoTitle}>24/7 Phone Support</Text>
-            <Text style={styles.supportInfoSubtitle}>+91 1800-123-4567</Text>
-          </View>
-        </View>
-        <View style={styles.supportInfoCard}>
-          <Mail size={20} color="#2196F3" />
-          <View style={styles.supportInfoText}>
-            <Text style={styles.supportInfoTitle}>Email Support</Text>
-            <Text style={styles.supportInfoSubtitle}>support@homechef.com</Text>
-          </View>
-        </View>
+        <ContactActions
+          phone="+91 1800-123-4567"
+          email="support@homechef.com"
+          variant="horizontal"
+          size="medium"
+        />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} style={styles.content}>
         {filteredTickets.length > 0 ? (
           filteredTickets.map(renderTicketCard)
         ) : (
-          <View style={styles.emptyState}>
-            <MessageCircle size={60} color="#BDC3C7" />
-            <Text style={styles.emptyStateText}>No support tickets found</Text>
-            <Text style={styles.emptyStateSubtext}>
-              {searchQuery ? 'Try adjusting your search criteria' : 'Create your first support ticket to get help'}
-            </Text>
-            <TouchableOpacity 
-              style={styles.emptyStateButton}
-              onPress={() => setShowCreateModal(true)}
-            >
-              <Text style={styles.emptyStateButtonText}>Create Ticket</Text>
-            </TouchableOpacity>
-          </View>
+          <EmptyState
+            icon={MessageCircle}
+            title="No support tickets found"
+            subtitle={searchQuery ? 'Try adjusting your search criteria' : 'Create your first support ticket to get help'}
+            actionText="Create Ticket"
+            onActionPress={() => setShowCreateModal(true)}
+          />
         )}
       </ScrollView>
 
@@ -760,28 +745,6 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     gap: 15,
   },
-  supportInfoCard: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F8F9FA',
-    padding: 12,
-    borderRadius: 12,
-    gap: 10,
-  },
-  supportInfoText: {
-    flex: 1,
-  },
-  supportInfoTitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#2C3E50',
-    marginBottom: 2,
-  },
-  supportInfoSubtitle: {
-    fontSize: 11,
-    color: '#7F8C8D',
-  },
   content: {
     flex: 1,
     padding: 20,
@@ -815,29 +778,6 @@ const styles = StyleSheet.create({
   ticketMeta: {
     flexDirection: 'row',
     gap: 8,
-  },
-  priorityBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  priorityText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 4,
-  },
-  statusText: {
-    color: '#FFFFFF',
-    fontSize: 10,
-    fontWeight: '600',
   },
   ticketTime: {
     fontSize: 12,
@@ -910,35 +850,6 @@ const styles = StyleSheet.create({
   messagesCount: {
     fontSize: 12,
     color: '#7F8C8D',
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 60,
-  },
-  emptyStateText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#2C3E50',
-    marginTop: 20,
-    marginBottom: 8,
-  },
-  emptyStateSubtext: {
-    fontSize: 14,
-    color: '#7F8C8D',
-    textAlign: 'center',
-    marginBottom: 30,
-    paddingHorizontal: 40,
-  },
-  emptyStateButton: {
-    backgroundColor: '#FF6B35',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 25,
-  },
-  emptyStateButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
   },
   modalContainer: {
     flex: 1,

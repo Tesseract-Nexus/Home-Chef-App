@@ -182,16 +182,19 @@ export const ReviewsProvider: React.FC<ReviewsProviderProps> = ({ children }) =>
       };
     }
 
-    const totalRating = chefReviews.reduce((sum, review) => sum + review.rating, 0);
-    const averageRating = totalRating / chefReviews.length;
+    const totalRating = chefReviews.reduce((sum, review) => sum + (review.rating || 0), 0);
+    const averageRating = chefReviews.length > 0 ? totalRating / chefReviews.length : 0;
 
     const ratingDistribution = chefReviews.reduce((dist, review) => {
-      dist[review.rating as keyof typeof dist]++;
+      const rating = review.rating || 1;
+      if (rating >= 1 && rating <= 5) {
+        dist[rating as keyof typeof dist]++;
+      }
       return dist;
     }, { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 });
 
     return {
-      averageRating: Math.round(averageRating * 10) / 10,
+      averageRating: averageRating ? Math.round(averageRating * 10) / 10 : 0,
       totalReviews: chefReviews.length,
       ratingDistribution
     };

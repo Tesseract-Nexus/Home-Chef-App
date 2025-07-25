@@ -291,17 +291,17 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   };
 
   const getTaxes = () => {
-    return Math.round(cartTotal * 0.05); // 5% tax
+    return cartTotal ? Math.round(cartTotal * 0.05) : 0; // 5% tax
   };
 
   const getPlatformFee = () => {
     if (cartTotal < PLATFORM_CONFIG.MINIMUM_ORDER_FOR_FEE) return 0;
-    return Math.round(cartTotal * PLATFORM_CONFIG.CHEF_COMMISSION_RATE);
+    return cartTotal ? Math.round(cartTotal * PLATFORM_CONFIG.CHEF_COMMISSION_RATE) : 0;
   };
 
   const getChefEarnings = () => {
     const platformFee = getPlatformFee();
-    const paymentProcessingFee = Math.round(cartTotal * PLATFORM_CONFIG.PAYMENT_PROCESSING_FEE);
+    const paymentProcessingFee = cartTotal ? Math.round(cartTotal * PLATFORM_CONFIG.PAYMENT_PROCESSING_FEE) : 0;
     return cartTotal - platformFee - paymentProcessingFee;
   };
 
@@ -339,7 +339,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       return 0; // Free cancellation within 30 seconds
     }
     
-    const penaltyAmount = cartTotal * PLATFORM_CONFIG.CANCELLATION_PENALTY_RATE;
+    const penaltyAmount = cartTotal ? cartTotal * PLATFORM_CONFIG.CANCELLATION_PENALTY_RATE : 0;
     return Math.min(
       Math.max(penaltyAmount, PLATFORM_CONFIG.MIN_CANCELLATION_PENALTY),
       PLATFORM_CONFIG.MAX_CANCELLATION_PENALTY

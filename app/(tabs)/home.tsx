@@ -4,9 +4,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, MapPin, Star, Heart, Filter, Clock, Award, Truck, ChevronDown } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
 import { useRouter } from 'expo-router';
+import { MetricCard } from '@/components/ui/MetricCard';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { SectionHeader } from '@/components/ui/SectionHeader';
+import { RatingDisplay } from '@/components/ui/RatingDisplay';
 import { getResponsiveDimensions, getLayoutStyles } from '@/utils/responsive';
-import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES, SHADOWS } from '@/utils/constants';
+import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES, SHADOWS, ICON_SIZES } from '@/utils/constants';
 import { useToast } from '@/hooks/useToast';
+import { useChefSubscriptions } from '@/hooks/useChefSubscriptions';
 
 const FEATURED_CHEFS = [
   {
@@ -99,6 +104,7 @@ export default function CustomerHome() {
   const router = useRouter();
   const { isWeb, isDesktop } = getResponsiveDimensions();
   const { showSuccess, showInfo } = useToast();
+  const { isSubscribedToChef } = useChefSubscriptions();
 
   // Initialize fade animation
   React.useEffect(() => {
@@ -190,6 +196,11 @@ export default function CustomerHome() {
             <Text style={styles.discountText}>{chef.discount}</Text>
           </View>
         )}
+        {isSubscribedToChef(chef.id.toString()) && (
+          <View style={styles.subscribedBadge}>
+            <Text style={styles.subscribedBadgeText}>🔔</Text>
+          </View>
+        )}
         <TouchableOpacity 
           style={styles.favoriteButton}
           onPress={() => toggleFavorite(chef.id)}
@@ -211,11 +222,11 @@ export default function CustomerHome() {
         <Text style={styles.chefName}>{chef.name}</Text>
         
         <View style={styles.chefMeta}>
-          <View style={styles.ratingContainer}>
-            <Star size={12} color={COLORS.rating} fill={COLORS.rating} />
-            <Text style={styles.rating}>{chef.rating}</Text>
-            <Text style={styles.reviewCount}>({chef.reviewCount})</Text>
-          </View>
+          <RatingDisplay
+            rating={chef.rating}
+            reviewCount={chef.reviewCount}
+            size="small"
+          />
           <Text style={styles.metaDivider}>•</Text>
           <Text style={styles.deliveryTime}>{chef.deliveryTime}</Text>
           <Text style={styles.metaDivider}>•</Text>
@@ -321,31 +332,28 @@ export default function CustomerHome() {
 
           {/* Featured Section */}
           <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Featured on HomeChef</Text>
-              <TouchableOpacity>
-                <Text style={styles.seeAllText}>See all</Text>
-              </TouchableOpacity>
-            </View>
+            <SectionHeader
+              title="Featured on HomeChef"
+              actionText="See all"
+              onActionPress={() => {}}
+              showChevron
+            />
             
             <View style={[styles.chefsGrid, isWeb && styles.webChefsGrid]}>
               {filteredChefs.length > 0 ? (
                 filteredChefs.map(renderChefCard)
               ) : (
-                <View style={styles.noResultsContainer}>
-                  <Text style={styles.noResultsText}>No chefs found</Text>
-                  <Text style={styles.noResultsSubtext}>Try adjusting your filters or search terms</Text>
-                  <TouchableOpacity 
-                    style={styles.clearFiltersButton}
-                    onPress={() => {
-                      setSelectedCuisine(null);
-                      setSelectedFilter(null);
-                      setSearchQuery('');
-                    }}
-                  >
-                    <Text style={styles.clearFiltersText}>Clear Filters</Text>
-                  </TouchableOpacity>
-                </View>
+                <EmptyState
+                  icon={Search}
+                  title="No chefs found"
+                  subtitle="Try adjusting your filters or search terms"
+                  actionText="Clear Filters"
+                  onActionPress={() => {
+                    setSelectedCuisine(null);
+                    setSelectedFilter(null);
+                    setSearchQuery('');
+                  }}
+                />
               )}
             </View>
           </View>
@@ -446,11 +454,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: COLORS.text.primary,
   },
-  seeAllText: {
-    fontSize: FONT_SIZES.md,
-    color: COLORS.text.secondary,
-    fontWeight: '500',
-  },
   categoriesContainer: {
     paddingLeft: SPACING.lg,
   },
@@ -459,23 +462,24 @@ const styles = StyleSheet.create({
   },
   categoryCard: {
     alignItems: 'center',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.md,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.lg,
     marginRight: SPACING.md,
-    minWidth: 70,
+    minWidth: 80,
     backgroundColor: COLORS.background.primary,
     borderRadius: BORDER_RADIUS.lg,
+    ...SHADOWS.subtle,
   },
   selectedCategoryCard: {
     backgroundColor: COLORS.text.primary,
   },
   categoryEmoji: {
-    fontSize: 20,
+    fontSize: 24,
     marginBottom: SPACING.sm,
   },
   categoryName: {
-    fontSize: FONT_SIZES.xs,
-    fontWeight: '500',
+    fontSize: FONT_SIZES.sm,
+    fontWeight: '600',
     color: COLORS.text.primary,
     textAlign: 'center',
   },
@@ -495,23 +499,24 @@ const styles = StyleSheet.create({
   quickFilterButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.md,
     backgroundColor: COLORS.background.primary,
     borderRadius: BORDER_RADIUS.xxl,
     marginRight: SPACING.md,
     borderWidth: 1,
     borderColor: COLORS.border.light,
     gap: SPACING.xs,
+    minHeight: 36,
   },
   activeQuickFilter: {
     backgroundColor: COLORS.text.primary,
     borderColor: COLORS.text.primary,
   },
   quickFilterText: {
-    fontSize: FONT_SIZES.xs,
+    fontSize: FONT_SIZES.sm,
     color: COLORS.text.primary,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   activeQuickFilterText: {
     color: COLORS.text.white,
@@ -527,10 +532,10 @@ const styles = StyleSheet.create({
   },
   chefCard: {
     backgroundColor: COLORS.background.primary,
-    marginBottom: SPACING.lg,
+    marginBottom: SPACING.md,
     borderRadius: BORDER_RADIUS.lg,
     overflow: 'hidden',
-    ...SHADOWS.small,
+    ...SHADOWS.subtle,
   },
   closedChef: {
     opacity: 0.6,
@@ -540,7 +545,7 @@ const styles = StyleSheet.create({
   },
   chefImage: {
     width: '100%',
-    height: 140,
+    height: 180,
     resizeMode: 'cover',
   },
   discountBadge: {
@@ -548,13 +553,13 @@ const styles = StyleSheet.create({
     top: SPACING.md,
     left: SPACING.md,
     backgroundColor: COLORS.text.primary,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
-    borderRadius: BORDER_RADIUS.sm,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: SPACING.sm,
+    borderRadius: BORDER_RADIUS.md,
   },
   discountText: {
     color: COLORS.text.white,
-    fontSize: FONT_SIZES.xs,
+    fontSize: FONT_SIZES.sm,
     fontWeight: '600',
   },
   favoriteButton: {
@@ -562,9 +567,27 @@ const styles = StyleSheet.create({
     top: SPACING.md,
     right: SPACING.md,
     backgroundColor: COLORS.background.primary,
-    padding: SPACING.sm,
+    width: 36,
+    height: 36,
     borderRadius: BORDER_RADIUS.round,
+    alignItems: 'center',
+    justifyContent: 'center',
     ...SHADOWS.subtle,
+  },
+  subscribedBadge: {
+    position: 'absolute',
+    top: SPACING.md,
+    right: SPACING.xl * 3,
+    backgroundColor: COLORS.text.primary,
+    width: 28,
+    height: 28,
+    borderRadius: BORDER_RADIUS.round,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...SHADOWS.subtle,
+  },
+  subscribedBadgeText: {
+    fontSize: 14,
   },
   closedOverlay: {
     position: 'absolute',
@@ -581,79 +604,35 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   chefInfo: {
-    padding: SPACING.md,
+    padding: SPACING.lg,
   },
   chefName: {
-    fontSize: FONT_SIZES.md,
+    fontSize: FONT_SIZES.lg,
     fontWeight: '600',
     color: COLORS.text.primary,
-    marginBottom: SPACING.xs,
+    marginBottom: SPACING.sm,
   },
   chefMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: SPACING.sm,
-  },
-  ratingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  rating: {
-    marginLeft: SPACING.xs,
-    fontSize: FONT_SIZES.xs,
-    fontWeight: '500',
-    color: COLORS.text.primary,
-  },
-  reviewCount: {
-    marginLeft: SPACING.xs,
-    fontSize: FONT_SIZES.xs,
-    color: COLORS.text.tertiary,
+    marginBottom: SPACING.xs,
   },
   metaDivider: {
     marginHorizontal: SPACING.sm,
-    fontSize: FONT_SIZES.xs,
+    fontSize: FONT_SIZES.sm,
     color: COLORS.text.tertiary,
   },
   deliveryTime: {
-    fontSize: FONT_SIZES.xs,
+    fontSize: FONT_SIZES.sm,
     color: COLORS.text.secondary,
   },
   deliveryFee: {
-    fontSize: FONT_SIZES.xs,
+    fontSize: FONT_SIZES.sm,
     color: COLORS.text.secondary,
   },
   chefSpecialty: {
-    fontSize: FONT_SIZES.xs,
+    fontSize: FONT_SIZES.sm,
     color: COLORS.text.tertiary,
-  },
-  noResultsContainer: {
-    alignItems: 'center',
-    paddingVertical: SPACING.xxxl * 2,
-    paddingHorizontal: SPACING.xl,
-    gridColumn: '1 / -1',
-  },
-  noResultsText: {
-    fontSize: FONT_SIZES.xl,
-    fontWeight: '600',
-    color: COLORS.text.primary,
-    marginBottom: SPACING.sm,
-  },
-  noResultsSubtext: {
-    fontSize: FONT_SIZES.md,
-    color: COLORS.text.secondary,
-    textAlign: 'center',
-    marginBottom: SPACING.xl,
-  },
-  clearFiltersButton: {
-    backgroundColor: COLORS.text.primary,
-    paddingHorizontal: SPACING.xl,
-    paddingVertical: SPACING.md,
-    borderRadius: BORDER_RADIUS.xxl,
-  },
-  clearFiltersText: {
-    color: COLORS.text.white,
-    fontSize: FONT_SIZES.md,
-    fontWeight: '500',
   },
   bottomSpacing: {
     height: SPACING.xl,

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Animated, TouchableOpacity, Platform } from 'react-native';
 import { CircleCheck as CheckCircle, TriangleAlert as AlertTriangle, X, Info, CircleAlert as AlertCircle } from 'lucide-react-native';
-import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES } from '@/utils/constants';
+import { COLORS, SPACING, FONT_SIZES } from '@/utils/constants';
 
 export interface ToastConfig {
   id: string;
@@ -22,7 +22,7 @@ interface ToastProps {
 
 const Toast: React.FC<ToastProps> = ({ toast, onDismiss }) => {
   const [fadeAnim] = useState(new Animated.Value(0));
-  const [slideAnim] = useState(new Animated.Value(-100));
+  const [slideAnim] = useState(new Animated.Value(100));
 
   useEffect(() => {
     // Animate in
@@ -57,7 +57,7 @@ const Toast: React.FC<ToastProps> = ({ toast, onDismiss }) => {
         useNativeDriver: true,
       }),
       Animated.timing(slideAnim, {
-        toValue: -100,
+        toValue: 100,
         useNativeDriver: true,
       }),
     ]).start(() => {
@@ -70,10 +70,10 @@ const Toast: React.FC<ToastProps> = ({ toast, onDismiss }) => {
       case 'success':
         return {
           icon: CheckCircle,
-          backgroundColor: '#F0F9FF',
+          backgroundColor: '#F0FDF4',
           borderColor: '#06C167',
           iconColor: '#06C167',
-          textColor: '#000000',
+          textColor: '#166534',
         };
       case 'error':
         return {
@@ -81,7 +81,7 @@ const Toast: React.FC<ToastProps> = ({ toast, onDismiss }) => {
           backgroundColor: '#FEF2F2',
           borderColor: '#EF4444',
           iconColor: '#EF4444',
-          textColor: '#000000',
+          textColor: '#DC2626',
         };
       case 'warning':
         return {
@@ -89,7 +89,7 @@ const Toast: React.FC<ToastProps> = ({ toast, onDismiss }) => {
           backgroundColor: '#FFFBEB',
           borderColor: '#F59E0B',
           iconColor: '#F59E0B',
-          textColor: '#000000',
+          textColor: '#D97706',
         };
       case 'info':
         return {
@@ -97,7 +97,7 @@ const Toast: React.FC<ToastProps> = ({ toast, onDismiss }) => {
           backgroundColor: '#F0F9FF',
           borderColor: '#3B82F6',
           iconColor: '#3B82F6',
-          textColor: '#000000',
+          textColor: '#1D4ED8',
         };
     }
   };
@@ -148,19 +148,28 @@ const Toast: React.FC<ToastProps> = ({ toast, onDismiss }) => {
 const styles = StyleSheet.create({
   container: {
     position: 'absolute',
-    top: Platform.OS === 'web' ? 20 : 60,
+    bottom: Platform.OS === 'web' ? 20 : 100,
     left: SPACING.lg,
     right: SPACING.lg,
-    borderRadius: BORDER_RADIUS.md,
+    borderRadius: 12,
     borderLeftWidth: 4,
     borderWidth: 1,
     borderColor: COLORS.border.light,
     zIndex: 9999,
-    elevation: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 8,
+      },
+      android: {
+        elevation: 8,
+      },
+      web: {
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)',
+      },
+    }),
   },
   content: {
     flexDirection: 'row',
@@ -184,7 +193,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.text.primary,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.sm,
-    borderRadius: BORDER_RADIUS.sm,
+    borderRadius: 8,
     marginLeft: SPACING.md,
   },
   actionText: {

@@ -7,7 +7,7 @@ import { apiService } from '@/services/apiService';
 import { isFeatureEnabled } from '@/config/featureFlags';
 import { ChefHat, Phone, Mail, Eye, EyeOff, ArrowLeft } from 'lucide-react-native';
 import { getResponsiveDimensions } from '@/utils/responsive';
-import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES } from '@/utils/constants';
+import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '@/utils/constants';
 
 export default function Login() {
   const [loginMethod, setLoginMethod] = useState<'phone' | 'email'>('email');

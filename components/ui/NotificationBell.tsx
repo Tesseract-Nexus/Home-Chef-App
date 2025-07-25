@@ -3,23 +3,9 @@ import { View, Text, StyleSheet, TouchableOpacity, Modal, ScrollView, Image } fr
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Bell, X, Clock, CircleCheck as CheckCircle, Truck, ChefHat, Star } from 'lucide-react-native';
 import { useAuth } from '@/hooks/useAuth';
-import { useNotifications } from '@/hooks/useNotifications';
-import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES } from '@/utils/constants';
+import { useNotifications, Notification } from '@/hooks/useNotifications';
+import { COLORS, SPACING, FONT_SIZES } from '@/utils/constants';
 import { OrderCountdownTimer } from '@/components/OrderCountdownTimer';
-
-export interface Notification {
-  id: string;
-  type: 'order_update' | 'delivery' | 'chef' | 'promotion' | 'system';
-  title: string;
-  message: string;
-  timestamp: Date;
-  isRead: boolean;
-  actionUrl?: string;
-  imageUrl?: string;
-  orderId?: string;
-  actionType?: 'show_cancellation_timer' | 'track_order' | 'rate_order';
-}
-
 
 export const NotificationBell: React.FC = () => {
   const { notifications, markAsRead, markAllAsRead } = useNotifications();
@@ -213,7 +199,7 @@ const styles = StyleSheet.create({
     top: 2,
     right: 2,
     backgroundColor: '#EF4444',
-    borderRadius: BORDER_RADIUS.round,
+    borderRadius: 50,
     minWidth: 16,
     height: 16,
     alignItems: 'center',
@@ -276,7 +262,7 @@ const styles = StyleSheet.create({
   notificationIcon: {
     width: 32,
     height: 32,
-    borderRadius: BORDER_RADIUS.md,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: SPACING.md,

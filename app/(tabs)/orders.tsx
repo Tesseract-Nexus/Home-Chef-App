@@ -4,6 +4,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Clock, MapPin, Phone, Star, X, MessageCircle, Truck, CircleCheck as CheckCircle, TriangleAlert as AlertTriangle } from 'lucide-react-native';
 import { useRewards } from '@/hooks/useRewards';
 import { TippingModal } from '@/components/TippingModal';
+import { StatusIndicator } from '@/components/ui/StatusIndicator';
+import { TabNavigation } from '@/components/ui/TabNavigation';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { ContactActions } from '@/components/ui/ContactActions';
 import { isFeatureEnabled } from '@/config/featureFlags';
 import { ReviewModal } from '@/components/ReviewModal';
 import { useReviews } from '@/hooks/useReviews';
@@ -188,24 +192,15 @@ export default function Orders() {
   return (
     <View style={[styles.container, isWeb && styles.webContainer]}>
       <SafeAreaView style={styles.safeArea}>
-        <View style={[styles.tabContainer, isWeb && styles.webTabContainer]}>
-          <TouchableOpacity 
-            style={[styles.tab, activeTab === 'active' && styles.activeTab]}
-            onPress={() => setActiveTab('active')}
-          >
-            <Text style={[styles.tabText, activeTab === 'active' && styles.activeTabText]}>
-              Active Orders ({activeOrders.length})
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.tab, activeTab === 'history' && styles.activeTab]}
-            onPress={() => setActiveTab('history')}
-          >
-            <Text style={[styles.tabText, activeTab === 'history' && styles.activeTabText]}>
-              Order History ({orderHistory.length})
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <TabNavigation
+          variant="pills"
+          tabs={[
+            { id: 'active', label: 'Active Orders', count: activeOrders.length },
+            { id: 'history', label: 'Order History', count: orderHistory.length },
+          ]}
+          selectedTab={activeTab}
+          onTabChange={(tab) => setActiveTab(tab as 'active' | 'history')}
+        />
 
       <ScrollView 
         showsVerticalScrollIndicator={false} 
@@ -217,19 +212,21 @@ export default function Orders() {
               activeOrders.length > 0 ? (
                 activeOrders.map(renderOrderCard)
               ) : (
-                <View style={styles.emptyState}>
-                  <Text style={styles.emptyStateText}>No active orders</Text>
-                  <Text style={styles.emptyStateSubtext}>Your future orders will appear here</Text>
-                </View>
+                <EmptyState
+                  icon={Clock}
+                  title="No active orders"
+                  subtitle="Your future orders will appear here"
+                />
               )
             ) : (
               orderHistory.length > 0 ? (
                 orderHistory.map(renderOrderCard)
               ) : (
-                <View style={styles.emptyState}>
-                  <Text style={styles.emptyStateText}>No order history</Text>
-                  <Text style={styles.emptyStateSubtext}>Start ordering to see your history</Text>
-                </View>
+                <EmptyState
+                  icon={Star}
+                  title="No order history"
+                  subtitle="Start ordering to see your history"
+                />
               )
             )}
           </View>
@@ -296,32 +293,6 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
-    marginTop: 12,
-    marginHorizontal: 20,
-    borderRadius: 12,
-    padding: 4,
-  },
-  webTabContainer: {},
-  tab: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderRadius: 8,
-  },
-  activeTab: {
-    backgroundColor: '#FF6B35',
-  },
-  tabText: {
-    fontSize: 14,
-    color: '#7F8C8D',
-    fontWeight: '600',
-  },
-  activeTabText: {
-    color: '#FFFFFF',
   },
   content: {
     flex: 1,
@@ -511,23 +482,23 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   cancelButton: {
-    backgroundColor: '#F44336',
+    backgroundColor: '#FFEBEE',
+    paddingHorizontal: 12,
     paddingVertical: 8,
-    paddingHorizontal: 16,
     borderRadius: 8,
     alignItems: 'center',
   },
   cancelButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 12,
+    color: '#F44336',
+    fontWeight: '500',
   },
   ordersGrid: {
     // Default mobile layout
   },
   webOrdersGrid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 16,
   },
 });

@@ -30,7 +30,7 @@ export const ToastProvider: React.FC<ToastProviderProps> = ({ children }) => {
   const [toasts, setToasts] = useState<ToastConfig[]>([]);
 
   const showToast = (config: Omit<ToastConfig, 'id'>) => {
-    const id = Date.now().toString();
+    const id = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
     const newToast: ToastConfig = {
       ...config,
       id,

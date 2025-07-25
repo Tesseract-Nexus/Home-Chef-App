@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Modal, TextInput, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Plus, X, CreditCard as Edit, Trash2, Shield, Users, Settings, Eye, EyeOff, Mail, Phone, MapPin, Calendar, UserCheck, UserX, Clock } from 'lucide-react-native';
+import { Plus, X, CreditCard as Edit, Trash2, Shield, Users, Settings, Eye, EyeOff, Mail, Phone, MapPin, Calendar, UserCheck, UserX, Clock, CheckCircle } from 'lucide-react-native';
+import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '@/utils/constants';
+import { useWorkingHours } from '@/hooks/useWorkingHours';
 
 const STAFF_ROLES = [
   { id: 'admin', label: 'Admin', permissions: ['all'], color: '#F44336' },
@@ -68,10 +70,12 @@ const SAMPLE_STAFF = [
 ];
 
 export default function AdminStaffManagement() {
+  const { changeRequests, approveScheduleChange, rejectScheduleChange } = useWorkingHours();
   const [staff, setStaff] = useState(SAMPLE_STAFF);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingStaff, setEditingStaff] = useState<typeof SAMPLE_STAFF[0] | null>(null);
   const [selectedTab, setSelectedTab] = useState<'active' | 'inactive' | 'all'>('all');
+  const [showScheduleRequestsModal, setShowScheduleRequestsModal] = useState(false);
   
   const [staffForm, setStaffForm] = useState({
     name: '',
@@ -186,6 +190,19 @@ export default function AdminStaffManagement() {
     return STAFF_ROLES.find(r => r.id === role)?.label || role;
   };
 
+  const handleApproveScheduleChange = async (requestId: string, notes?: string) => {
+    const success = await approveScheduleChange(requestId, notes);
+    if (success) {
+      Alert.alert('Success', 'Schedule change request approved successfully!');
+    }
+  };
+
+  const handleRejectScheduleChange = async (requestId: string, reason: string) => {
+    const success = await rejectScheduleChange(requestId, reason);
+    if (success) {
+      Alert.alert('Success', 'Schedule change request rejected.');
+    }
+  };
   const getFilteredStaff = () => {
     if (selectedTab === 'all') return staff;
     return staff.filter(s => s.status === selectedTab);
@@ -416,9 +433,24 @@ export default function AdminStaffManagement() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Staff Management</Text>
-        <TouchableOpacity style={styles.addButton} onPress={handleAddStaff}>
-          <Plus size={24} color="#FFFFFF" />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          {changeRequests.filter(r => r.status === 'pending').length > 0 && (
+            <TouchableOpacity 
+              style={styles.scheduleRequestsButton} 
+              onPress={() => setShowScheduleRequestsModal(true)}
+            >
+              <Clock size={20} color="#FFFFFF" />
+              <View style={styles.requestsBadge}>
+                <Text style={styles.requestsBadgeText}>
+                  {changeRequests.filter(r => r.status === 'pending').length}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={styles.addButton} onPress={handleAddStaff}>
+            <Plus size={24} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Tab Navigation */}
@@ -454,6 +486,87 @@ export default function AdminStaffManagement() {
       </ScrollView>
 
       <AddStaffModal />
+      
+      {/* Schedule Change Requests Modal */}
+      <Modal visible={showScheduleRequestsModal} animationType="slide" presentationStyle="pageSheet">
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Schedule Change Requests</Text>
+            <TouchableOpacity onPress={() => setShowScheduleRequestsModal(false)}>
+              <X size={24} color="#2C3E50" />
+            </TouchableOpacity>
+          </View>
+          
+          <ScrollView style={styles.modalContent}>
+            {changeRequests.filter(r => r.status === 'pending').length > 0 ? (
+              changeRequests.filter(r => r.status === 'pending').map((request) => (
+                <View key={request.id} style={styles.requestCard}>
+                  <View style={styles.requestHeader}>
+                    <Text style={styles.requestChefName}>{request.chefName}</Text>
+                    <View style={styles.urgentBadge}>
+                      <Text style={styles.urgentText}>URGENT</Text>
+                    </View>
+                  </View>
+                  
+                  <Text style={styles.requestReason}>Reason: {request.reason}</Text>
+                  <Text style={styles.requestDate}>
+                    Requested: {request.requestedAt.toLocaleDateString()} at {request.requestedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </Text>
+
+                  <View style={styles.scheduleComparison}>
+                    <Text style={styles.comparisonTitle}>Requested Changes:</Text>
+                    {request.requestedSchedule.map((day, index) => (
+                      <View key={day.day} style={styles.dayComparison}>
+                        <Text style={styles.dayComparisonName}>
+                          {day.day.charAt(0).toUpperCase() + day.day.slice(1)}:
+                        </Text>
+                        <Text style={styles.dayComparisonHours}>
+                          {day.isWorking ? `${day.hours.start} - ${day.hours.end}` : 'Closed'}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+
+                  <View style={styles.requestActions}>
+                    <TouchableOpacity 
+                      style={styles.rejectRequestButton}
+                      onPress={() => {
+                        Alert.prompt(
+                          'Reject Request',
+                          'Please provide a reason for rejection:',
+                          (reason) => {
+                            if (reason) {
+                              handleRejectScheduleChange(request.id, reason);
+                            }
+                          }
+                        );
+                      }}
+                    >
+                      <X size={16} color="#FFFFFF" />
+                      <Text style={styles.rejectRequestButtonText}>Reject</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.approveRequestButton}
+                      onPress={() => handleApproveScheduleChange(request.id, 'Approved for emergency schedule change')}
+                    >
+                      <CheckCircle size={16} color="#FFFFFF" />
+                      <Text style={styles.approveRequestButtonText}>Approve</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))
+            ) : (
+              <View style={styles.noRequestsState}>
+                <Clock size={48} color="#BDC3C7" />
+                <Text style={styles.noRequestsText}>No pending requests</Text>
+                <Text style={styles.noRequestsSubtext}>
+                  Chef schedule change requests will appear here
+                </Text>
+              </View>
+            )}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -485,6 +598,160 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  scheduleRequestsButton: {
+    backgroundColor: '#FF9800',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  requestsBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#F44336',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  requestsBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  requestCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF9800',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  requestHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  requestChefName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#2C3E50',
+  },
+  urgentBadge: {
+    backgroundColor: '#F44336',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  urgentText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  requestReason: {
+    fontSize: 14,
+    color: '#2C3E50',
+    marginBottom: 8,
+    fontStyle: 'italic',
+  },
+  requestDate: {
+    fontSize: 12,
+    color: '#7F8C8D',
+    marginBottom: 16,
+  },
+  scheduleComparison: {
+    backgroundColor: '#F8F9FA',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  comparisonTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#2C3E50',
+    marginBottom: 8,
+  },
+  dayComparison: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  dayComparisonName: {
+    fontSize: 13,
+    color: '#2C3E50',
+    fontWeight: '500',
+  },
+  dayComparisonHours: {
+    fontSize: 13,
+    color: '#FF9800',
+    fontWeight: '600',
+  },
+  requestActions: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  rejectRequestButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F44336',
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 6,
+  },
+  rejectRequestButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  approveRequestButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4CAF50',
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 6,
+  },
+  approveRequestButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  noRequestsState: {
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  noRequestsText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#2C3E50',
+    marginTop: 20,
+    marginBottom: 8,
+  },
+  noRequestsSubtext: {
+    fontSize: 14,
+    color: '#7F8C8D',
+    textAlign: 'center',
   },
   tabContainer: {
     flexDirection: 'row',

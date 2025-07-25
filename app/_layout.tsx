@@ -12,6 +12,9 @@ import { TippingProvider } from '@/hooks/useTipping';
 import { OrderManagementProvider } from '@/hooks/useOrderManagement';
 import { ToastProvider } from '@/hooks/useToast';
 import { NotificationsProvider } from '@/hooks/useNotifications';
+import { ChefSubscriptionsProvider } from '@/hooks/useChefSubscriptions';
+import { WorkingHoursProvider } from '@/hooks/useWorkingHours';
+import { BORDER_RADIUS } from '@/utils/constants';
 
 export default function RootLayout() {
   useFrameworkReady();
@@ -26,7 +29,9 @@ export default function RootLayout() {
             <RewardsProvider>
               <AdsProvider>
                 <TippingProvider>
+                  <ChefSubscriptionsProvider>
                     <OrderManagementProvider>
+                     <WorkingHoursProvider>
                   <Stack screenOptions={{ headerShown: false }}>
                     <Stack.Screen name="index" />
                     <Stack.Screen name="auth/login" />
@@ -38,7 +43,9 @@ export default function RootLayout() {
                     <Stack.Screen name="+not-found" />
                   </Stack>
                   <StatusBar style="auto" />
+                     </WorkingHoursProvider>
                     </OrderManagementProvider>
+                  </ChefSubscriptionsProvider>
                 </TippingProvider>
               </AdsProvider>
             </RewardsProvider>

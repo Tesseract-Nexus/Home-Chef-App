@@ -134,22 +134,23 @@ export default function AdminAnalytics() {
   );
 
   const renderWeeklyChart = () => {
-    const maxOrders = Math.max(...ANALYTICS_DATA.timeAnalytics.weeklyTrends.map(d => d.orders));
+    const orderValues = ANALYTICS_DATA.timeAnalytics.weeklyTrends.map(d => d.orders || 0);
+    const maxOrders = orderValues.length > 0 ? Math.max(...orderValues) : 1;
     
     return (
       <View style={styles.chartContainer}>
         <Text style={styles.chartTitle}>Weekly Order Trends</Text>
         <View style={styles.chart}>
           {ANALYTICS_DATA.timeAnalytics.weeklyTrends.map((day, index) => {
-            const height = (day.orders / maxOrders) * 120;
+            const height = day.orders && maxOrders ? (day.orders / maxOrders) * 120 : 0;
             return (
               <View key={index} style={styles.chartColumn}>
                 <View style={styles.chartBarContainer}>
                   <View style={[styles.chartBar, { height }]} />
                 </View>
                 <Text style={styles.chartDay}>{day.day}</Text>
-                <Text style={styles.chartOrders}>{day.orders}</Text>
-                <Text style={styles.chartRevenue}>₹{(day.revenue / 1000).toFixed(0)}K</Text>
+                <Text style={styles.chartOrders}>{day.orders || 0}</Text>
+                <Text style={styles.chartRevenue}>₹{day.revenue ? (day.revenue / 1000).toFixed(0) : 0}K</Text>
               </View>
             );
           })}

@@ -8,7 +8,7 @@ import { useAddresses } from '@/hooks/useAddresses';
 import { useOrderManagement } from '@/hooks/useOrderManagement';
 import { OrderCountdownTimer } from '@/components/OrderCountdownTimer';
 import { getResponsiveDimensions } from '@/utils/responsive';
-import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES, SHADOWS } from '@/utils/constants';
+import { COLORS, SPACING, FONT_SIZES, SHADOWS, BORDER_RADIUS } from '@/utils/constants';
 import { useToast } from '@/hooks/useToast';
 
 const PAYMENT_METHODS = [

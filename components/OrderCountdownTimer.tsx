@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { X, Clock, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle } from 'lucide-react-native';
 import { useOrderManagement } from '@/hooks/useOrderManagement';
 import { getResponsiveDimensions } from '@/utils/responsive';
-import { COLORS, SPACING, BORDER_RADIUS, FONT_SIZES } from '@/utils/constants';
+import { COLORS, SPACING, FONT_SIZES, BORDER_RADIUS } from '@/utils/constants';
 
 interface OrderCountdownTimerProps {
   orderId: string;
@@ -183,9 +183,7 @@ const styles = StyleSheet.create({
     padding: SPACING.xl,
     elevation: 10,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 5 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
+    boxShadow: '0 5px 10px rgba(0, 0, 0, 0.3)',
     width: '100%',
     maxWidth: 400,
   },

@@ -1,35 +1,64 @@
-# dependencies
+# Dependencies
 node_modules/
+.pnpm-store/
 
-# expo
-.expo/
+# Build outputs
 dist/
-web-build/
-expo-env.d.ts
+build/
+.next/
+out/
 
-# native
-*.orig.*
-*.jks
-*.p8
-*.p12
-*.key
-*.mobileprovision
-
-# metro
-.metro-health-check*
-
-# debug
-npm-debug.*
-yarn-debug.*
-yarn-error.*
-
-# macos
-.DS_Store
-*.pem
-
-# local env files
-.env*.local
+# Environment files
 .env
+.env.local
+.env.*.local
+*.env
 
-# typescript
-*.tsbuildinfo
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage/
+.nyc_output/
+*.lcov
+
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+
+# Docker
+.docker/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Secrets (never commit these)
+*.pem
+*.key
+credentials.json
+secrets.json

@@ -1,6 +1,6 @@
 version: 2
 updates:
-  # Enable version updates for npm
+  # NPM dependencies for web app
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
@@ -8,51 +8,64 @@ updates:
       day: "monday"
       time: "09:00"
     open-pull-requests-limit: 10
-    reviewers:
-      - "your-team"
-    assignees:
-      - "your-team"
-    commit-message:
-      prefix: "chore"
-      include: "scope"
     labels:
       - "dependencies"
       - "npm"
+    groups:
+      npm-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
-  # Enable version updates for Docker
-  - package-ecosystem: "docker"
-    directory: "/"
+  # Go modules for API
+  - package-ecosystem: "gomod"
+    directory: "/apps/api"
     schedule:
       interval: "weekly"
       day: "monday"
       time: "09:00"
     open-pull-requests-limit: 5
-    reviewers:
-      - "your-team"
-    assignees:
-      - "your-team"
-    commit-message:
-      prefix: "chore"
-      include: "scope"
+    labels:
+      - "dependencies"
+      - "go"
+    groups:
+      go-minor-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Docker dependencies
+  - package-ecosystem: "docker"
+    directory: "/apps/web"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
     labels:
       - "dependencies"
       - "docker"
 
-  # Enable version updates for GitHub Actions
+  - package-ecosystem: "docker"
+    directory: "/apps/api"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    labels:
+      - "dependencies"
+      - "docker"
+
+  # GitHub Actions dependencies
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
       time: "09:00"
-    open-pull-requests-limit: 5
-    reviewers:
-      - "your-team"
-    assignees:
-      - "your-team"
-    commit-message:
-      prefix: "chore"
-      include: "scope"
     labels:
       - "dependencies"
       - "github-actions"

@@ -6,7 +6,7 @@
 # -----------------------------------------------------------------------------
 # Stage 1: Builder
 # -----------------------------------------------------------------------------
-FROM node:20-alpine AS builder
+FROM node:25-alpine AS builder
 RUN apk add --no-cache libc6-compat
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 WORKDIR /app
@@ -38,7 +38,7 @@ RUN pnpm build:web
 # -----------------------------------------------------------------------------
 # Stage 2: Tester (optional - use --target=tester to run tests)
 # -----------------------------------------------------------------------------
-FROM node:20-alpine AS tester
+FROM node:25-alpine AS tester
 RUN apk add --no-cache libc6-compat
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 WORKDIR /app
@@ -68,7 +68,7 @@ RUN echo "Tests completed successfully"
 # -----------------------------------------------------------------------------
 # Stage 3: Production
 # -----------------------------------------------------------------------------
-FROM node:20-alpine AS production
+FROM node:25-alpine AS production
 RUN apk --no-cache add wget
 RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 WORKDIR /app

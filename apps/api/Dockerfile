@@ -69,7 +69,7 @@ RUN echo "Tests completed successfully"
 # -----------------------------------------------------------------------------
 # Stage 3: Production
 # -----------------------------------------------------------------------------
-FROM alpine:3.19 AS production
+FROM alpine:3.23 AS production
 
 # Install ca-certificates and wget for health checks
 RUN apk --no-cache add ca-certificates wget tzdata

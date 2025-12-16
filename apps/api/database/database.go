@@ -64,7 +64,8 @@ func Connect() error {
 func Migrate() error {
 	log.Println("Running database migrations...")
 
-	err := DB.AutoMigrate(
+	// Phase 1: Core tables without circular dependencies
+	if err := DB.AutoMigrate(
 		// Users & Auth
 		&models.User{},
 		&models.RefreshToken{},
@@ -97,10 +98,6 @@ func Migrate() error {
 		&models.PostLike{},
 		&models.PostComment{},
 
-		// Catering
-		&models.CateringRequest{},
-		&models.CateringQuote{},
-
 		// Addresses
 		&models.Address{},
 
@@ -114,10 +111,19 @@ func Migrate() error {
 		// Admin
 		&models.PlatformSettings{},
 		&models.AuditLog{},
-	)
+	); err != nil {
+		return fmt.Errorf("migration phase 1 failed: %w", err)
+	}
 
-	if err != nil {
-		return fmt.Errorf("migration failed: %w", err)
+	// Phase 2: Catering tables (have circular reference)
+	// First create CateringRequest without the AcceptedQuoteID FK
+	if err := DB.AutoMigrate(&models.CateringRequest{}); err != nil {
+		return fmt.Errorf("migration phase 2a failed: %w", err)
+	}
+
+	// Then create CateringQuote which references CateringRequest
+	if err := DB.AutoMigrate(&models.CateringQuote{}); err != nil {
+		return fmt.Errorf("migration phase 2b failed: %w", err)
 	}
 
 	log.Println("Database migrations completed")

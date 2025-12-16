@@ -38,6 +38,7 @@ func Connect() error {
 		NowFunc: func() time.Time {
 			return time.Now().UTC()
 		},
+		DisableForeignKeyConstraintWhenMigrating: true,
 	}
 
 	var err error
@@ -64,12 +65,7 @@ func Connect() error {
 func Migrate() error {
 	log.Println("Running database migrations...")
 
-	// Use a session with disabled foreign key constraints for migration
-	migrator := DB.Session(&gorm.Session{
-		DisableForeignKeyConstraintWhenMigrating: true,
-	})
-
-	err := migrator.AutoMigrate(
+	err := DB.AutoMigrate(
 		// Users & Auth
 		&models.User{},
 		&models.RefreshToken{},

@@ -42,7 +42,11 @@ class ApiClient {
     // Use mock service in mock mode
     if (MOCK_MODE) {
       const { mockService } = await import('@/mock/mock-service');
-      return mockService.request<T>(method, endpoint, options);
+      const mockOptions = {
+        params: options.params,
+        body: typeof options.body === 'string' ? options.body : undefined,
+      };
+      return mockService.request<T>(method, endpoint, mockOptions);
     }
 
     const { params, ...fetchOptions } = options;

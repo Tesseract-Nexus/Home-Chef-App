@@ -40,20 +40,24 @@ export function useSwipe<T extends HTMLElement = HTMLElement>(config: SwipeConfi
   });
 
   const handleTouchStart = useCallback((e: TouchEvent) => {
+    const touch = e.touches[0];
+    if (!touch) return;
     state.current = {
-      startX: e.touches[0].clientX,
-      startY: e.touches[0].clientY,
-      endX: e.touches[0].clientX,
-      endY: e.touches[0].clientY,
+      startX: touch.clientX,
+      startY: touch.clientY,
+      endX: touch.clientX,
+      endY: touch.clientY,
       swiping: true,
     };
   }, []);
 
   const handleTouchMove = useCallback((e: TouchEvent) => {
     if (!state.current.swiping) return;
+    const touch = e.touches[0];
+    if (!touch) return;
 
-    state.current.endX = e.touches[0].clientX;
-    state.current.endY = e.touches[0].clientY;
+    state.current.endX = touch.clientX;
+    state.current.endY = touch.clientY;
 
     if (preventDefaultOnSwipe) {
       const diffX = Math.abs(state.current.endX - state.current.startX);

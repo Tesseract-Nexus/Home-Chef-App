@@ -95,15 +95,18 @@ export const SOCIAL = {
 
 // Helper function to get random food image
 export function getRandomFoodImage(): string {
-  return FOOD_PLACEHOLDERS[Math.floor(Math.random() * FOOD_PLACEHOLDERS.length)];
+  const index = Math.floor(Math.random() * FOOD_PLACEHOLDERS.length);
+  return FOOD_PLACEHOLDERS[index]!;
 }
 
 // Helper function to get random chef image
 export function getRandomChefImage(): string {
-  return CHEF_PLACEHOLDERS[Math.floor(Math.random() * CHEF_PLACEHOLDERS.length)];
+  const index = Math.floor(Math.random() * CHEF_PLACEHOLDERS.length);
+  return CHEF_PLACEHOLDERS[index]!;
 }
 
 // Helper function to get random avatar
 export function getRandomAvatar(): string {
-  return AVATAR_PLACEHOLDERS[Math.floor(Math.random() * AVATAR_PLACEHOLDERS.length)];
+  const index = Math.floor(Math.random() * AVATAR_PLACEHOLDERS.length);
+  return AVATAR_PLACEHOLDERS[index]!;
 }

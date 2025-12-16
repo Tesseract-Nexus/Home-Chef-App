@@ -16,6 +16,9 @@ import {
 import { useState } from 'react';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { useCartStore } from '@/app/store/cart-store';
+import { MobileBottomNav, MobileBottomNavSpacer } from '@/shared/components/navigation';
+import { Logo } from '@/shared/components/brand';
+import { useIsMobile, useOnlineStatus } from '@/shared/hooks/useMobile';
 
 export function MainLayout() {
   const location = useLocation();
@@ -24,6 +27,8 @@ export function MainLayout() {
   const cartItemCount = useCartStore((state) => state.getItemCount());
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const isMobile = useIsMobile();
+  const isOnline = useOnlineStatus();
 
   const navigation = [
     { name: 'Home', href: '/', icon: Home },
@@ -39,17 +44,19 @@ export function MainLayout() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Offline Banner */}
+      {!isOnline && (
+        <div className="fixed inset-x-0 top-0 z-50 bg-amber-500 px-4 py-2 text-center text-sm font-medium text-white safe-top">
+          You're offline. Some features may be unavailable.
+        </div>
+      )}
+
       {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-gray-200 bg-white/95 backdrop-blur">
+      <header className={`sticky top-0 z-40 border-b border-gray-200 bg-white/95 backdrop-blur ${!isOnline ? 'mt-10' : ''}`}>
         <nav className="container-app">
           <div className="flex h-16 items-center justify-between">
             {/* Logo */}
-            <Link to="/" className="flex items-center gap-2">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-500">
-                <span className="text-lg font-bold text-white">H</span>
-              </div>
-              <span className="text-xl font-bold text-gray-900">HomeChef</span>
-            </Link>
+            <Logo size="sm" />
 
             {/* Desktop Navigation */}
             <div className="hidden items-center gap-1 md:flex">
@@ -231,18 +238,16 @@ export function MainLayout() {
         <Outlet />
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-gray-200 bg-white">
+      {/* Mobile Bottom Navigation */}
+      {isMobile && <MobileBottomNav />}
+
+      {/* Footer - hidden on mobile when bottom nav is shown */}
+      <footer className="border-t border-gray-200 bg-white hidden md:block">
         <div className="container-app py-12">
           <div className="grid gap-8 md:grid-cols-4">
             {/* Brand */}
             <div className="md:col-span-1">
-              <Link to="/" className="flex items-center gap-2">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-500">
-                  <span className="text-lg font-bold text-white">H</span>
-                </div>
-                <span className="text-xl font-bold text-gray-900">HomeChef</span>
-              </Link>
+              <Logo showTagline />
               <p className="mt-4 text-sm text-gray-500">
                 Connecting you with home chefs for authentic, homemade food delivered to your doorstep.
               </p>
@@ -318,6 +323,9 @@ export function MainLayout() {
           </div>
         </div>
       </footer>
+
+      {/* Spacer for mobile bottom navigation */}
+      {isMobile && <MobileBottomNavSpacer />}
     </div>
   );
 }

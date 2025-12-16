@@ -9,16 +9,13 @@ import {
   LogOut,
 } from 'lucide-react';
 import { useAuth } from '@/app/providers/AuthProvider';
-
-const navigation = [
-  { name: 'Dashboard', href: '/delivery/dashboard', icon: LayoutDashboard },
-  { name: 'Orders', href: '/delivery/orders', icon: Package },
-  { name: 'Earnings', href: '/delivery/earnings', icon: DollarSign },
-];
+import { DeliveryBottomNav } from '@/shared/components/navigation';
+import { useOnlineStatus } from '@/shared/hooks/useMobile';
 
 export function DeliveryLayout() {
   const location = useLocation();
   const { user, logout } = useAuth();
+  const isOnline = useOnlineStatus();
 
   const isActive = (href: string) => location.pathname === href;
 
@@ -71,39 +68,19 @@ export function DeliveryLayout() {
       </header>
 
       {/* Main content */}
-      <main className="flex-1 p-4">
+      <main className="flex-1 p-4 pb-20">
         <Outlet />
       </main>
 
-      {/* Bottom navigation */}
-      <nav className="sticky bottom-0 border-t border-gray-200 bg-white">
-        <div className="flex items-center justify-around py-2">
-          {navigation.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.name}
-                to={item.href}
-                className={`flex flex-col items-center gap-1 rounded-lg px-4 py-2 ${
-                  isActive(item.href)
-                    ? 'text-brand-600'
-                    : 'text-gray-500 hover:text-gray-900'
-                }`}
-              >
-                <Icon className="h-5 w-5" />
-                <span className="text-xs font-medium">{item.name}</span>
-              </Link>
-            );
-          })}
-          <button
-            onClick={logout}
-            className="flex flex-col items-center gap-1 rounded-lg px-4 py-2 text-gray-500 hover:text-red-600"
-          >
-            <LogOut className="h-5 w-5" />
-            <span className="text-xs font-medium">Logout</span>
-          </button>
+      {/* Mobile Bottom Navigation */}
+      <DeliveryBottomNav />
+
+      {/* Offline Banner */}
+      {!isOnline && (
+        <div className="fixed inset-x-0 top-0 z-50 bg-amber-500 px-4 py-2 text-center text-sm font-medium text-white safe-top">
+          You're offline. Deliveries will sync when connected.
         </div>
-      </nav>
+      )}
     </div>
   );
 }

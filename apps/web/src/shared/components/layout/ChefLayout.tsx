@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/app/providers/AuthProvider';
+import { ChefBottomNav, ChefBottomNavSpacer } from '@/shared/components/navigation';
+import { useIsMobile, useOnlineStatus } from '@/shared/hooks/useMobile';
 
 const navigation = [
   { name: 'Dashboard', href: '/chef/dashboard', icon: LayoutDashboard },
@@ -33,6 +35,8 @@ export function ChefLayout() {
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const isMobile = useIsMobile('lg');
+  const isOnline = useOnlineStatus();
 
   const isActive = (href: string) => location.pathname === href;
 
@@ -196,10 +200,20 @@ export function ChefLayout() {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-8">
+        <main className={`flex-1 overflow-y-auto p-4 lg:p-8 ${isMobile ? 'pb-20' : ''}`}>
           <Outlet />
         </main>
       </div>
+
+      {/* Mobile Bottom Navigation */}
+      {isMobile && <ChefBottomNav />}
+
+      {/* Offline Banner */}
+      {!isOnline && (
+        <div className="fixed inset-x-0 top-0 z-50 bg-amber-500 px-4 py-2 text-center text-sm font-medium text-white safe-top">
+          You're offline. Orders will sync when connected.
+        </div>
+      )}
     </div>
   );
 }

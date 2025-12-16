@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { motion } from 'framer-motion';
 import {
   Plus,
   Search,
@@ -13,11 +14,12 @@ import {
   Star,
   Loader2,
   Upload,
-  X,
   ChefHat,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiClient } from '@/shared/services/api-client';
+import { Button, Card, Input, Badge, SimpleDialog } from '@/shared/components/ui';
+import { fadeInUp, staggerContainer } from '@/shared/utils/animations';
 import type { MenuItem, MenuCategory } from '@/shared/types';
 
 const menuItemSchema = z.object({
@@ -127,94 +129,104 @@ export default function ChefMenuPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      initial="hidden"
+      animate="visible"
+      variants={staggerContainer}
+      className="space-y-6"
+    >
       {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-4">
+      <motion.div variants={fadeInUp} className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Menu Management</h1>
+          <h1 className="font-display text-display-xs text-gray-900">Menu Management</h1>
           <p className="mt-1 text-gray-600">
             {allItems.length} item{allItems.length !== 1 ? 's' : ''} in your menu
           </p>
         </div>
-        <button onClick={() => setShowForm(true)} className="btn-primary">
-          <Plus className="h-5 w-5" />
+        <Button variant="primary" leftIcon={<Plus className="h-5 w-5" />} onClick={() => setShowForm(true)}>
           Add Item
-        </button>
-      </div>
+        </Button>
+      </motion.div>
 
       {/* Search and Filter */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
+      <motion.div variants={fadeInUp} className="flex flex-col gap-4 sm:flex-row sm:items-center">
+        <div className="flex-1 max-w-md">
+          <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search menu items..."
-            className="input-base pl-10"
+            leftIcon={<Search className="h-5 w-5" />}
           />
         </div>
-        <div className="flex gap-2 overflow-x-auto">
-          <button
+        <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0">
+          <Button
+            variant={selectedCategory === null ? 'primary' : 'outline'}
+            size="sm"
             onClick={() => setSelectedCategory(null)}
-            className={`rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap ${
-              selectedCategory === null
-                ? 'bg-brand-500 text-white'
-                : 'bg-white text-gray-600 hover:bg-gray-100'
-            }`}
           >
             All
-          </button>
+          </Button>
           {categories.map((category) => (
-            <button
+            <Button
               key={category.id}
+              variant={selectedCategory === category.id ? 'primary' : 'outline'}
+              size="sm"
               onClick={() => setSelectedCategory(category.id)}
-              className={`rounded-full px-4 py-2 text-sm font-medium whitespace-nowrap ${
-                selectedCategory === category.id
-                  ? 'bg-brand-500 text-white'
-                  : 'bg-white text-gray-600 hover:bg-gray-100'
-              }`}
             >
               {category.name}
-            </button>
+            </Button>
           ))}
         </div>
-      </div>
+      </motion.div>
 
       {/* Menu Items Grid */}
       {filteredItems.length === 0 ? (
-        <div className="rounded-xl bg-white p-12 text-center shadow-sm">
-          <ChefHat className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-4 font-medium text-gray-900">No menu items</h3>
-          <p className="mt-2 text-gray-600">
-            {searchQuery
-              ? 'No items match your search'
-              : 'Add your first menu item to get started'}
-          </p>
-          {!searchQuery && (
-            <button onClick={() => setShowForm(true)} className="btn-primary mt-4">
-              Add Menu Item
-            </button>
-          )}
-        </div>
+        <motion.div variants={fadeInUp}>
+          <Card variant="filled" padding="lg" className="text-center">
+            <ChefHat className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-4 font-medium text-gray-900">No menu items</h3>
+            <p className="mt-2 text-gray-600">
+              {searchQuery
+                ? 'No items match your search'
+                : 'Add your first menu item to get started'}
+            </p>
+            {!searchQuery && (
+              <Button variant="primary" className="mt-4" onClick={() => setShowForm(true)}>
+                Add Menu Item
+              </Button>
+            )}
+          </Card>
+        </motion.div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <motion.div
+          variants={staggerContainer}
+          className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+        >
           {filteredItems.map((item) => (
-            <MenuItemCard
-              key={item.id}
-              item={item}
-              onEdit={() => handleEdit(item)}
-              onDelete={() => handleDelete(item)}
-              onToggleAvailability={() =>
-                toggleAvailability.mutate({ id: item.id, isAvailable: !item.isAvailable })
-              }
-            />
+            <motion.div key={item.id} variants={fadeInUp}>
+              <MenuItemCard
+                item={item}
+                onEdit={() => handleEdit(item)}
+                onDelete={() => handleDelete(item)}
+                onToggleAvailability={() =>
+                  toggleAvailability.mutate({ id: item.id, isAvailable: !item.isAvailable })
+                }
+              />
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
       )}
 
-      {/* Add/Edit Form Modal */}
-      {showForm && (
+      {/* Add/Edit Form Dialog */}
+      <SimpleDialog
+        open={showForm}
+        onOpenChange={(open) => {
+          setShowForm(open);
+          if (!open) setEditingItem(null);
+        }}
+        title={editingItem ? 'Edit Menu Item' : 'Add Menu Item'}
+        size="lg"
+      >
         <MenuItemForm
           item={editingItem}
           categories={categories}
@@ -231,8 +243,8 @@ export default function ChefMenuPage() {
           }}
           isLoading={createMutation.isPending || updateMutation.isPending}
         />
-      )}
-    </div>
+      </SimpleDialog>
+    </motion.div>
   );
 }
 
@@ -248,7 +260,11 @@ function MenuItemCard({
   onToggleAvailability: () => void;
 }) {
   return (
-    <div className={`rounded-xl bg-white shadow-sm overflow-hidden ${!item.isAvailable ? 'opacity-60' : ''}`}>
+    <Card
+      variant="default"
+      padding="none"
+      className={`overflow-hidden ${!item.isAvailable ? 'opacity-60' : ''}`}
+    >
       {/* Image */}
       <div className="relative aspect-video">
         {item.imageUrl ? (
@@ -263,16 +279,14 @@ function MenuItemCard({
           </div>
         )}
         {item.isFeatured && (
-          <span className="absolute top-2 left-2 rounded-full bg-brand-500 px-2 py-0.5 text-xs font-medium text-white">
-            <Star className="mr-1 inline h-3 w-3" />
+          <Badge variant="solid-brand" size="sm" className="absolute top-2 left-2">
+            <Star className="mr-1 h-3 w-3" />
             Featured
-          </span>
+          </Badge>
         )}
         {!item.isAvailable && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-            <span className="rounded-full bg-white px-3 py-1 text-sm font-medium">
-              Unavailable
-            </span>
+            <Badge variant="default" size="md">Unavailable</Badge>
           </div>
         )}
       </div>
@@ -290,12 +304,9 @@ function MenuItemCard({
         {item.dietaryTags.length > 0 && (
           <div className="mt-3 flex flex-wrap gap-1">
             {item.dietaryTags.slice(0, 3).map((tag) => (
-              <span
-                key={tag}
-                className="rounded bg-green-50 px-2 py-0.5 text-xs text-green-700"
-              >
+              <Badge key={tag} variant="success" size="sm">
                 {tag}
-              </span>
+              </Badge>
             ))}
           </div>
         )}
@@ -315,41 +326,34 @@ function MenuItemCard({
 
         {/* Actions */}
         <div className="mt-4 flex items-center gap-2 border-t pt-4">
-          <button
+          <Button
+            variant={item.isAvailable ? 'outline' : 'success'}
+            size="sm"
+            className="flex-1"
             onClick={onToggleAvailability}
-            className={`flex-1 rounded-lg py-2 text-sm font-medium transition-colors ${
-              item.isAvailable
-                ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                : 'bg-green-100 text-green-700 hover:bg-green-200'
-            }`}
+            leftIcon={item.isAvailable ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           >
-            {item.isAvailable ? (
-              <>
-                <EyeOff className="mr-1 inline h-4 w-4" />
-                Hide
-              </>
-            ) : (
-              <>
-                <Eye className="mr-1 inline h-4 w-4" />
-                Show
-              </>
-            )}
-          </button>
-          <button
+            {item.isAvailable ? 'Hide' : 'Show'}
+          </Button>
+          <Button
+            variant="outline"
+            size="icon-sm"
             onClick={onEdit}
-            className="rounded-lg bg-brand-100 p-2 text-brand-600 hover:bg-brand-200"
+            className="text-brand-600"
           >
             <Edit2 className="h-4 w-4" />
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="outline"
+            size="icon-sm"
             onClick={onDelete}
-            className="rounded-lg bg-red-100 p-2 text-red-600 hover:bg-red-200"
+            className="text-red-600"
           >
             <Trash2 className="h-4 w-4" />
-          </button>
+          </Button>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -411,198 +415,159 @@ function MenuItemForm({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 pt-20">
-      <div className="w-full max-w-2xl rounded-xl bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b p-6">
-          <h2 className="text-xl font-semibold text-gray-900">
-            {item ? 'Edit Menu Item' : 'Add Menu Item'}
-          </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-            <X className="h-6 w-6" />
-          </button>
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {/* Image Upload */}
+      <div>
+        <label className="mb-2 block text-sm font-medium text-gray-700">
+          Photo
+        </label>
+        <div className="flex items-center justify-center rounded-xl border-2 border-dashed border-gray-300 p-8 hover:border-brand-400 transition-colors cursor-pointer">
+          <div className="text-center">
+            <Upload className="mx-auto h-8 w-8 text-gray-400" />
+            <p className="mt-2 text-sm text-gray-600">
+              Click to upload or drag and drop
+            </p>
+            <p className="text-xs text-gray-400">PNG, JPG up to 5MB</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Basic Info */}
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="sm:col-span-2">
+          <Input
+            label="Name *"
+            {...register('name')}
+            error={errors.name?.message}
+          />
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
-          {/* Image Upload */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Photo
-            </label>
-            <div className="flex items-center justify-center rounded-lg border-2 border-dashed border-gray-300 p-8">
-              <div className="text-center">
-                <Upload className="mx-auto h-8 w-8 text-gray-400" />
-                <p className="mt-2 text-sm text-gray-600">
-                  Click to upload or drag and drop
-                </p>
-                <p className="text-xs text-gray-400">PNG, JPG up to 5MB</p>
-              </div>
-            </div>
-          </div>
+        <div className="sm:col-span-2">
+          <label className="mb-1.5 block text-sm font-medium text-gray-700">Description</label>
+          <textarea
+            {...register('description')}
+            rows={3}
+            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-gray-900 placeholder:text-gray-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-all"
+          />
+        </div>
 
-          {/* Basic Info */}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-gray-700">Name *</label>
-              <input {...register('name')} className="input-base mt-1" />
-              {errors.name && (
-                <p className="mt-1 text-xs text-red-600">{errors.name.message}</p>
-              )}
-            </div>
+        <Input
+          label="Price *"
+          type="number"
+          step="0.01"
+          {...register('price', { valueAsNumber: true })}
+          error={errors.price?.message}
+          leftIcon={<span className="text-gray-400">$</span>}
+        />
 
-            <div className="sm:col-span-2">
-              <label className="block text-sm font-medium text-gray-700">Description</label>
-              <textarea {...register('description')} rows={3} className="input-base mt-1" />
-            </div>
+        <Input
+          label="Compare Price (optional)"
+          type="number"
+          step="0.01"
+          {...register('comparePrice', { valueAsNumber: true })}
+          leftIcon={<span className="text-gray-400">$</span>}
+        />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Price *</label>
-              <div className="relative mt-1">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-                <input
-                  type="number"
-                  step="0.01"
-                  {...register('price', { valueAsNumber: true })}
-                  className="input-base pl-7"
-                />
-              </div>
-              {errors.price && (
-                <p className="mt-1 text-xs text-red-600">{errors.price.message}</p>
-              )}
-            </div>
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-gray-700">Category</label>
+          <select
+            {...register('categoryId')}
+            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-all"
+          >
+            <option value="">No category</option>
+            {categories.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.name}
+              </option>
+            ))}
+          </select>
+        </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Compare Price (optional)
-              </label>
-              <div className="relative mt-1">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">$</span>
-                <input
-                  type="number"
-                  step="0.01"
-                  {...register('comparePrice', { valueAsNumber: true })}
-                  className="input-base pl-7"
-                />
-              </div>
-            </div>
+        <Input
+          label="Prep Time (min) *"
+          type="number"
+          {...register('prepTime', { valueAsNumber: true })}
+          error={errors.prepTime?.message}
+        />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Category</label>
-              <select {...register('categoryId')} className="input-base mt-1">
-                <option value="">No category</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+        <Input
+          label="Portion Size"
+          {...register('portionSize')}
+          placeholder="e.g., 500g"
+        />
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Prep Time (min) *</label>
-              <input
-                type="number"
-                {...register('prepTime', { valueAsNumber: true })}
-                className="input-base mt-1"
-              />
-              {errors.prepTime && (
-                <p className="mt-1 text-xs text-red-600">{errors.prepTime.message}</p>
-              )}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Portion Size</label>
-              <input {...register('portionSize')} className="input-base mt-1" placeholder="e.g., 500g" />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Serves</label>
-              <input
-                type="number"
-                {...register('serves', { valueAsNumber: true })}
-                className="input-base mt-1"
-              />
-            </div>
-          </div>
-
-          {/* Dietary Tags */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Dietary Tags</label>
-            <div className="flex flex-wrap gap-2">
-              {DIETARY_TAGS.map((tag) => (
-                <button
-                  key={tag}
-                  type="button"
-                  onClick={() => toggleTag(tag, 'dietaryTags')}
-                  className={`rounded-full px-3 py-1 text-sm ${
-                    dietaryTags.includes(tag)
-                      ? 'bg-green-500 text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  {tag}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Allergens */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Contains Allergens</label>
-            <div className="flex flex-wrap gap-2">
-              {ALLERGENS.map((allergen) => (
-                <button
-                  key={allergen}
-                  type="button"
-                  onClick={() => toggleTag(allergen, 'allergens')}
-                  className={`rounded-full px-3 py-1 text-sm ${
-                    allergens.includes(allergen)
-                      ? 'bg-red-500 text-white'
-                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
-                >
-                  {allergen}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Toggles */}
-          <div className="flex gap-6">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                {...register('isAvailable')}
-                className="h-4 w-4 rounded border-gray-300 text-brand-600"
-              />
-              <span className="text-sm text-gray-700">Available for order</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                {...register('isFeatured')}
-                className="h-4 w-4 rounded border-gray-300 text-brand-600"
-              />
-              <span className="text-sm text-gray-700">Featured item</span>
-            </label>
-          </div>
-
-          {/* Actions */}
-          <div className="flex justify-end gap-3 border-t pt-6">
-            <button type="button" onClick={onClose} className="btn-outline">
-              Cancel
-            </button>
-            <button type="submit" disabled={isLoading} className="btn-primary">
-              {isLoading ? (
-                <Loader2 className="h-5 w-5 animate-spin" />
-              ) : item ? (
-                'Save Changes'
-              ) : (
-                'Add Item'
-              )}
-            </button>
-          </div>
-        </form>
+        <Input
+          label="Serves"
+          type="number"
+          {...register('serves', { valueAsNumber: true })}
+        />
       </div>
-    </div>
+
+      {/* Dietary Tags */}
+      <div>
+        <label className="mb-2 block text-sm font-medium text-gray-700">Dietary Tags</label>
+        <div className="flex flex-wrap gap-2">
+          {DIETARY_TAGS.map((tag) => (
+            <Button
+              key={tag}
+              type="button"
+              variant={dietaryTags.includes(tag) ? 'success' : 'outline'}
+              size="sm"
+              onClick={() => toggleTag(tag, 'dietaryTags')}
+            >
+              {tag}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      {/* Allergens */}
+      <div>
+        <label className="mb-2 block text-sm font-medium text-gray-700">Contains Allergens</label>
+        <div className="flex flex-wrap gap-2">
+          {ALLERGENS.map((allergen) => (
+            <Button
+              key={allergen}
+              type="button"
+              variant={allergens.includes(allergen) ? 'danger' : 'outline'}
+              size="sm"
+              onClick={() => toggleTag(allergen, 'allergens')}
+            >
+              {allergen}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      {/* Toggles */}
+      <div className="flex gap-6">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            {...register('isAvailable')}
+            className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+          />
+          <span className="text-sm text-gray-700">Available for order</span>
+        </label>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            {...register('isFeatured')}
+            className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+          />
+          <span className="text-sm text-gray-700">Featured item</span>
+        </label>
+      </div>
+
+      {/* Actions */}
+      <div className="flex justify-end gap-3 border-t pt-6">
+        <Button type="button" variant="outline" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button type="submit" variant="primary" isLoading={isLoading}>
+          {item ? 'Save Changes' : 'Add Item'}
+        </Button>
+      </div>
+    </form>
   );
 }

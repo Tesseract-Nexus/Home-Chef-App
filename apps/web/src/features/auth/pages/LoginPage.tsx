@@ -3,9 +3,12 @@ import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Eye, EyeOff, Loader2, Mail, Lock } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Eye, EyeOff, Mail, Lock, ChefHat } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/app/providers/AuthProvider';
+import { Button, Input, Card } from '@/shared/components/ui';
+import { fadeInLeft, fadeInRight } from '@/shared/utils/animations';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -43,7 +46,6 @@ export default function LoginPage() {
   const handleSocialLogin = async (provider: 'google' | 'facebook' | 'apple') => {
     setIsLoading(true);
     try {
-      // In production, this would open OAuth popup and get token
       await loginWithSocial(provider, 'mock-token');
       toast.success('Welcome!');
     } catch (error: unknown) {
@@ -57,34 +59,50 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen">
       {/* Left side - Form */}
-      <div className="flex flex-1 flex-col justify-center px-4 py-12 sm:px-6 lg:flex-none lg:px-20 xl:px-24">
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={fadeInLeft}
+        transition={{ duration: 0.5 }}
+        className="flex flex-1 flex-col justify-center px-4 py-12 sm:px-6 lg:flex-none lg:px-20 xl:px-24"
+      >
         <div className="mx-auto w-full max-w-sm lg:w-96">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500">
-              <span className="text-xl font-bold text-white">H</span>
+          <Link to="/" className="inline-flex items-center gap-2 group">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 shadow-md group-hover:shadow-lg transition-shadow">
+              <ChefHat className="h-5 w-5 text-white" />
             </div>
-            <span className="text-2xl font-bold text-gray-900">HomeChef</span>
+            <span className="font-display text-2xl font-bold text-gray-900">HomeChef</span>
           </Link>
 
-          <div className="mt-8">
-            <h2 className="text-2xl font-bold text-gray-900">Welcome back</h2>
-            <p className="mt-2 text-sm text-gray-600">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="mt-8"
+          >
+            <h2 className="font-display text-display-xs text-gray-900">Welcome back</h2>
+            <p className="mt-2 text-gray-600">
               Don't have an account?{' '}
-              <Link to="/register" className="font-medium text-brand-600 hover:text-brand-500">
+              <Link to="/register" className="font-medium text-brand-600 hover:text-brand-500 transition-colors">
                 Sign up
               </Link>
             </p>
-          </div>
+          </motion.div>
 
-          <div className="mt-8">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mt-8"
+          >
             {/* Social login buttons */}
             <div className="grid grid-cols-3 gap-3">
-              <button
-                type="button"
+              <Button
+                variant="outline"
                 onClick={() => handleSocialLogin('google')}
                 disabled={isLoading}
-                className="btn-outline py-2.5"
+                className="py-2.5"
               >
                 <svg className="h-5 w-5" viewBox="0 0 24 24">
                   <path
@@ -104,145 +122,139 @@ export default function LoginPage() {
                     d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                   />
                 </svg>
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="outline"
                 onClick={() => handleSocialLogin('facebook')}
                 disabled={isLoading}
-                className="btn-outline py-2.5"
+                className="py-2.5"
               >
                 <svg className="h-5 w-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                 </svg>
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="outline"
                 onClick={() => handleSocialLogin('apple')}
                 disabled={isLoading}
-                className="btn-outline py-2.5"
+                className="py-2.5"
               >
                 <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701" />
                 </svg>
-              </button>
+              </Button>
             </div>
 
             <div className="relative mt-6">
               <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
+                <div className="w-full border-t border-gray-200" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="bg-white px-2 text-gray-500">Or continue with</span>
+                <span className="bg-white px-3 text-gray-500">Or continue with</span>
               </div>
             </div>
 
             {/* Login form */}
             <form onSubmit={handleSubmit(onSubmit)} className="mt-6 space-y-5">
-              <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                  Email
-                </label>
-                <div className="relative mt-1">
-                  <Mail className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-                  <input
-                    id="email"
-                    type="email"
-                    autoComplete="email"
-                    {...register('email')}
-                    className={`input-base pl-10 ${errors.email ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-                    placeholder="you@example.com"
-                  />
-                </div>
-                {errors.email && (
-                  <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
-                )}
-              </div>
+              <Input
+                label="Email"
+                type="email"
+                autoComplete="email"
+                {...register('email')}
+                leftIcon={<Mail className="h-5 w-5" />}
+                error={errors.email?.message}
+                placeholder="you@example.com"
+              />
 
-              <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                  Password
-                </label>
-                <div className="relative mt-1">
-                  <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-                  <input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete="current-password"
-                    {...register('password')}
-                    className={`input-base pl-10 pr-10 ${errors.password ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : ''}`}
-                    placeholder="••••••••"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                  >
-                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                  </button>
-                </div>
-                {errors.password && (
-                  <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
-                )}
+              <div className="space-y-1.5">
+                <Input
+                  label="Password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  {...register('password')}
+                  leftIcon={<Lock className="h-5 w-5" />}
+                  rightIcon={
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  }
+                  error={errors.password?.message}
+                  placeholder="••••••••"
+                />
               </div>
 
               <div className="flex items-center justify-between">
-                <div className="flex items-center">
+                <label className="flex items-center gap-2 cursor-pointer">
                   <input
-                    id="remember-me"
                     type="checkbox"
-                    className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                    className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500 transition-colors"
                   />
-                  <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-600">
-                    Remember me
-                  </label>
-                </div>
+                  <span className="text-sm text-gray-600">Remember me</span>
+                </label>
                 <Link
                   to="/forgot-password"
-                  className="text-sm font-medium text-brand-600 hover:text-brand-500"
+                  className="text-sm font-medium text-brand-600 hover:text-brand-500 transition-colors"
                 >
                   Forgot password?
                 </Link>
               </div>
 
-              <button
+              <Button
                 type="submit"
-                disabled={isLoading}
-                className="btn-primary w-full py-3"
+                variant="primary"
+                size="lg"
+                isLoading={isLoading}
+                className="w-full"
               >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                    Signing in...
-                  </>
-                ) : (
-                  'Sign in'
-                )}
-              </button>
+                Sign in
+              </Button>
             </form>
 
             {/* Demo credentials */}
-            <div className="mt-6 rounded-lg bg-gray-50 p-4">
-              <p className="text-sm font-medium text-gray-700">Demo Credentials</p>
-              <div className="mt-2 space-y-1 text-sm text-gray-600">
-                <p>Email: john@example.com</p>
-                <p>Password: password123</p>
-              </div>
-            </div>
-          </div>
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="mt-6"
+            >
+              <Card variant="filled" padding="md" className="bg-gray-50/80">
+                <p className="text-sm font-medium text-gray-700">Demo Credentials</p>
+                <div className="mt-2 space-y-1 text-sm text-gray-600">
+                  <p>Email: john@example.com</p>
+                  <p>Password: password123</p>
+                </div>
+              </Card>
+            </motion.div>
+          </motion.div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Right side - Image */}
-      <div className="relative hidden w-0 flex-1 lg:block">
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        variants={fadeInRight}
+        transition={{ duration: 0.6, delay: 0.2 }}
+        className="relative hidden w-0 flex-1 lg:block"
+      >
         <img
           className="absolute inset-0 h-full w-full object-cover"
           src="https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=1200&h=900&fit=crop"
           alt="Delicious homemade food"
         />
-        <div className="absolute inset-0 bg-brand-500/20" />
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-12">
-          <blockquote className="text-white">
-            <p className="text-xl font-medium">
+        <div className="absolute inset-0 bg-gradient-to-br from-brand-500/30 to-spice-500/20" />
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent p-12">
+          <motion.blockquote
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+            className="text-white"
+          >
+            <p className="font-display text-xl font-medium leading-relaxed">
               "HomeChef has changed how I eat. Finally, real homemade food that
               reminds me of my mom's cooking!"
             </p>
@@ -250,9 +262,9 @@ export default function LoginPage() {
               <p className="font-semibold">Sarah M.</p>
               <p className="text-sm text-white/80">Happy Customer</p>
             </footer>
-          </blockquote>
+          </motion.blockquote>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 }

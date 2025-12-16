@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
 import {
   DollarSign,
   ShoppingBag,
@@ -12,6 +13,8 @@ import {
 } from 'lucide-react';
 import { apiClient } from '@/shared/services/api-client';
 import { useAuth } from '@/app/providers/AuthProvider';
+import { Card, Badge, Button } from '@/shared/components/ui';
+import { fadeInUp, staggerContainer } from '@/shared/utils/animations';
 import type { Order, PaginatedResponse } from '@/shared/types';
 
 interface DashboardStats {
@@ -54,19 +57,24 @@ export default function ChefDashboardPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <motion.div
+      initial="hidden"
+      animate="visible"
+      variants={staggerContainer}
+      className="space-y-6"
+    >
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">
+      <motion.div variants={fadeInUp}>
+        <h1 className="font-display text-display-xs text-gray-900">
           Welcome back, {user?.firstName}!
         </h1>
         <p className="mt-1 text-gray-600">
           Here's what's happening with your kitchen today
         </p>
-      </div>
+      </motion.div>
 
       {/* Stats Grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <motion.div variants={fadeInUp} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Today's Revenue"
           value={`$${stats?.todayRevenue?.toFixed(2) || '0.00'}`}
@@ -93,169 +101,147 @@ export default function ChefDashboardPage() {
           value={stats?.rating?.toFixed(1) || '0.0'}
           subtitle={`${stats?.totalReviews || 0} reviews`}
           icon={Star}
-          color="orange"
+          color="golden"
         />
-      </div>
+      </motion.div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Pending Orders */}
-        <div className="rounded-xl bg-white p-6 shadow-sm">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">Pending Orders</h2>
-            <Link
-              to="/chef/orders"
-              className="text-sm text-brand-600 hover:text-brand-700"
-            >
-              View all
-            </Link>
-          </div>
+        <motion.div variants={fadeInUp}>
+          <Card variant="default" padding="lg">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">Pending Orders</h2>
+              <Link to="/chef/orders">
+                <Button variant="link" size="sm">View all</Button>
+              </Link>
+            </div>
 
-          {(pendingOrders?.data ?? []).length === 0 ? (
-            <div className="mt-6 text-center py-8">
-              <ChefHat className="mx-auto h-12 w-12 text-gray-300" />
-              <p className="mt-3 text-gray-500">No pending orders</p>
-              <p className="text-sm text-gray-400">New orders will appear here</p>
-            </div>
-          ) : (
-            <div className="mt-4 space-y-3">
-              {(pendingOrders?.data ?? []).slice(0, 4).map((order) => (
-                <PendingOrderCard key={order.id} order={order} />
-              ))}
-            </div>
-          )}
-        </div>
+            {(pendingOrders?.data ?? []).length === 0 ? (
+              <div className="mt-6 text-center py-8">
+                <ChefHat className="mx-auto h-12 w-12 text-gray-300" />
+                <p className="mt-3 text-gray-500">No pending orders</p>
+                <p className="text-sm text-gray-400">New orders will appear here</p>
+              </div>
+            ) : (
+              <div className="mt-4 space-y-3">
+                {(pendingOrders?.data ?? []).slice(0, 4).map((order) => (
+                  <PendingOrderCard key={order.id} order={order} />
+                ))}
+              </div>
+            )}
+          </Card>
+        </motion.div>
 
         {/* Quick Actions */}
-        <div className="space-y-6">
-          <div className="rounded-xl bg-white p-6 shadow-sm">
+        <motion.div variants={fadeInUp} className="space-y-6">
+          <Card variant="default" padding="lg">
             <h2 className="text-lg font-semibold text-gray-900">Quick Actions</h2>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <Link
+              <QuickActionLink
                 to="/chef/menu"
-                className="flex items-center gap-3 rounded-lg border p-4 hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-100">
-                  <ChefHat className="h-5 w-5 text-brand-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">Manage Menu</p>
-                  <p className="text-sm text-gray-500">Add or edit items</p>
-                </div>
-              </Link>
-              <Link
+                icon={ChefHat}
+                color="brand"
+                title="Manage Menu"
+                subtitle="Add or edit items"
+              />
+              <QuickActionLink
                 to="/chef/orders"
-                className="flex items-center gap-3 rounded-lg border p-4 hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100">
-                  <ShoppingBag className="h-5 w-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">View Orders</p>
-                  <p className="text-sm text-gray-500">Manage all orders</p>
-                </div>
-              </Link>
-              <Link
+                icon={ShoppingBag}
+                color="blue"
+                title="View Orders"
+                subtitle="Manage all orders"
+              />
+              <QuickActionLink
                 to="/chef/earnings"
-                className="flex items-center gap-3 rounded-lg border p-4 hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-100">
-                  <DollarSign className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">Earnings</p>
-                  <p className="text-sm text-gray-500">Track your income</p>
-                </div>
-              </Link>
-              <Link
+                icon={DollarSign}
+                color="green"
+                title="Earnings"
+                subtitle="Track your income"
+              />
+              <QuickActionLink
                 to="/chef/social"
-                className="flex items-center gap-3 rounded-lg border p-4 hover:bg-gray-50 transition-colors"
-              >
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
-                  <TrendingUp className="h-5 w-5 text-purple-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">Social Feed</p>
-                  <p className="text-sm text-gray-500">Share your creations</p>
-                </div>
-              </Link>
+                icon={TrendingUp}
+                color="purple"
+                title="Social Feed"
+                subtitle="Share your creations"
+              />
             </div>
-          </div>
+          </Card>
 
-          {/* Tips */}
-          <div className="rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 p-6 text-white">
+          {/* Pro Tip */}
+          <Card variant="premium" padding="lg" className="text-white">
             <h3 className="font-semibold">Pro Tip</h3>
             <p className="mt-2 text-brand-100">
               Customers love seeing photos of your dishes! Post on the social feed
               to increase visibility and attract more orders.
             </p>
-            <Link
-              to="/chef/social"
-              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-white/20 px-4 py-2 text-sm font-medium hover:bg-white/30 transition-colors"
-            >
-              Create a post
-              <ArrowRight className="h-4 w-4" />
+            <Link to="/chef/social">
+              <Button variant="ghost" size="sm" className="mt-4 bg-white/20 hover:bg-white/30 text-white">
+                Create a post
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
             </Link>
-          </div>
-        </div>
+          </Card>
+        </motion.div>
       </div>
 
       {/* Recent Orders */}
-      <div className="rounded-xl bg-white p-6 shadow-sm">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Recent Orders</h2>
-          <Link
-            to="/chef/orders"
-            className="flex items-center gap-1 text-sm text-brand-600 hover:text-brand-700"
-          >
-            View all
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
+      <motion.div variants={fadeInUp}>
+        <Card variant="default" padding="lg">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-gray-900">Recent Orders</h2>
+            <Link to="/chef/orders">
+              <Button variant="link" size="sm" rightIcon={<ArrowRight className="h-4 w-4" />}>
+                View all
+              </Button>
+            </Link>
+          </div>
 
-        <div className="mt-4 overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b text-left text-sm text-gray-500">
-                <th className="pb-3 font-medium">Order</th>
-                <th className="pb-3 font-medium">Items</th>
-                <th className="pb-3 font-medium">Total</th>
-                <th className="pb-3 font-medium">Status</th>
-                <th className="pb-3 font-medium">Time</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {(recentOrders?.data ?? []).map((order) => (
-                <tr key={order.id} className="text-sm">
-                  <td className="py-3">
-                    <Link
-                      to={`/chef/orders/${order.id}`}
-                      className="font-medium text-brand-600 hover:underline"
-                    >
-                      #{order.orderNumber}
-                    </Link>
-                  </td>
-                  <td className="py-3 text-gray-600">
-                    {order.items.length} item(s)
-                  </td>
-                  <td className="py-3 font-medium text-gray-900">
-                    ${order.total.toFixed(2)}
-                  </td>
-                  <td className="py-3">
-                    <OrderStatusBadge status={order.status} />
-                  </td>
-                  <td className="py-3 text-gray-500">
-                    {new Date(order.createdAt).toLocaleTimeString('en-US', {
-                      hour: 'numeric',
-                      minute: '2-digit',
-                    })}
-                  </td>
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b text-left text-sm text-gray-500">
+                  <th className="pb-3 font-medium">Order</th>
+                  <th className="pb-3 font-medium">Items</th>
+                  <th className="pb-3 font-medium">Total</th>
+                  <th className="pb-3 font-medium">Status</th>
+                  <th className="pb-3 font-medium">Time</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+              </thead>
+              <tbody className="divide-y">
+                {(recentOrders?.data ?? []).map((order) => (
+                  <tr key={order.id} className="text-sm">
+                    <td className="py-3">
+                      <Link
+                        to={`/chef/orders/${order.id}`}
+                        className="font-medium text-brand-600 hover:underline"
+                      >
+                        #{order.orderNumber}
+                      </Link>
+                    </td>
+                    <td className="py-3 text-gray-600">
+                      {order.items.length} item(s)
+                    </td>
+                    <td className="py-3 font-medium text-gray-900">
+                      ${order.total.toFixed(2)}
+                    </td>
+                    <td className="py-3">
+                      <OrderStatusBadge status={order.status} />
+                    </td>
+                    <td className="py-3 text-gray-500">
+                      {new Date(order.createdAt).toLocaleTimeString('en-US', {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                      })}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      </motion.div>
+    </motion.div>
   );
 }
 
@@ -273,24 +259,28 @@ function StatCard({
   change?: number;
   subtitle?: string;
   icon: typeof DollarSign;
-  color: 'green' | 'blue' | 'yellow' | 'orange';
+  color: 'green' | 'blue' | 'yellow' | 'golden';
   urgent?: boolean;
 }) {
   const colorClasses = {
-    green: 'bg-green-100 text-green-600',
+    green: 'bg-fresh-100 text-fresh-600',
     blue: 'bg-blue-100 text-blue-600',
     yellow: 'bg-yellow-100 text-yellow-600',
-    orange: 'bg-orange-100 text-orange-600',
+    golden: 'bg-golden-100 text-golden-600',
   };
 
   return (
-    <div className={`rounded-xl bg-white p-6 shadow-sm ${urgent ? 'ring-2 ring-yellow-400' : ''}`}>
+    <Card
+      variant="default"
+      padding="lg"
+      className={urgent ? 'ring-2 ring-yellow-400' : ''}
+    >
       <div className="flex items-center justify-between">
-        <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${colorClasses[color]}`}>
+        <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${colorClasses[color]}`}>
           <Icon className="h-6 w-6" />
         </div>
         {change !== undefined && (
-          <span className={`flex items-center gap-1 text-sm ${change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+          <span className={`flex items-center gap-1 text-sm font-medium ${change >= 0 ? 'text-fresh-600' : 'text-red-600'}`}>
             <ArrowUpRight className={`h-4 w-4 ${change < 0 ? 'rotate-180' : ''}`} />
             {Math.abs(change)}%
           </span>
@@ -298,7 +288,43 @@ function StatCard({
       </div>
       <p className="mt-4 text-2xl font-bold text-gray-900">{value}</p>
       <p className="text-sm text-gray-500">{subtitle || title}</p>
-    </div>
+    </Card>
+  );
+}
+
+function QuickActionLink({
+  to,
+  icon: Icon,
+  color,
+  title,
+  subtitle,
+}: {
+  to: string;
+  icon: typeof ChefHat;
+  color: 'brand' | 'blue' | 'green' | 'purple';
+  title: string;
+  subtitle: string;
+}) {
+  const colorClasses = {
+    brand: 'bg-brand-100 text-brand-600',
+    blue: 'bg-blue-100 text-blue-600',
+    green: 'bg-fresh-100 text-fresh-600',
+    purple: 'bg-purple-100 text-purple-600',
+  };
+
+  return (
+    <Link
+      to={to}
+      className="flex items-center gap-3 rounded-xl border border-gray-200 p-4 hover:bg-gray-50 hover:border-gray-300 transition-all"
+    >
+      <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${colorClasses[color]}`}>
+        <Icon className="h-5 w-5" />
+      </div>
+      <div>
+        <p className="font-medium text-gray-900">{title}</p>
+        <p className="text-sm text-gray-500">{subtitle}</p>
+      </div>
+    </Link>
   );
 }
 
@@ -308,8 +334,8 @@ function PendingOrderCard({ order }: { order: Order }) {
   return (
     <Link
       to={`/chef/orders/${order.id}`}
-      className={`flex items-center justify-between rounded-lg border p-4 transition-colors hover:bg-gray-50 ${
-        isNew ? 'border-yellow-300 bg-yellow-50' : ''
+      className={`flex items-center justify-between rounded-xl border p-4 transition-all hover:bg-gray-50 ${
+        isNew ? 'border-yellow-300 bg-yellow-50 hover:bg-yellow-100' : 'border-gray-200'
       }`}
     >
       <div className="flex items-center gap-3">
@@ -319,7 +345,7 @@ function PendingOrderCard({ order }: { order: Order }) {
         <div>
           <p className="font-medium text-gray-900">#{order.orderNumber}</p>
           <p className="text-sm text-gray-500">
-            {order.items.length} items • ${order.total.toFixed(2)}
+            {order.items.length} items - ${order.total.toFixed(2)}
           </p>
         </div>
       </div>
@@ -337,22 +363,22 @@ function PendingOrderCard({ order }: { order: Order }) {
 }
 
 function OrderStatusBadge({ status }: { status: string }) {
-  const config: Record<string, { label: string; color: string }> = {
-    pending: { label: 'New', color: 'bg-yellow-100 text-yellow-800' },
-    accepted: { label: 'Accepted', color: 'bg-blue-100 text-blue-800' },
-    preparing: { label: 'Preparing', color: 'bg-purple-100 text-purple-800' },
-    ready: { label: 'Ready', color: 'bg-green-100 text-green-800' },
-    picked_up: { label: 'Picked Up', color: 'bg-cyan-100 text-cyan-800' },
-    delivering: { label: 'Delivering', color: 'bg-orange-100 text-orange-800' },
-    delivered: { label: 'Delivered', color: 'bg-gray-100 text-gray-800' },
-    cancelled: { label: 'Cancelled', color: 'bg-red-100 text-red-800' },
+  const config: Record<string, { label: string; variant: 'warning' | 'info' | 'success' | 'default' | 'error' }> = {
+    pending: { label: 'New', variant: 'warning' },
+    accepted: { label: 'Accepted', variant: 'info' },
+    preparing: { label: 'Preparing', variant: 'info' },
+    ready: { label: 'Ready', variant: 'success' },
+    picked_up: { label: 'Picked Up', variant: 'info' },
+    delivering: { label: 'Delivering', variant: 'warning' },
+    delivered: { label: 'Delivered', variant: 'default' },
+    cancelled: { label: 'Cancelled', variant: 'error' },
   };
 
-  const { label, color } = config[status] || { label: status, color: 'bg-gray-100 text-gray-800' };
+  const { label, variant } = config[status] || { label: status, variant: 'default' as const };
 
   return (
-    <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${color}`}>
+    <Badge variant={variant} size="sm">
       {label}
-    </span>
+    </Badge>
   );
 }

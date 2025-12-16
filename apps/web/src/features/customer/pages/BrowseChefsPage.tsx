@@ -1,18 +1,26 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
   MapPin,
-  Star,
   Clock,
   Filter,
-  ChevronDown,
   X,
-  Loader2,
 } from 'lucide-react';
 import { apiClient } from '@/shared/services/api-client';
 import type { Chef, PaginatedResponse, ChefFilters } from '@/shared/types';
+import {
+  Button,
+  Card,
+  Input,
+  Badge,
+  Avatar,
+  RatingBadge,
+  SimpleSelect,
+  SkeletonChefCard,
+} from '@/shared/components/ui';
 
 const CUISINES = [
   'South Indian',
@@ -42,6 +50,26 @@ const SORT_OPTIONS = [
   { value: 'orders', label: 'Most Popular' },
   { value: 'price', label: 'Price' },
 ];
+
+const RATING_OPTIONS = [
+  { value: '', label: 'Any Rating' },
+  { value: '4.5', label: '4.5+ Stars' },
+  { value: '4', label: '4+ Stars' },
+  { value: '3.5', label: '3.5+ Stars' },
+];
+
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.05 },
+  },
+};
+
+const fadeInUp = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0 },
+};
 
 export default function BrowseChefsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -73,7 +101,6 @@ export default function BrowseChefsPage() {
         params.delete(key);
       }
     });
-    // Reset to page 1 when filters change
     if (!newFilters.page) {
       params.set('page', '1');
     }
@@ -101,211 +128,187 @@ export default function BrowseChefsPage() {
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container-app">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Explore Home Chefs</h1>
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <h1 className="font-display text-display-sm text-gray-900">Explore Home Chefs</h1>
           <p className="mt-2 text-gray-600">
             Discover talented home chefs serving authentic homemade food
           </p>
-        </div>
+        </motion.div>
 
         {/* Search and Filters */}
-        <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
+        >
           {/* Search */}
           <form onSubmit={handleSearch} className="flex-1 max-w-xl">
-            <div className="relative">
-              <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search chefs, dishes, cuisines..."
-                className="input-base pl-12 pr-4 py-3"
-              />
-            </div>
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search chefs, dishes, cuisines..."
+              leftIcon={<Search className="h-5 w-5" />}
+              inputSize="lg"
+            />
           </form>
 
           {/* Sort and Filter buttons */}
           <div className="flex items-center gap-3">
-            <div className="relative">
-              <select
-                value={filters.sort || 'rating'}
-                onChange={(e) => updateFilters({ sort: e.target.value as ChefFilters['sort'] })}
-                className="input-base appearance-none pr-10 py-2.5"
-              >
-                {SORT_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" />
-            </div>
+            <SimpleSelect
+              options={SORT_OPTIONS}
+              value={filters.sort || 'rating'}
+              onValueChange={(value) => updateFilters({ sort: value as ChefFilters['sort'] })}
+            />
 
-            <button
+            <Button
+              variant={activeFilterCount > 0 ? 'brand-outline' : 'outline'}
               onClick={() => setShowFilters(!showFilters)}
-              className={`btn-outline flex items-center gap-2 py-2.5 ${
-                activeFilterCount > 0 ? 'border-brand-500 text-brand-600' : ''
-              }`}
+              leftIcon={<Filter className="h-4 w-4" />}
             >
-              <Filter className="h-4 w-4" />
               Filters
               {activeFilterCount > 0 && (
-                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-500 text-xs text-white">
+                <Badge variant="solid-brand" size="sm" className="ml-2">
                   {activeFilterCount}
-                </span>
+                </Badge>
               )}
-            </button>
+            </Button>
           </div>
-        </div>
+        </motion.div>
 
         {/* Filter Panel */}
-        {showFilters && (
-          <div className="mb-6 rounded-xl bg-white p-6 shadow-sm">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-gray-900">Filters</h3>
-              {activeFilterCount > 0 && (
-                <button
-                  onClick={clearAllFilters}
-                  className="text-sm text-brand-600 hover:text-brand-700"
-                >
-                  Clear all
-                </button>
-              )}
-            </div>
+        <AnimatePresence>
+          {showFilters && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <Card variant="default" padding="md" className="mb-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-semibold text-gray-900">Filters</h3>
+                  {activeFilterCount > 0 && (
+                    <Button variant="link" onClick={clearAllFilters}>
+                      Clear all
+                    </Button>
+                  )}
+                </div>
 
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-              {/* Cuisine */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Cuisine
-                </label>
-                <select
-                  value={filters.cuisine || ''}
-                  onChange={(e) => updateFilters({ cuisine: e.target.value })}
-                  className="input-base"
-                >
-                  <option value="">All Cuisines</option>
-                  {CUISINES.map((cuisine) => (
-                    <option key={cuisine} value={cuisine}>
-                      {cuisine}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Dietary */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Dietary
-                </label>
-                <select
-                  value={filters.dietary || ''}
-                  onChange={(e) => updateFilters({ dietary: e.target.value })}
-                  className="input-base"
-                >
-                  <option value="">All Options</option>
-                  {DIETARY_OPTIONS.map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Rating */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Minimum Rating
-                </label>
-                <select
-                  value={filters.rating || ''}
-                  onChange={(e) =>
-                    updateFilters({ rating: e.target.value ? Number(e.target.value) : undefined })
-                  }
-                  className="input-base"
-                >
-                  <option value="">Any Rating</option>
-                  <option value="4.5">4.5+ Stars</option>
-                  <option value="4">4+ Stars</option>
-                  <option value="3.5">3.5+ Stars</option>
-                </select>
-              </div>
-
-              {/* Open Now */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Availability
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={filters.isOpen || false}
-                    onChange={(e) =>
-                      updateFilters({ isOpen: e.target.checked ? true : undefined })
-                    }
-                    className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                  <SimpleSelect
+                    label="Cuisine"
+                    options={[{ value: '', label: 'All Cuisines' }, ...CUISINES.map(c => ({ value: c, label: c }))]}
+                    value={filters.cuisine || ''}
+                    onValueChange={(value) => updateFilters({ cuisine: value || undefined })}
                   />
-                  <span className="text-gray-700">Open Now</span>
-                </label>
-              </div>
-            </div>
-          </div>
-        )}
+
+                  <SimpleSelect
+                    label="Dietary"
+                    options={[{ value: '', label: 'All Options' }, ...DIETARY_OPTIONS.map(d => ({ value: d, label: d }))]}
+                    value={filters.dietary || ''}
+                    onValueChange={(value) => updateFilters({ dietary: value || undefined })}
+                  />
+
+                  <SimpleSelect
+                    label="Minimum Rating"
+                    options={RATING_OPTIONS}
+                    value={String(filters.rating || '')}
+                    onValueChange={(value) => updateFilters({ rating: value ? Number(value) : undefined })}
+                  />
+
+                  <div>
+                    <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                      Availability
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer mt-3">
+                      <input
+                        type="checkbox"
+                        checked={filters.isOpen || false}
+                        onChange={(e) =>
+                          updateFilters({ isOpen: e.target.checked ? true : undefined })
+                        }
+                        className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                      />
+                      <span className="text-gray-700">Open Now</span>
+                    </label>
+                  </div>
+                </div>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Active filters */}
-        {(filters.search || filters.cuisine || filters.dietary) && (
-          <div className="mb-6 flex flex-wrap items-center gap-2">
-            <span className="text-sm text-gray-500">Active filters:</span>
-            {filters.search && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-brand-100 px-3 py-1 text-sm text-brand-700">
-                Search: {filters.search}
-                <button
-                  onClick={() => {
-                    setSearchQuery('');
-                    updateFilters({ search: undefined });
-                  }}
-                  className="hover:text-brand-900"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            )}
-            {filters.cuisine && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-brand-100 px-3 py-1 text-sm text-brand-700">
-                {filters.cuisine}
-                <button
-                  onClick={() => updateFilters({ cuisine: undefined })}
-                  className="hover:text-brand-900"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            )}
-            {filters.dietary && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-brand-100 px-3 py-1 text-sm text-brand-700">
-                {filters.dietary}
-                <button
-                  onClick={() => updateFilters({ dietary: undefined })}
-                  className="hover:text-brand-900"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            )}
-          </div>
-        )}
+        <AnimatePresence>
+          {(filters.search || filters.cuisine || filters.dietary) && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="mb-6 flex flex-wrap items-center gap-2"
+            >
+              <span className="text-sm text-gray-500">Active filters:</span>
+              {filters.search && (
+                <Badge variant="brand" className="gap-1">
+                  Search: {filters.search}
+                  <button
+                    onClick={() => {
+                      setSearchQuery('');
+                      updateFilters({ search: undefined });
+                    }}
+                    className="hover:text-brand-900 ml-1"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              )}
+              {filters.cuisine && (
+                <Badge variant="brand" className="gap-1">
+                  {filters.cuisine}
+                  <button
+                    onClick={() => updateFilters({ cuisine: undefined })}
+                    className="hover:text-brand-900 ml-1"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              )}
+              {filters.dietary && (
+                <Badge variant="brand" className="gap-1">
+                  {filters.dietary}
+                  <button
+                    onClick={() => updateFilters({ dietary: undefined })}
+                    className="hover:text-brand-900 ml-1"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Results */}
         {isLoading ? (
-          <div className="flex items-center justify-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-brand-500" />
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <SkeletonChefCard key={i} />
+            ))}
           </div>
         ) : error ? (
-          <div className="rounded-xl bg-red-50 p-8 text-center">
+          <Card variant="filled" padding="lg" className="text-center bg-red-50">
             <p className="text-red-600">Failed to load chefs. Please try again.</p>
-          </div>
+            <Button variant="primary" className="mt-4" onClick={() => window.location.reload()}>
+              Retry
+            </Button>
+          </Card>
         ) : (data?.data ?? []).length === 0 ? (
-          <div className="rounded-xl bg-gray-100 p-12 text-center">
+          <Card variant="filled" padding="lg" className="text-center">
             <div className="mx-auto h-16 w-16 rounded-full bg-gray-200 flex items-center justify-center mb-4">
               <Search className="h-8 w-8 text-gray-400" />
             </div>
@@ -313,13 +316,10 @@ export default function BrowseChefsPage() {
             <p className="mt-2 text-gray-600">
               Try adjusting your filters or search query
             </p>
-            <button
-              onClick={clearAllFilters}
-              className="btn-primary mt-4"
-            >
+            <Button variant="primary" className="mt-4" onClick={clearAllFilters}>
               Clear filters
-            </button>
-          </div>
+            </Button>
+          </Card>
         ) : (
           <>
             {/* Results count */}
@@ -328,32 +328,39 @@ export default function BrowseChefsPage() {
             </p>
 
             {/* Chef Grid */}
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <motion.div
+              variants={staggerContainer}
+              initial="hidden"
+              animate="visible"
+              className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
+            >
               {(data?.data ?? []).map((chef) => (
-                <ChefCard key={chef.id} chef={chef} />
+                <motion.div key={chef.id} variants={fadeInUp}>
+                  <ChefCardItem chef={chef} />
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
 
             {/* Pagination */}
             {data && data.pagination.totalPages > 1 && (
               <div className="mt-8 flex items-center justify-center gap-2">
-                <button
+                <Button
+                  variant="outline"
                   onClick={() => updateFilters({ page: filters.page! - 1 })}
                   disabled={!data.pagination.hasPrev}
-                  className="btn-outline disabled:opacity-50"
                 >
                   Previous
-                </button>
+                </Button>
                 <span className="px-4 text-sm text-gray-600">
                   Page {data.pagination.page} of {data.pagination.totalPages}
                 </span>
-                <button
+                <Button
+                  variant="outline"
                   onClick={() => updateFilters({ page: filters.page! + 1 })}
                   disabled={!data.pagination.hasNext}
-                  className="btn-outline disabled:opacity-50"
                 >
                   Next
-                </button>
+                </Button>
               </div>
             )}
           </>
@@ -363,73 +370,74 @@ export default function BrowseChefsPage() {
   );
 }
 
-function ChefCard({ chef }: { chef: Chef }) {
+function ChefCardItem({ chef }: { chef: Chef }) {
   return (
-    <Link
-      to={`/chefs/${chef.id}`}
-      className="card card-hover overflow-hidden group"
-    >
-      {/* Banner */}
-      <div className="relative h-32">
-        <img
-          src={chef.bannerImage || chef.profileImage}
-          alt={chef.businessName}
-          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-        />
-        {chef.verified && (
-          <div className="absolute top-2 right-2 rounded-full bg-green-500 px-2 py-0.5 text-xs font-medium text-white">
-            Verified
-          </div>
-        )}
-        <div className="absolute -bottom-8 left-4">
+    <Link to={`/chefs/${chef.id}`}>
+      <Card variant="default" padding="none" hover="lift" className="overflow-hidden group">
+        {/* Banner */}
+        <div className="relative h-32 overflow-hidden">
           <img
-            src={chef.profileImage}
+            src={chef.bannerImage || chef.profileImage}
             alt={chef.businessName}
-            className="h-16 w-16 rounded-xl border-4 border-white object-cover shadow-sm"
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
           />
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="p-4 pt-10">
-        <div className="flex items-start justify-between">
-          <div className="min-w-0">
-            <h3 className="font-semibold text-gray-900 truncate">{chef.businessName}</h3>
-            <p className="mt-1 text-sm text-gray-500 truncate">
-              {chef.cuisines.slice(0, 2).join(' • ')}
-            </p>
-          </div>
-          <div className="flex items-center gap-1 rounded-lg bg-green-50 px-2 py-1 ml-2 flex-shrink-0">
-            <Star className="h-4 w-4 fill-green-500 text-green-500" />
-            <span className="text-sm font-medium text-green-700">{chef.rating}</span>
-          </div>
-        </div>
-
-        <p className="mt-3 line-clamp-2 text-sm text-gray-600">{chef.description}</p>
-
-        <div className="mt-4 flex items-center gap-4 text-sm text-gray-500">
-          <div className="flex items-center gap-1">
-            <Clock className="h-4 w-4" />
-            {chef.prepTime}
-          </div>
-          <div>{chef.priceRange}</div>
-        </div>
-
-        <div className="mt-3 flex items-center justify-between text-sm">
-          <div className="flex items-center gap-1 text-gray-500">
-            <MapPin className="h-4 w-4" />
-            {chef.serviceRadius} km radius
-          </div>
-          {chef.acceptingOrders ? (
-            <span className="flex items-center gap-1 text-green-600">
-              <span className="h-2 w-2 rounded-full bg-green-500" />
-              Open
-            </span>
-          ) : (
-            <span className="text-gray-400">Closed</span>
+          {chef.verified && (
+            <Badge variant="success" size="sm" className="absolute top-2 right-2">
+              Verified
+            </Badge>
           )}
+          <div className="absolute -bottom-8 left-4">
+            <Avatar
+              src={chef.profileImage}
+              alt={chef.businessName}
+              size="xl"
+              shape="square"
+              className="border-4 border-white shadow-elevated rounded-xl"
+            />
+          </div>
         </div>
-      </div>
+
+        {/* Content */}
+        <div className="p-4 pt-10">
+          <div className="flex items-start justify-between">
+            <div className="min-w-0 flex-1">
+              <h3 className="font-semibold text-gray-900 truncate group-hover:text-brand-600 transition-colors">
+                {chef.businessName}
+              </h3>
+              <p className="mt-1 text-sm text-gray-500 truncate">
+                {chef.cuisines.slice(0, 2).join(' • ')}
+              </p>
+            </div>
+            <RatingBadge value={chef.rating} className="ml-2" />
+          </div>
+
+          <p className="mt-3 line-clamp-2 text-sm text-gray-600">{chef.description}</p>
+
+          <div className="mt-4 flex items-center gap-4 text-sm text-gray-500">
+            <div className="flex items-center gap-1">
+              <Clock className="h-4 w-4" />
+              {chef.prepTime}
+            </div>
+            <div>{chef.priceRange}</div>
+          </div>
+
+          <div className="mt-3 flex items-center justify-between text-sm">
+            <div className="flex items-center gap-1 text-gray-500">
+              <MapPin className="h-4 w-4" />
+              {chef.serviceRadius} km radius
+            </div>
+            {chef.acceptingOrders ? (
+              <Badge variant="success" size="sm" dot>
+                Open
+              </Badge>
+            ) : (
+              <Badge variant="default" size="sm">
+                Closed
+              </Badge>
+            )}
+          </div>
+        </div>
+      </Card>
     </Link>
   );
 }

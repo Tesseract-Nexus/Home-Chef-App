@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* HomeChef Food & Chef Themed Design System */
+/* HomeChef Design System - Core Styles */
 :root {
   /* Mobile-specific spacing */
   --spacing-safe-top: env(safe-area-inset-top);
@@ -11,6 +11,7 @@
   --spacing-safe-right: env(safe-area-inset-right);
 }
 
+/* CSS Keyframe Animations */
 @keyframes fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -56,17 +57,13 @@
 
   html {
     @apply scroll-smooth antialiased;
-    /* Prevent horizontal scroll on mobile */
     overflow-x: hidden;
-    /* Smooth scrolling on iOS */
     -webkit-overflow-scrolling: touch;
   }
 
   body {
     @apply bg-gray-50 text-gray-900 font-sans;
-    /* Prevent pull-to-refresh on mobile */
     overscroll-behavior-y: contain;
-    /* Safe area padding for notched devices */
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
   }
@@ -81,15 +78,10 @@
     touch-action: manipulation;
   }
 
-  /* Disable text selection on interactive elements for mobile */
+  /* Disable text selection on interactive elements */
   button, .no-select {
     -webkit-user-select: none;
     user-select: none;
-  }
-
-  /* Improve touch scrolling */
-  .scroll-touch {
-    -webkit-overflow-scrolling: touch;
   }
 
   /* Remove tap highlight on mobile */
@@ -98,7 +90,7 @@
   }
 }
 
-/* Custom utility classes */
+/* Utility classes */
 @layer utilities {
   .text-balance {
     text-wrap: balance;
@@ -113,7 +105,7 @@
     display: none;
   }
 
-  /* Gradient backgrounds - Food themed */
+  /* Gradient backgrounds */
   .bg-gradient-brand {
     @apply bg-gradient-to-r from-brand-500 to-brand-600;
   }
@@ -142,12 +134,10 @@
     background: linear-gradient(135deg, #fef2f2 0%, #fff7ed 100%);
   }
 
-  /* Food card overlay gradient */
   .bg-gradient-food-overlay {
     background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.7) 100%);
   }
 
-  /* Chef profile gradient */
   .bg-gradient-chef {
     background: linear-gradient(135deg, #f97316 0%, #ea580c 50%, #c2410c 100%);
   }
@@ -159,11 +149,6 @@
 
   .glass-dark {
     @apply bg-gray-900/80 backdrop-blur-md;
-  }
-
-  /* Card hover effect */
-  .card-hover {
-    @apply transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5;
   }
 
   /* Mobile-specific utilities */
@@ -210,11 +195,6 @@
     animation: shimmer 1.5s infinite;
   }
 
-  /* Pull to refresh indicator */
-  .pull-indicator {
-    @apply transition-transform duration-200;
-  }
-
   /* Haptic feedback simulation */
   .haptic-light:active {
     transform: scale(0.98);
@@ -224,12 +204,11 @@
     transform: scale(0.95);
   }
 
-  /* Hide on mobile, show on desktop */
+  /* Visibility utilities */
   .mobile-hidden {
     @apply hidden md:block;
   }
 
-  /* Show on mobile, hide on desktop */
   .mobile-only {
     @apply block md:hidden;
   }
@@ -280,18 +259,19 @@
   }
 }
 
-/* Component layer for reusable patterns */
+/* Component patterns */
 @layer components {
+  /* Container */
   .container-app {
     @apply mx-auto max-w-7xl px-4 sm:px-6 lg:px-8;
   }
 
-  /* Mobile-first container */
   .container-mobile {
     @apply mx-auto w-full px-4;
     max-width: min(100%, 640px);
   }
 
+  /* Page layout */
   .page-header {
     @apply mb-6 space-y-2;
   }
@@ -308,119 +288,7 @@
     @apply py-8 md:py-12 lg:py-16;
   }
 
-  /* Mobile-optimized inputs with larger touch targets */
-  .input-base {
-    @apply w-full rounded-lg border border-gray-300 px-4 py-3 text-base
-           placeholder:text-gray-400 focus:border-brand-500 focus:ring-brand-500
-           disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500
-           min-h-[44px] min-w-[44px];
-  }
-
-  .input-sm {
-    @apply w-full rounded-lg border border-gray-300 px-3 py-2 text-sm
-           placeholder:text-gray-400 focus:border-brand-500 focus:ring-brand-500;
-  }
-
-  /* Touch-friendly buttons */
-  .btn-base {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-3
-           text-base font-medium transition-all duration-150
-           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
-           disabled:pointer-events-none disabled:opacity-50
-           min-h-[44px] min-w-[44px] active:scale-[0.98];
-  }
-
-  .btn-sm {
-    @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2
-           text-sm font-medium transition-all duration-150
-           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
-           disabled:pointer-events-none disabled:opacity-50
-           active:scale-[0.98];
-  }
-
-  .btn-primary {
-    @apply btn-base bg-brand-500 text-white hover:bg-brand-600
-           focus-visible:ring-brand-500 active:bg-brand-700;
-  }
-
-  .btn-primary-sm {
-    @apply btn-sm bg-brand-500 text-white hover:bg-brand-600
-           focus-visible:ring-brand-500 active:bg-brand-700;
-  }
-
-  .btn-secondary {
-    @apply btn-base bg-gray-100 text-gray-900 hover:bg-gray-200
-           focus-visible:ring-gray-500 active:bg-gray-300;
-  }
-
-  .btn-outline {
-    @apply btn-base border border-gray-300 bg-white text-gray-700
-           hover:bg-gray-50 focus-visible:ring-gray-500 active:bg-gray-100;
-  }
-
-  .btn-ghost {
-    @apply btn-base text-gray-600 hover:bg-gray-100 hover:text-gray-900
-           active:bg-gray-200;
-  }
-
-  .btn-danger {
-    @apply btn-base bg-error-500 text-white hover:bg-error-600
-           focus-visible:ring-error-500 active:bg-red-700;
-  }
-
-  /* Icon buttons for mobile */
-  .btn-icon {
-    @apply inline-flex items-center justify-center rounded-full p-2.5
-           transition-all duration-150 min-h-[44px] min-w-[44px]
-           focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
-           active:scale-[0.95];
-  }
-
-  .btn-icon-primary {
-    @apply btn-icon bg-brand-500 text-white hover:bg-brand-600;
-  }
-
-  .btn-icon-ghost {
-    @apply btn-icon text-gray-600 hover:bg-gray-100;
-  }
-
-  /* FAB (Floating Action Button) */
-  .fab {
-    @apply fixed bottom-20 right-4 z-40 flex h-14 w-14 items-center justify-center
-           rounded-full bg-brand-500 text-white shadow-lg
-           transition-all duration-200 hover:bg-brand-600 hover:shadow-xl
-           active:scale-95 md:bottom-6;
-  }
-
-  .badge {
-    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
-  }
-
-  .badge-brand {
-    @apply badge bg-brand-100 text-brand-700;
-  }
-
-  .badge-success {
-    @apply badge bg-success-50 text-success-600;
-  }
-
-  .badge-warning {
-    @apply badge bg-warning-50 text-warning-600;
-  }
-
-  .badge-error {
-    @apply badge bg-error-50 text-error-600;
-  }
-
-  .card {
-    @apply rounded-xl border border-gray-200 bg-white shadow-sm;
-  }
-
-  .card-padding {
-    @apply p-4 md:p-6;
-  }
-
-  /* Mobile bottom navigation bar */
+  /* Mobile bottom navigation */
   .bottom-nav {
     @apply fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white
            safe-bottom md:hidden;
@@ -436,12 +304,7 @@
     @apply bottom-nav-item text-brand-600;
   }
 
-  /* Pull to refresh */
-  .pull-to-refresh {
-    @apply flex items-center justify-center py-4 text-gray-400;
-  }
-
-  /* Mobile modal/sheet */
+  /* Mobile sheet */
   .mobile-sheet {
     @apply fixed inset-x-0 bottom-0 z-50 rounded-t-2xl bg-white
            shadow-2xl safe-bottom transform transition-transform duration-300;
@@ -464,12 +327,7 @@
     @apply swipe-dot w-4 bg-brand-500;
   }
 
-  /* Image with loading state */
-  .img-responsive {
-    @apply w-full h-auto object-cover;
-  }
-
-  /* List item for mobile */
+  /* List items */
   .list-item {
     @apply flex items-center gap-4 px-4 py-3 transition-colors active:bg-gray-50;
   }
@@ -478,13 +336,7 @@
     @apply list-item border-b border-gray-100;
   }
 
-  /* Search bar mobile */
-  .search-bar-mobile {
-    @apply flex items-center gap-3 rounded-full bg-gray-100 px-4 py-2.5
-           focus-within:bg-white focus-within:ring-2 focus-within:ring-brand-500;
-  }
-
-  /* Sticky header for mobile */
+  /* Sticky header */
   .sticky-header {
     @apply sticky top-0 z-40 border-b border-gray-200 bg-white/95 backdrop-blur safe-top;
   }
@@ -495,284 +347,7 @@
            ring-2 ring-white;
   }
 
-  /* Quantity stepper */
-  .quantity-stepper {
-    @apply inline-flex items-center rounded-lg border border-gray-300;
-  }
-
-  .quantity-stepper-btn {
-    @apply flex h-10 w-10 items-center justify-center text-gray-600
-           transition-colors hover:bg-gray-100 active:bg-gray-200
-           disabled:opacity-50 disabled:cursor-not-allowed;
-  }
-
-  .quantity-stepper-value {
-    @apply w-12 text-center font-medium text-gray-900;
-  }
-
-  /* ========================================
-     Food & Chef Themed Components
-     ======================================== */
-
-  /* Food Card */
-  .food-card {
-    @apply card overflow-hidden transition-all duration-300
-           hover:shadow-lg hover:-translate-y-1;
-  }
-
-  .food-card-image {
-    @apply relative h-48 w-full overflow-hidden;
-  }
-
-  .food-card-image img {
-    @apply h-full w-full object-cover transition-transform duration-500;
-  }
-
-  .food-card:hover .food-card-image img {
-    @apply scale-110;
-  }
-
-  .food-card-overlay {
-    @apply absolute inset-0 bg-gradient-food-overlay opacity-0
-           transition-opacity duration-300;
-  }
-
-  .food-card:hover .food-card-overlay {
-    @apply opacity-100;
-  }
-
-  .food-card-content {
-    @apply p-4;
-  }
-
-  .food-card-title {
-    @apply font-semibold text-gray-900 line-clamp-1;
-  }
-
-  .food-card-description {
-    @apply mt-1 text-sm text-gray-500 line-clamp-2;
-  }
-
-  .food-card-footer {
-    @apply mt-3 flex items-center justify-between;
-  }
-
-  .food-card-price {
-    @apply text-lg font-bold text-brand-600;
-  }
-
-  /* Chef Card */
-  .chef-card {
-    @apply card overflow-hidden transition-all duration-300
-           hover:shadow-lg hover:-translate-y-1;
-  }
-
-  .chef-card-avatar {
-    @apply relative mx-auto -mt-8 h-24 w-24 overflow-hidden rounded-full
-           border-4 border-white shadow-md;
-  }
-
-  .chef-card-avatar img {
-    @apply h-full w-full object-cover;
-  }
-
-  .chef-card-info {
-    @apply p-4 text-center;
-  }
-
-  .chef-card-name {
-    @apply text-lg font-semibold text-gray-900;
-  }
-
-  .chef-card-specialty {
-    @apply mt-1 text-sm text-brand-600;
-  }
-
-  .chef-card-rating {
-    @apply mt-2 flex items-center justify-center gap-1;
-  }
-
-  /* Rating Stars */
-  .rating-stars {
-    @apply flex items-center gap-0.5;
-  }
-
-  .rating-star {
-    @apply h-4 w-4 text-golden-400;
-  }
-
-  .rating-star-empty {
-    @apply h-4 w-4 text-gray-300;
-  }
-
-  /* Price Tag */
-  .price-tag {
-    @apply inline-flex items-center gap-1 font-bold;
-  }
-
-  .price-tag-currency {
-    @apply text-sm;
-  }
-
-  .price-tag-amount {
-    @apply text-xl;
-  }
-
-  .price-tag-original {
-    @apply text-sm text-gray-400 line-through;
-  }
-
-  /* Discount Badge */
-  .discount-badge {
-    @apply inline-flex items-center rounded-full bg-spice-500
-           px-2 py-0.5 text-xs font-semibold text-white;
-  }
-
-  /* Cuisine Tag */
-  .cuisine-tag {
-    @apply inline-flex items-center rounded-full bg-brand-100
-           px-3 py-1 text-xs font-medium text-brand-700;
-  }
-
-  /* Spicy Level Indicator */
-  .spicy-level {
-    @apply flex items-center gap-0.5;
-  }
-
-  .spicy-icon {
-    @apply h-4 w-4 text-spice-500;
-  }
-
-  .spicy-icon-inactive {
-    @apply h-4 w-4 text-gray-300;
-  }
-
-  /* Delivery Time Badge */
-  .delivery-time {
-    @apply inline-flex items-center gap-1.5 rounded-full bg-fresh-100
-           px-3 py-1 text-xs font-medium text-fresh-700;
-  }
-
-  /* Order Status Badge */
-  .order-status {
-    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1
-           text-xs font-semibold;
-  }
-
-  .order-status-pending {
-    @apply order-status bg-golden-100 text-golden-700;
-  }
-
-  .order-status-preparing {
-    @apply order-status bg-brand-100 text-brand-700;
-  }
-
-  .order-status-ready {
-    @apply order-status bg-fresh-100 text-fresh-700;
-  }
-
-  .order-status-delivered {
-    @apply order-status bg-gray-100 text-gray-700;
-  }
-
-  .order-status-cancelled {
-    @apply order-status bg-spice-100 text-spice-700;
-  }
-
-  /* Hero Section */
-  .hero-section {
-    @apply relative overflow-hidden bg-gradient-cream py-16 md:py-24;
-  }
-
-  .hero-content {
-    @apply container-app relative z-10;
-  }
-
-  .hero-title {
-    @apply text-4xl font-bold tracking-tight text-gray-900
-           md:text-5xl lg:text-6xl;
-  }
-
-  .hero-title span {
-    @apply text-brand-600;
-  }
-
-  .hero-description {
-    @apply mt-4 max-w-2xl text-lg text-gray-600 md:text-xl;
-  }
-
-  /* Category Card */
-  .category-card {
-    @apply group relative h-40 overflow-hidden rounded-2xl cursor-pointer;
-  }
-
-  .category-card-image {
-    @apply absolute inset-0 transition-transform duration-500;
-  }
-
-  .category-card-image img {
-    @apply h-full w-full object-cover;
-  }
-
-  .category-card:hover .category-card-image img {
-    @apply scale-110;
-  }
-
-  .category-card-overlay {
-    @apply absolute inset-0 bg-gradient-to-t from-black/70 to-transparent;
-  }
-
-  .category-card-content {
-    @apply absolute inset-x-0 bottom-0 p-4 text-white;
-  }
-
-  .category-card-title {
-    @apply font-semibold text-lg;
-  }
-
-  .category-card-count {
-    @apply text-sm text-white/80;
-  }
-
-  /* Testimonial Card */
-  .testimonial-card {
-    @apply card p-6 text-center;
-  }
-
-  .testimonial-avatar {
-    @apply mx-auto h-16 w-16 rounded-full object-cover ring-4 ring-brand-100;
-  }
-
-  .testimonial-content {
-    @apply mt-4 text-gray-600 italic;
-  }
-
-  .testimonial-author {
-    @apply mt-4 font-semibold text-gray-900;
-  }
-
-  .testimonial-role {
-    @apply text-sm text-gray-500;
-  }
-
-  /* Stats Display */
-  .stats-grid {
-    @apply grid grid-cols-2 gap-4 md:grid-cols-4;
-  }
-
-  .stat-card {
-    @apply rounded-2xl bg-white p-6 text-center shadow-sm;
-  }
-
-  .stat-value {
-    @apply text-3xl font-bold text-brand-600;
-  }
-
-  .stat-label {
-    @apply mt-1 text-sm text-gray-500;
-  }
-
-  /* Empty State */
+  /* Empty state */
   .empty-state {
     @apply flex flex-col items-center justify-center py-12 text-center;
   }
@@ -789,7 +364,7 @@
     @apply mt-2 max-w-sm text-gray-500;
   }
 
-  /* Logo placeholder */
+  /* Logo */
   .logo {
     @apply flex items-center gap-2;
   }
@@ -810,13 +385,3 @@
     @apply text-xs text-gray-500;
   }
 }
-
-/* Responsive breakpoints reference for mobile-first development */
-/*
-  Default (0px+): Mobile phones portrait
-  sm (640px+): Mobile phones landscape / small tablets
-  md (768px+): Tablets portrait
-  lg (1024px+): Tablets landscape / laptops
-  xl (1280px+): Desktops
-  2xl (1536px+): Large desktops
-*/

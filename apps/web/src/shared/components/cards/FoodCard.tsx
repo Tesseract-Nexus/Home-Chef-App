@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom';
-import { Star, Clock, Plus, Heart, Flame } from 'lucide-react';
+import { Clock, Plus, Heart, Flame } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { cn } from '@/shared/utils/cn';
 import { FOOD_PLACEHOLDERS } from '@/shared/constants/images';
+import { Card, Badge, RatingBadge, Button } from '@/shared/components/ui';
 
 interface FoodCardProps {
   id: string;
@@ -47,32 +49,45 @@ export function FoodCard({
   const imageUrl = image || FOOD_PLACEHOLDERS[parseInt(id) % FOOD_PLACEHOLDERS.length];
 
   return (
-    <div className={cn('food-card', className)}>
+    <Card
+      variant="default"
+      padding="none"
+      hover="lift"
+      className={cn('overflow-hidden group', className)}
+    >
       {/* Image */}
-      <Link to={`/menu/${id}`} className="food-card-image">
-        <img src={imageUrl} alt={name} loading="lazy" />
-        <div className="food-card-overlay" />
+      <Link to={`/menu/${id}`} className="relative block aspect-square overflow-hidden">
+        <motion.img
+          src={imageUrl}
+          alt={name}
+          loading="lazy"
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
         {/* Badges */}
         <div className="absolute left-3 top-3 flex flex-col gap-2">
           {discount && (
-            <span className="discount-badge">-{discount}%</span>
+            <Badge variant="error" size="sm">
+              -{discount}%
+            </Badge>
           )}
           {isVegetarian && (
-            <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-fresh-500 text-white">
-              <span className="text-xs">V</span>
-            </span>
+            <Badge variant="success" size="sm">
+              Veg
+            </Badge>
           )}
         </div>
 
         {/* Favorite button */}
         {onFavorite && (
-          <button
+          <motion.button
             onClick={(e) => {
               e.preventDefault();
               onFavorite();
             }}
-            className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-sm transition-all hover:bg-white hover:scale-110"
+            whileTap={{ scale: 0.9 }}
+            className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 shadow-soft-md backdrop-blur-sm transition-all hover:bg-white hover:shadow-elevated"
           >
             <Heart
               className={cn(
@@ -80,18 +95,20 @@ export function FoodCard({
                 isFavorite ? 'fill-spice-500 text-spice-500' : 'text-gray-600'
               )}
             />
-          </button>
+          </motion.button>
         )}
       </Link>
 
       {/* Content */}
-      <div className="food-card-content">
+      <div className="p-4">
         <Link to={`/menu/${id}`}>
-          <h3 className="food-card-title">{name}</h3>
+          <h3 className="font-semibold text-gray-900 line-clamp-1 group-hover:text-brand-600 transition-colors">
+            {name}
+          </h3>
         </Link>
 
         {description && (
-          <p className="food-card-description">{description}</p>
+          <p className="mt-1 text-sm text-gray-500 line-clamp-2">{description}</p>
         )}
 
         {/* Chef link */}
@@ -105,28 +122,24 @@ export function FoodCard({
         )}
 
         {/* Meta info */}
-        <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-gray-500">
-          {rating && (
-            <div className="flex items-center gap-1">
-              <Star className="h-4 w-4 fill-golden-400 text-golden-400" />
-              <span className="font-medium text-gray-900">{rating}</span>
-              {reviewCount && <span>({reviewCount})</span>}
-            </div>
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          {rating !== undefined && (
+            <RatingBadge value={rating} showCount={!!reviewCount} count={reviewCount} size="sm" />
           )}
           {prepTime && (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1 text-sm text-gray-500">
               <Clock className="h-4 w-4" />
               <span>{prepTime}</span>
             </div>
           )}
           {spicyLevel && (
-            <div className="spicy-level">
+            <div className="flex items-center gap-0.5">
               {[1, 2, 3].map((level) => (
                 <Flame
                   key={level}
                   className={cn(
                     'h-4 w-4',
-                    level <= spicyLevel ? 'text-spice-500' : 'text-gray-300'
+                    level <= spicyLevel ? 'text-spice-500' : 'text-gray-200'
                   )}
                 />
               ))}
@@ -135,28 +148,31 @@ export function FoodCard({
         </div>
 
         {/* Footer */}
-        <div className="food-card-footer">
-          <div className="price-tag text-brand-600">
-            <span className="price-tag-currency">$</span>
-            <span className="price-tag-amount">{price.toFixed(2)}</span>
+        <div className="mt-4 flex items-center justify-between">
+          <div className="flex items-baseline gap-2">
+            <span className="text-xl font-bold text-brand-600">
+              ${price.toFixed(2)}
+            </span>
             {originalPrice && originalPrice > price && (
-              <span className="price-tag-original ml-2">
+              <span className="text-sm text-gray-400 line-through">
                 ${originalPrice.toFixed(2)}
               </span>
             )}
           </div>
 
           {onAddToCart && (
-            <button
+            <Button
+              variant="primary"
+              size="icon"
               onClick={onAddToCart}
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-500 text-white transition-all hover:bg-brand-600 active:scale-95"
+              className="rounded-xl"
             >
               <Plus className="h-5 w-5" />
-            </button>
+            </Button>
           )}
         </div>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -172,28 +188,30 @@ export function FoodCardCompact({
   const imageUrl = image || FOOD_PLACEHOLDERS[parseInt(id) % FOOD_PLACEHOLDERS.length];
 
   return (
-    <div className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-3">
+    <Card variant="outlined" padding="sm" hover="lift" className="flex items-center gap-4">
       <img
         src={imageUrl}
         alt={name}
-        className="h-20 w-20 rounded-lg object-cover"
+        className="h-20 w-20 rounded-xl object-cover"
         loading="lazy"
       />
-      <div className="flex-1">
-        <h4 className="font-medium text-gray-900">{name}</h4>
+      <div className="flex-1 min-w-0">
+        <h4 className="font-medium text-gray-900 truncate">{name}</h4>
         {chefName && (
           <p className="text-sm text-gray-500">by {chefName}</p>
         )}
         <p className="mt-1 font-bold text-brand-600">${price.toFixed(2)}</p>
       </div>
       {onAddToCart && (
-        <button
+        <Button
+          variant="secondary"
+          size="icon"
           onClick={onAddToCart}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-100 text-brand-600 transition-all hover:bg-brand-200 active:scale-95"
+          className="shrink-0"
         >
           <Plus className="h-5 w-5" />
-        </button>
+        </Button>
       )}
-    </div>
+    </Card>
   );
 }

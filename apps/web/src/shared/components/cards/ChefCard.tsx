@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom';
-import { Star, MapPin, Clock, Heart, Award } from 'lucide-react';
+import { MapPin, Clock, Heart, Award } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { cn } from '@/shared/utils/cn';
 import { CHEF_PLACEHOLDERS, FOOD_PLACEHOLDERS } from '@/shared/constants/images';
+import { Card, Badge, Avatar, RatingBadge, Button } from '@/shared/components/ui';
 
 interface ChefCardProps {
   id: string;
@@ -40,25 +42,31 @@ export function ChefCard({
   const coverUrl = coverImage || FOOD_PLACEHOLDERS[parseInt(id) % FOOD_PLACEHOLDERS.length];
 
   return (
-    <div className={cn('chef-card', className)}>
+    <Card
+      variant="default"
+      padding="none"
+      hover="lift"
+      className={cn('overflow-hidden group', className)}
+    >
       {/* Cover Image */}
       <div className="relative h-32 overflow-hidden">
-        <img
+        <motion.img
           src={coverUrl}
           alt={`${name}'s kitchen`}
-          className="h-full w-full object-cover"
+          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
           loading="lazy"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
 
         {/* Favorite button */}
         {onFavorite && (
-          <button
+          <motion.button
             onClick={(e) => {
               e.preventDefault();
               onFavorite();
             }}
-            className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-sm transition-all hover:bg-white hover:scale-110"
+            whileTap={{ scale: 0.9 }}
+            className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/90 shadow-soft-md backdrop-blur-sm transition-all hover:bg-white hover:shadow-elevated"
           >
             <Heart
               className={cn(
@@ -66,54 +74,56 @@ export function ChefCard({
                 isFavorite ? 'fill-spice-500 text-spice-500' : 'text-gray-600'
               )}
             />
-          </button>
+          </motion.button>
         )}
 
         {/* Verified badge */}
         {isVerified && (
-          <div className="absolute left-3 top-3 flex items-center gap-1 rounded-full bg-fresh-500 px-2 py-1 text-xs font-medium text-white">
-            <Award className="h-3 w-3" />
+          <Badge variant="success" size="sm" className="absolute left-3 top-3">
+            <Award className="h-3 w-3 mr-1" />
             Verified
-          </div>
+          </Badge>
         )}
-      </div>
 
-      {/* Avatar */}
-      <div className="chef-card-avatar">
-        <img src={avatarUrl} alt={name} loading="lazy" />
+        {/* Avatar - overlapping the cover */}
+        <div className="absolute -bottom-8 left-4">
+          <Avatar
+            src={avatarUrl}
+            alt={name}
+            size="xl"
+            ring="default"
+            className="border-4 border-white shadow-elevated"
+          />
+        </div>
       </div>
 
       {/* Info */}
-      <div className="chef-card-info">
+      <div className="p-4 pt-12 text-center">
         <Link to={`/chefs/${id}`}>
-          <h3 className="chef-card-name hover:text-brand-600 transition-colors">
+          <h3 className="font-semibold text-gray-900 text-lg group-hover:text-brand-600 transition-colors">
             {name}
           </h3>
         </Link>
 
         {specialty && (
-          <p className="chef-card-specialty">{specialty}</p>
+          <p className="mt-1 text-sm text-brand-600">{specialty}</p>
         )}
 
         {/* Cuisines */}
         {cuisines && cuisines.length > 0 && (
-          <div className="mt-2 flex flex-wrap justify-center gap-1">
+          <div className="mt-3 flex flex-wrap justify-center gap-1.5">
             {cuisines.slice(0, 3).map((cuisine, index) => (
-              <span key={index} className="cuisine-tag">
+              <Badge key={index} variant="default" size="sm">
                 {cuisine}
-              </span>
+              </Badge>
             ))}
           </div>
         )}
 
         {/* Rating */}
-        {rating && (
-          <div className="chef-card-rating">
-            <Star className="h-4 w-4 fill-golden-400 text-golden-400" />
-            <span className="font-medium text-gray-900">{rating}</span>
-            {reviewCount && (
-              <span className="text-sm text-gray-500">({reviewCount})</span>
-            )}
+        {rating !== undefined && (
+          <div className="mt-3 flex justify-center">
+            <RatingBadge value={rating} showCount={!!reviewCount} count={reviewCount} />
           </div>
         )}
 
@@ -134,14 +144,16 @@ export function ChefCard({
         </div>
 
         {/* CTA */}
-        <Link
-          to={`/chefs/${id}`}
-          className="mt-4 block w-full btn-primary-sm text-center"
+        <Button
+          asChild
+          variant="primary"
+          fullWidth
+          className="mt-4"
         >
-          View Menu
-        </Link>
+          <Link to={`/chefs/${id}`}>View Menu</Link>
+        </Button>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -161,43 +173,35 @@ export function ChefCardHorizontal({
   const avatarUrl = avatar || CHEF_PLACEHOLDERS[parseInt(id) % CHEF_PLACEHOLDERS.length];
 
   return (
-    <Link
-      to={`/chefs/${id}`}
-      className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white p-4 transition-all hover:shadow-md"
-    >
-      <div className="relative">
-        <img
-          src={avatarUrl}
-          alt={name}
-          className="h-16 w-16 rounded-full object-cover"
-          loading="lazy"
-        />
-        {isVerified && (
-          <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-fresh-500 text-white">
-            <Award className="h-3 w-3" />
-          </div>
-        )}
-      </div>
-      <div className="flex-1">
-        <h4 className="font-semibold text-gray-900">{name}</h4>
-        {specialty && (
-          <p className="text-sm text-brand-600">{specialty}</p>
-        )}
-        <div className="mt-1 flex items-center gap-3 text-sm text-gray-500">
-          {rating && (
-            <div className="flex items-center gap-1">
-              <Star className="h-3 w-3 fill-golden-400 text-golden-400" />
-              <span>{rating}</span>
-            </div>
-          )}
-          {deliveryTime && (
-            <div className="flex items-center gap-1">
-              <Clock className="h-3 w-3" />
-              <span>{deliveryTime}</span>
+    <Link to={`/chefs/${id}`}>
+      <Card variant="outlined" padding="md" hover="lift" className="flex items-center gap-4">
+        <div className="relative shrink-0">
+          <Avatar src={avatarUrl} alt={name} size="lg" />
+          {isVerified && (
+            <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-fresh-500 text-white ring-2 ring-white">
+              <Award className="h-3 w-3" />
             </div>
           )}
         </div>
-      </div>
+        <div className="flex-1 min-w-0">
+          <h4 className="font-semibold text-gray-900 truncate">{name}</h4>
+          {specialty && (
+            <p className="text-sm text-brand-600 truncate">{specialty}</p>
+          )}
+          <div className="mt-1 flex items-center gap-3 text-sm text-gray-500">
+            {rating !== undefined && (
+              <RatingBadge value={rating} size="sm" />
+            )}
+            {deliveryTime && (
+              <div className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                <span>{deliveryTime}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      </Card>
     </Link>
   );
 }
+

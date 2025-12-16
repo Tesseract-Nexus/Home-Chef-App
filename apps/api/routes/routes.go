@@ -7,6 +7,7 @@ import (
 	"github.com/homechef/api/handlers"
 	"github.com/homechef/api/middleware"
 	"github.com/homechef/api/models"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 func SetupRouter() *gin.Engine {
@@ -16,6 +17,9 @@ func SetupRouter() *gin.Engine {
 	}
 
 	r := gin.Default()
+
+	// Prometheus metrics middleware
+	r.Use(middleware.PrometheusMiddleware())
 
 	// CORS configuration
 	corsConfig := cors.DefaultConfig()
@@ -29,11 +33,16 @@ func SetupRouter() *gin.Engine {
 	authHandler := handlers.NewAuthHandler()
 	chefHandler := handlers.NewChefHandler()
 	orderHandler := handlers.NewOrderHandler()
+	healthHandler := handlers.NewHealthHandler()
 
-	// Health check
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "ok", "service": "homechef-api"})
-	})
+	// Health check endpoints
+	r.GET("/health", healthHandler.Health)
+	r.GET("/health/live", healthHandler.Liveness)
+	r.GET("/health/ready", healthHandler.Readiness)
+	r.GET("/health/stats", healthHandler.SystemStats)
+
+	// Prometheus metrics endpoint
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	// API v1 routes
 	v1 := r.Group("/api/v1")

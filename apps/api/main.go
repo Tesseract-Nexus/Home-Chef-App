@@ -12,6 +12,7 @@ import (
 	"github.com/homechef/api/config"
 	"github.com/homechef/api/database"
 	"github.com/homechef/api/routes"
+	"github.com/homechef/api/services"
 )
 
 func main() {
@@ -28,6 +29,23 @@ func main() {
 	// Run migrations
 	if err := database.Migrate(); err != nil {
 		log.Fatalf("Failed to run migrations: %v", err)
+	}
+
+	// Connect to NATS
+	natsClient := services.GetNATSClient()
+	if err := natsClient.Connect(); err != nil {
+		log.Printf("Warning: Failed to connect to NATS: %v", err)
+		log.Println("NATS messaging will be unavailable")
+	} else {
+		defer natsClient.Close()
+
+		// Start notification service
+		notificationService := services.GetNotificationService()
+		if err := notificationService.Start(); err != nil {
+			log.Printf("Warning: Failed to start notification service: %v", err)
+		} else {
+			defer notificationService.Stop()
+		}
 	}
 
 	// Setup router

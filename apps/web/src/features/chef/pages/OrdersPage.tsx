@@ -184,7 +184,7 @@ function OrderCard({
   onUpdateStatus: (status: OrderStatus) => void;
   isUpdating: boolean;
 }) {
-  const status = STATUS_CONFIG[order.status];
+  const status = STATUS_CONFIG[order.status] ?? { label: order.status, color: 'bg-gray-100 text-gray-800' };
   const isNew = order.status === 'pending';
 
   return (
@@ -295,7 +295,7 @@ function OrderDetailModal({
   onUpdateStatus: (status: OrderStatus) => void;
   isUpdating: boolean;
 }) {
-  const status = STATUS_CONFIG[order.status];
+  const status = STATUS_CONFIG[order.status] ?? { label: order.status, color: 'bg-gray-100 text-gray-800' };
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4 pt-20">

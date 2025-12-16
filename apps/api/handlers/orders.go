@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -12,6 +13,7 @@ import (
 	"github.com/homechef/api/database"
 	"github.com/homechef/api/middleware"
 	"github.com/homechef/api/models"
+	"github.com/homechef/api/services"
 )
 
 type OrderHandler struct{}
@@ -202,6 +204,27 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 	// Load the created order with items
 	database.DB.Preload("Items").First(&order, order.ID)
 
+	// Publish order created event
+	go func() {
+		orderEvent := services.OrderEvent{
+			OrderID:     order.ID,
+			OrderNumber: order.OrderNumber,
+			CustomerID:  order.CustomerID,
+			ChefID:      order.ChefID,
+			Status:      string(order.Status),
+			Total:       order.Total,
+		}
+		if err := services.PublishOrderEvent(services.SubjectOrderCreated, orderEvent); err != nil {
+			log.Printf("Failed to publish order created event: %v", err)
+		}
+		// Also notify the chef
+		if err := services.PublishOrderEvent(services.SubjectChefNewOrder, orderEvent); err != nil {
+			log.Printf("Failed to publish chef new order event: %v", err)
+		}
+		// Record metrics
+		middleware.RecordOrder(string(order.Status), order.Total)
+	}()
+
 	c.JSON(http.StatusCreated, order.ToResponse())
 }
 
@@ -297,6 +320,21 @@ func (h *OrderHandler) CancelOrder(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to cancel order"})
 		return
 	}
+
+	// Publish order cancelled event
+	go func() {
+		orderEvent := services.OrderEvent{
+			OrderID:     order.ID,
+			OrderNumber: order.OrderNumber,
+			CustomerID:  order.CustomerID,
+			ChefID:      order.ChefID,
+			Status:      string(order.Status),
+			Total:       order.Total,
+		}
+		if err := services.PublishOrderEvent(services.SubjectOrderCancelled, orderEvent); err != nil {
+			log.Printf("Failed to publish order cancelled event: %v", err)
+		}
+	}()
 
 	c.JSON(http.StatusOK, order.ToResponse())
 }

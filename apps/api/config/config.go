@@ -61,6 +61,9 @@ type Config struct {
 	// Redis
 	RedisURL string
 
+	// NATS
+	NATSURL string
+
 	// Feature Flags
 	EnableMockMode bool
 }
@@ -129,6 +132,9 @@ func Load() {
 
 		// Redis
 		RedisURL: getEnv("REDIS_URL", "redis://localhost:6379"),
+
+		// NATS
+		NATSURL: getEnv("NATS_URL", "nats://localhost:4222"),
 
 		// Feature Flags
 		EnableMockMode: enableMock,

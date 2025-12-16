@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/homechef/api/database"
 	"github.com/homechef/api/middleware"
 	"github.com/homechef/api/models"
+	"github.com/homechef/api/services"
 )
 
 type ChefHandler struct{}
@@ -380,6 +382,28 @@ func (h *ChefHandler) UpdateOrderStatus(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update order"})
 		return
 	}
+
+	// Publish order status update event
+	go func() {
+		orderEvent := services.OrderEvent{
+			OrderID:     order.ID,
+			OrderNumber: order.OrderNumber,
+			CustomerID:  order.CustomerID,
+			ChefID:      order.ChefID,
+			Status:      string(order.Status),
+			Total:       order.Total,
+		}
+
+		// Determine which subject to publish to based on status
+		subject := services.SubjectOrderUpdated
+		if order.Status == models.OrderStatusDelivered {
+			subject = services.SubjectOrderDelivered
+		}
+
+		if err := services.PublishOrderEvent(subject, orderEvent); err != nil {
+			log.Printf("Failed to publish order status update event: %v", err)
+		}
+	}()
 
 	c.JSON(http.StatusOK, order.ToResponse())
 }

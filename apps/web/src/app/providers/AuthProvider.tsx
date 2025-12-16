@@ -19,6 +19,7 @@ interface AuthContextValue {
   register: (data: RegisterData) => Promise<void>;
   logout: () => void;
   updateUser: (user: Partial<User>) => void;
+  updateProfile: (data: Partial<User>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -106,6 +107,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [user, setUser]
   );
 
+  const updateProfile = useCallback(
+    async (data: Partial<User>) => {
+      const { apiClient } = await import('@/shared/services/api-client');
+      const updatedUser = await apiClient.put<User>('/profile', data);
+      if (user) {
+        setUser({ ...user, ...updatedUser });
+      }
+    },
+    [user, setUser]
+  );
+
   const value: AuthContextValue = {
     user,
     isAuthenticated: !!token && !!user,
@@ -115,6 +127,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     register,
     logout,
     updateUser,
+    updateProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

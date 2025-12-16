@@ -330,6 +330,7 @@ export type DeliveryStatus =
 
 // Filter types
 export interface ChefFilters {
+  [key: string]: string | number | boolean | undefined;
   lat?: number;
   lng?: number;
   radius?: number;

@@ -44,9 +44,10 @@ export default function OrderDetailPage() {
     queryKey: ['order', id],
     queryFn: () => apiClient.get<Order>(`/orders/${id}`),
     enabled: !!id,
-    refetchInterval: (data) => {
+    refetchInterval: (query) => {
       // Poll for updates on active orders
-      if (data && !['delivered', 'cancelled', 'refunded'].includes(data.status)) {
+      const orderData = query.state.data;
+      if (orderData && !['delivered', 'cancelled', 'refunded'].includes(orderData.status)) {
         return 30000; // Every 30 seconds
       }
       return false;

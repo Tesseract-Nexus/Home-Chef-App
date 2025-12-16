@@ -8,10 +8,21 @@ build/
 .next/
 out/
 
+# Go
+apps/api/tmp/
+apps/api/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
 # Environment files
 .env
 .env.local
-.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
 *.env
 
 # IDE
@@ -21,7 +32,7 @@ out/
 *.swo
 *~
 
-# OS files
+# OS
 .DS_Store
 Thumbs.db
 
@@ -36,29 +47,18 @@ yarn-error.log*
 # Testing
 coverage/
 .nyc_output/
-*.lcov
 
-# Go
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
-*.test
-*.out
-vendor/
+# Misc
+*.pem
+*.key
+*.cert
+.turbo/
 
-# Docker
-.docker/
+# TypeScript
+*.tsbuildinfo
 
 # Temporary files
 tmp/
 temp/
-*.tmp
-*.temp
-
-# Secrets (never commit these)
-*.pem
-*.key
-credentials.json
-secrets.json
+.tmp/
+.temp/

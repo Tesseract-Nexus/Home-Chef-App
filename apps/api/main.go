@@ -1,37 +1,69 @@
 package main
 
 import (
+	"context"
+	"log"
 	"net/http"
-	"github.com/Agent-Sphere/home-chef-app/apps/api/database"
-	"github.com/Agent-Sphere/home-chef-app/apps/api/initializers"
-	"github.com/Agent-Sphere/home-chef-app/apps/api/routes" // Import routes
-	"github.com/gin-gonic/gin"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/homechef/api/config"
+	"github.com/homechef/api/database"
+	"github.com/homechef/api/routes"
 )
 
-func init() {
-	initializers.LoadEnvVariables()
-	database.ConnectToDB()
-}
-
 func main() {
-	router := gin.Default()
+	// Load configuration
+	config.Load()
+	log.Printf("Starting HomeChef API in %s mode", config.AppConfig.Environment)
 
-	// Set up routes
-	routes.UserRoutes(router)
-	routes.ChefProfileRoutes(router)
-	routes.MenuItemRoutes(router)
-	routes.OrderRoutes(router)
-	routes.CartRoutes(router)
-	routes.PaymentRoutes(router)
-	routes.AdminRoutes(router)
-	routes.ReviewRoutes(router)
-	routes.AnalyticsRoutes(router)
-	routes.AdRoutes(router)
-	routes.DeliveryRoutes(router)
+	// Connect to database
+	if err := database.Connect(); err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
+	}
+	defer database.Close()
 
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "ok"})
-	})
+	// Run migrations
+	if err := database.Migrate(); err != nil {
+		log.Fatalf("Failed to run migrations: %v", err)
+	}
 
-	router.Run(":8080") // listen and serve on 0.0.0.0:8080
+	// Setup router
+	router := routes.SetupRouter()
+
+	// Create HTTP server
+	srv := &http.Server{
+		Addr:         ":" + config.AppConfig.Port,
+		Handler:      router,
+		ReadTimeout:  15 * time.Second,
+		WriteTimeout: 15 * time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+
+	// Start server in a goroutine
+	go func() {
+		log.Printf("Server listening on port %s", config.AppConfig.Port)
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("Failed to start server: %v", err)
+		}
+	}()
+
+	// Wait for interrupt signal to gracefully shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	log.Println("Shutting down server...")
+
+	// Give outstanding requests 30 seconds to complete
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatal("Server forced to shutdown:", err)
+	}
+
+	log.Println("Server exited gracefully")
 }

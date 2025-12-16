@@ -1,4 +1,5 @@
 # Build stage
+# NOTE: Build from monorepo root with: docker build -f apps/web/Dockerfile .
 FROM node:22-alpine AS builder
 
 WORKDIR /app
@@ -6,14 +7,19 @@ WORKDIR /app
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@9 --activate
 
-# Copy package files
-COPY package.json pnpm-lock.yaml ./
+# Copy monorepo root files needed for pnpm workspace
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 
-# Install dependencies
-RUN pnpm install --frozen-lockfile
+# Copy web package.json
+COPY apps/web/package.json ./apps/web/
 
-# Copy source code
-COPY . .
+# Install dependencies for web workspace only
+RUN pnpm install --frozen-lockfile --filter @homechef/web...
+
+# Copy web source code
+COPY apps/web ./apps/web
+
+WORKDIR /app/apps/web
 
 # Build arguments
 ARG VITE_API_URL
@@ -35,10 +41,10 @@ RUN pnpm build
 FROM nginx:alpine
 
 # Copy custom nginx config
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy built assets from builder
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/apps/web/dist /usr/share/nginx/html
 
 # Expose port
 EXPOSE 80

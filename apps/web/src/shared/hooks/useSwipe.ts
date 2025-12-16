@@ -1,4 +1,4 @@
-import { useRef, useCallback, useEffect } from 'react';
+import React, { useRef, useCallback, useEffect } from 'react';
 
 interface SwipeConfig {
   onSwipeLeft?: () => void;
@@ -151,8 +151,7 @@ export function useSwipeableList<T extends HTMLElement = HTMLElement>(
   // Merge refs
   const mergedRef = useCallback((node: T | null) => {
     containerRef.current = node;
-    // @ts-expect-error - assigning to ref.current
-    swipeRef.current = node;
+    (swipeRef as React.MutableRefObject<T | null>).current = node;
   }, [swipeRef]);
 
   return {
@@ -176,13 +175,13 @@ export function usePullToRefresh(onRefresh: () => Promise<void>) {
   const isRefreshing = useRef(false);
 
   const handleTouchStart = useCallback((e: TouchEvent) => {
-    if (containerRef.current?.scrollTop === 0) {
+    if (containerRef.current?.scrollTop === 0 && e.touches[0]) {
       startY.current = e.touches[0].clientY;
     }
   }, []);
 
   const handleTouchMove = useCallback((e: TouchEvent) => {
-    if (startY.current === 0 || isRefreshing.current) return;
+    if (startY.current === 0 || isRefreshing.current || !e.touches[0]) return;
 
     const currentY = e.touches[0].clientY;
     pullDistance.current = Math.max(0, currentY - startY.current);

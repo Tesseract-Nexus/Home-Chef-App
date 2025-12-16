@@ -1,12 +1,7 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import {
-  LayoutDashboard,
-  Package,
-  DollarSign,
   User,
-  Navigation,
   Bell,
-  LogOut,
 } from 'lucide-react';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { DeliveryBottomNav } from '@/shared/components/navigation';
@@ -14,10 +9,8 @@ import { useOnlineStatus } from '@/shared/hooks/useMobile';
 
 export function DeliveryLayout() {
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const isOnline = useOnlineStatus();
-
-  const isActive = (href: string) => location.pathname === href;
 
   return (
     <div className="flex min-h-screen flex-col bg-gray-50">

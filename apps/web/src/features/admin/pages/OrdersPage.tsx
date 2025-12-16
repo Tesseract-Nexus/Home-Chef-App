@@ -2,19 +2,12 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
   Search,
-  Filter,
   ShoppingBag,
-  Clock,
-  CheckCircle,
-  XCircle,
-  Truck,
-  ChefHat,
   Eye,
   Loader2,
   ChevronLeft,
   ChevronRight,
   DollarSign,
-  Calendar,
 } from 'lucide-react';
 import { apiClient } from '@/shared/services/api-client';
 import type { Order, OrderStatus, PaginatedResponse } from '@/shared/types';

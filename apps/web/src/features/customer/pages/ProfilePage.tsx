@@ -2,11 +2,8 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   User,
-  Mail,
-  Phone,
   MapPin,
   CreditCard,
   Bell,
@@ -15,13 +12,11 @@ import {
   Plus,
   Edit2,
   Trash2,
-  Loader2,
   Camera,
   Check,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/app/providers/AuthProvider';
-import { apiClient } from '@/shared/services/api-client';
 import type { Address } from '@/shared/types';
 
 const profileSchema = z.object({

@@ -412,7 +412,7 @@
            text-base font-medium transition-all duration-150
            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
            disabled:pointer-events-none disabled:opacity-50
-           touch-target active:scale-[0.98];
+           min-h-[44px] min-w-[44px] active:scale-[0.98];
   }
 
   .btn-sm {
@@ -456,7 +456,7 @@
   /* Icon buttons for mobile */
   .btn-icon {
     @apply inline-flex items-center justify-center rounded-full p-2.5
-           transition-all duration-150 touch-target
+           transition-all duration-150 min-h-[44px] min-w-[44px]
            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
            active:scale-[0.95];
   }

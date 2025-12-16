@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   Search,
-  Filter,
   Clock,
   CheckCircle,
   XCircle,
@@ -40,7 +39,7 @@ export default function OrdersPage() {
   const [filter, setFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['orders', filter],
     queryFn: () => {
       const statusFilter = filter === 'all'

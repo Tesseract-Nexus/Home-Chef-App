@@ -6,8 +6,6 @@ import {
   Users,
   ShoppingBag,
   DollarSign,
-  ChefHat,
-  Calendar,
   Download,
   Loader2,
 } from 'lucide-react';

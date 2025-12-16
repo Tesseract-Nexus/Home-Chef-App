@@ -14,7 +14,6 @@ import {
   Loader2,
   Upload,
   X,
-  GripVertical,
   ChefHat,
 } from 'lucide-react';
 import { toast } from 'sonner';

@@ -1,11 +1,10 @@
 import { useState } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft,
   Clock,
   MapPin,
-  Phone,
   MessageCircle,
   Star,
   CheckCircle,
@@ -37,7 +36,6 @@ const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; bgColor
 
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
@@ -398,7 +396,7 @@ function OrderProgress({ status }: { status: OrderStatus }) {
 
       {/* Steps */}
       <div className="space-y-6">
-        {steps.map((step, index) => {
+        {steps.map((step) => {
           const stepIndex = statusOrder.indexOf(step.key);
           const isCompleted = currentIndex >= stepIndex;
           const isCurrent = status === step.key || (status === 'picked_up' && step.key === 'ready');

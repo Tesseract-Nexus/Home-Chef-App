@@ -39,7 +39,6 @@ const TABS = [
 export default function ProfilePage() {
   const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
-  const queryClient = useQueryClient();
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -128,7 +127,7 @@ function ProfileTab() {
   const {
     register,
     handleSubmit,
-    formState: { errors, isDirty },
+    formState: { errors },
     reset,
   } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),

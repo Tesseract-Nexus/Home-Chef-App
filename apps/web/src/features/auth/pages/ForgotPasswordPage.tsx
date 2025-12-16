@@ -32,7 +32,7 @@ export default function ForgotPasswordPage() {
       await authService.forgotPassword(data.email);
       setSubmittedEmail(data.email);
       setIsSubmitted(true);
-    } catch (error) {
+    } catch {
       toast.error('Failed to send reset email. Please try again.');
     } finally {
       setIsLoading(false);

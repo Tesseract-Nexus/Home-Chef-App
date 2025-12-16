@@ -296,11 +296,10 @@ export default function ChefDetailPage() {
 
 function MenuItemCard({
   item,
-  chefId,
   chefInfo,
 }: {
   item: MenuItem;
-  chefId: string;
+  chefId?: string;
   chefInfo: {
     id: string;
     businessName: string;
@@ -310,7 +309,6 @@ function MenuItemCard({
   };
 }) {
   const [quantity, setQuantity] = useState(1);
-  const [showDetails, setShowDetails] = useState(false);
   const cart = useCartStore();
 
   const cartItem = cart.items.find((i) => i.menuItemId === item.id);

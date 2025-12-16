@@ -32,7 +32,7 @@ export default function SocialFeedPage() {
   const [selectedHashtag, setSelectedHashtag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const { data, isLoading, error } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['social-feed', selectedHashtag],
     queryFn: () =>
       apiClient.get<PaginatedResponse<SocialPost>>('/social/posts', {

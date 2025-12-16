@@ -104,7 +104,7 @@ export default function CateringRequestPage() {
   const createRequestMutation = useMutation({
     mutationFn: (data: CateringFormData) =>
       apiClient.post<CateringRequest>('/catering/requests', data),
-    onSuccess: (request) => {
+    onSuccess: () => {
       toast.success('Catering request submitted successfully!');
       navigate('/catering/quotes');
     },

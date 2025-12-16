@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiClient } from '@/shared/services/api-client';
-import type { Chef, OperatingHours } from '@/shared/types';
+import type { Chef } from '@/shared/types';
 
 const profileSchema = z.object({
   businessName: z.string().min(2, 'Business name must be at least 2 characters'),
@@ -39,8 +39,6 @@ const CUISINES = [
   'South Indian', 'North Indian', 'Italian', 'Japanese', 'Mexican',
   'Thai', 'Chinese', 'Mediterranean', 'Continental', 'American',
 ];
-
-const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'] as const;
 
 export default function ChefProfilePage() {
   const [isEditing, setIsEditing] = useState(false);

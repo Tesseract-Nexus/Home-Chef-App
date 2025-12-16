@@ -4,9 +4,7 @@ import {
   Settings,
   DollarSign,
   Percent,
-  Bell,
   Shield,
-  Globe,
   Save,
   Loader2,
 } from 'lucide-react';

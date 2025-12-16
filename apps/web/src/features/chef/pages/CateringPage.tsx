@@ -7,7 +7,6 @@ import {
   DollarSign,
   Clock,
   Send,
-  Eye,
   CheckCircle,
   XCircle,
   Loader2,

@@ -224,7 +224,6 @@ function CreatePostModal({
     register,
     handleSubmit,
     formState: { errors },
-    watch,
   } = useForm({
     defaultValues: {
       content: post?.content || '',

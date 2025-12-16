@@ -10,7 +10,6 @@ import {
   CheckCircle,
   Play,
   Loader2,
-  TrendingUp,
   Bike,
   Star,
   AlertCircle,

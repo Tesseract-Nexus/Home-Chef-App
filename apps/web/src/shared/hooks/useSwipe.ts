@@ -151,7 +151,7 @@ export function useSwipeableList<T extends HTMLElement = HTMLElement>(
   // Merge refs
   const mergedRef = useCallback((node: T | null) => {
     containerRef.current = node;
-    // @ts-ignore
+    // @ts-expect-error - assigning to ref.current
     swipeRef.current = node;
   }, [swipeRef]);
 

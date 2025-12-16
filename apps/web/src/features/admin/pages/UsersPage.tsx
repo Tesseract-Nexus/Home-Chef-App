@@ -2,13 +2,11 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Search,
-  Filter,
   MoreHorizontal,
   User,
   Mail,
   Phone,
   Calendar,
-  Shield,
   Ban,
   CheckCircle,
   Loader2,

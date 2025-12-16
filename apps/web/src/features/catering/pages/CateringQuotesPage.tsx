@@ -8,12 +8,10 @@ import {
   MapPin,
   Star,
   ChefHat,
-  DollarSign,
   Check,
   X,
   MessageCircle,
   Loader2,
-  ArrowRight,
   Plus,
   FileText,
 } from 'lucide-react';

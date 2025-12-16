@@ -1,4 +1,4 @@
-import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { Outlet, Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   UtensilsCrossed,
@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuth } from '@/app/providers/AuthProvider';
-import { ChefBottomNav, ChefBottomNavSpacer } from '@/shared/components/navigation';
+import { ChefBottomNav } from '@/shared/components/navigation';
 import { useIsMobile, useOnlineStatus } from '@/shared/hooks/useMobile';
 
 const navigation = [
@@ -31,7 +31,6 @@ const navigation = [
 
 export function ChefLayout() {
   const location = useLocation();
-  const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);

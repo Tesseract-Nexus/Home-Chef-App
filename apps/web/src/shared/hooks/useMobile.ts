@@ -74,7 +74,7 @@ export function useIsTouchDevice(): boolean {
     setIsTouch(
       'ontouchstart' in window ||
       navigator.maxTouchPoints > 0 ||
-      // @ts-ignore - msMaxTouchPoints for older IE
+      // @ts-expect-error - msMaxTouchPoints for older IE
       navigator.msMaxTouchPoints > 0
     );
   }, []);
@@ -90,7 +90,7 @@ export function useIsPWA(): boolean {
 
   useEffect(() => {
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-    // @ts-ignore - navigator.standalone for iOS
+    // @ts-expect-error - navigator.standalone for iOS
     const isIOSStandalone = window.navigator.standalone === true;
     setIsPWA(isStandalone || isIOSStandalone);
   }, []);

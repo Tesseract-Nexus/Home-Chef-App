@@ -7,8 +7,6 @@ import {
   DollarSign,
   TrendingUp,
   TrendingDown,
-  ArrowUpRight,
-  ArrowRight,
   AlertTriangle,
   Clock,
   Loader2,
@@ -227,7 +225,6 @@ export default function AdminDashboardPage() {
 }
 
 function StatCard({
-  title,
   value,
   subtext,
   change,
@@ -235,7 +232,7 @@ function StatCard({
   color,
   alert,
 }: {
-  title: string;
+  title?: string;
   value: string;
   subtext: string;
   change?: number;

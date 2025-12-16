@@ -196,7 +196,7 @@ export function useBackgroundSync() {
 
     try {
       const registration = await navigator.serviceWorker.ready;
-      // @ts-ignore - SyncManager types not fully available
+      // @ts-expect-error - SyncManager types not fully available
       await registration.sync.register(tag);
       return true;
     } catch (error) {

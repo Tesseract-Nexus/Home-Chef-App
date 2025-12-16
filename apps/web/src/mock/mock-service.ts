@@ -121,7 +121,7 @@ class MockService {
     };
   }
 
-  private socialLogin(body: { provider: string; token: string }): AuthResponse {
+  private socialLogin(_body: { provider: string; token: string }): AuthResponse {
     // Simulate social login - return first customer
     const user = mockUsers.find((u) => u.role === 'customer') ?? mockUsers[0]!;
     this.currentUser = user;
@@ -295,7 +295,7 @@ class MockService {
     return newPost;
   }
 
-  private likePost(id: string): { liked: boolean } {
+  private likePost(_id: string): { liked: boolean } {
     return { liked: true };
   }
 

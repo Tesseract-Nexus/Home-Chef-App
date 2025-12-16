@@ -1,4 +1,4 @@
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Outlet, Link } from 'react-router-dom';
 import {
   User,
   Bell,
@@ -8,7 +8,6 @@ import { DeliveryBottomNav } from '@/shared/components/navigation';
 import { useOnlineStatus } from '@/shared/hooks/useMobile';
 
 export function DeliveryLayout() {
-  const location = useLocation();
   const { user } = useAuth();
   const isOnline = useOnlineStatus();
 

@@ -6,7 +6,6 @@ import {
   Star,
   TrendingUp,
   Clock,
-  AlertCircle,
   ChefHat,
   ArrowUpRight,
   ArrowRight,

@@ -12,7 +12,6 @@ import {
   Plus,
   Check,
   Loader2,
-  AlertCircle,
   Wallet,
 } from 'lucide-react';
 import { toast } from 'sonner';

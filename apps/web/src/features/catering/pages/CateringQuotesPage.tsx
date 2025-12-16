@@ -68,7 +68,7 @@ export default function CateringQuotesPage() {
     },
   });
 
-  const activeRequest = requests?.data.find((r) => r.id === selectedRequest);
+  const activeRequest = (requests?.data ?? []).find((r) => r.id === selectedRequest);
 
   if (isLoading) {
     return (
@@ -100,7 +100,7 @@ export default function CateringQuotesPage() {
                 <h2 className="font-semibold text-gray-900">Your Requests</h2>
               </div>
 
-              {requests?.data.length === 0 ? (
+              {(requests?.data ?? []).length === 0 ? (
                 <div className="p-8 text-center">
                   <FileText className="mx-auto h-12 w-12 text-gray-400" />
                   <h3 className="mt-4 font-medium text-gray-900">No requests yet</h3>
@@ -113,7 +113,7 @@ export default function CateringQuotesPage() {
                 </div>
               ) : (
                 <div className="divide-y">
-                  {requests?.data.map((request) => {
+                  {(requests?.data ?? []).map((request) => {
                     const status = STATUS_CONFIG[request.status];
                     return (
                       <button
@@ -266,14 +266,14 @@ export default function CateringQuotesPage() {
                 {/* Quotes */}
                 <div className="mt-6">
                   <h2 className="text-lg font-semibold text-gray-900">
-                    Quotes ({quotes?.data.length || 0})
+                    Quotes ({quotes?.data?.length ?? 0})
                   </h2>
 
                   {quotesLoading ? (
                     <div className="mt-4 flex items-center justify-center py-12">
                       <Loader2 className="h-8 w-8 animate-spin text-brand-500" />
                     </div>
-                  ) : quotes?.data.length === 0 ? (
+                  ) : (quotes?.data ?? []).length === 0 ? (
                     <div className="mt-4 rounded-xl bg-white p-8 text-center shadow-sm">
                       <ChefHat className="mx-auto h-12 w-12 text-gray-400" />
                       <h3 className="mt-4 font-medium text-gray-900">No quotes yet</h3>
@@ -283,7 +283,7 @@ export default function CateringQuotesPage() {
                     </div>
                   ) : (
                     <div className="mt-4 space-y-4">
-                      {quotes?.data.map((quote) => (
+                      {(quotes?.data ?? []).map((quote) => (
                         <QuoteCard
                           key={quote.id}
                           quote={quote}

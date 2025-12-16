@@ -76,7 +76,7 @@ export default function ChefSocialPage() {
         <div className="flex items-center justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-brand-500" />
         </div>
-      ) : posts?.data.length === 0 ? (
+      ) : (posts?.data ?? []).length === 0 ? (
         <div className="rounded-xl bg-white p-12 text-center shadow-sm">
           <ImageIcon className="mx-auto h-12 w-12 text-gray-400" />
           <h3 className="mt-4 font-medium text-gray-900">No posts yet</h3>
@@ -89,7 +89,7 @@ export default function ChefSocialPage() {
         </div>
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {posts?.data.map((post) => (
+          {(posts?.data ?? []).map((post) => (
             <PostCard
               key={post.id}
               post={post}

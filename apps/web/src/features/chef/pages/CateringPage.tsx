@@ -54,9 +54,9 @@ export default function ChefCateringPage() {
     },
   });
 
-  const openRequests = requests?.data || [];
-  const pendingQuotes = myQuotes?.data.filter((q) => q.status === 'pending') || [];
-  const bookedEvents = myQuotes?.data.filter((q) => q.status === 'accepted') || [];
+  const openRequests = requests?.data ?? [];
+  const pendingQuotes = (myQuotes?.data ?? []).filter((q) => q.status === 'pending');
+  const bookedEvents = (myQuotes?.data ?? []).filter((q) => q.status === 'accepted');
 
   const isLoading = activeTab === 'requests' ? requestsLoading : quotesLoading;
 

@@ -304,7 +304,7 @@ export default function BrowseChefsPage() {
           <div className="rounded-xl bg-red-50 p-8 text-center">
             <p className="text-red-600">Failed to load chefs. Please try again.</p>
           </div>
-        ) : data?.data.length === 0 ? (
+        ) : (data?.data ?? []).length === 0 ? (
           <div className="rounded-xl bg-gray-100 p-12 text-center">
             <div className="mx-auto h-16 w-16 rounded-full bg-gray-200 flex items-center justify-center mb-4">
               <Search className="h-8 w-8 text-gray-400" />
@@ -324,12 +324,12 @@ export default function BrowseChefsPage() {
           <>
             {/* Results count */}
             <p className="mb-4 text-sm text-gray-500">
-              Showing {data?.data.length} of {data?.pagination.total} chefs
+              Showing {data?.data?.length ?? 0} of {data?.pagination?.total ?? 0} chefs
             </p>
 
             {/* Chef Grid */}
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {data?.data.map((chef) => (
+              {(data?.data ?? []).map((chef) => (
                 <ChefCard key={chef.id} chef={chef} />
               ))}
             </div>

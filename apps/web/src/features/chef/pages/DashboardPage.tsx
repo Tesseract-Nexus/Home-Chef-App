@@ -110,7 +110,7 @@ export default function ChefDashboardPage() {
             </Link>
           </div>
 
-          {pendingOrders?.data.length === 0 ? (
+          {(pendingOrders?.data ?? []).length === 0 ? (
             <div className="mt-6 text-center py-8">
               <ChefHat className="mx-auto h-12 w-12 text-gray-300" />
               <p className="mt-3 text-gray-500">No pending orders</p>
@@ -118,7 +118,7 @@ export default function ChefDashboardPage() {
             </div>
           ) : (
             <div className="mt-4 space-y-3">
-              {pendingOrders?.data.slice(0, 4).map((order) => (
+              {(pendingOrders?.data ?? []).slice(0, 4).map((order) => (
                 <PendingOrderCard key={order.id} order={order} />
               ))}
             </div>
@@ -224,7 +224,7 @@ export default function ChefDashboardPage() {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {recentOrders?.data.map((order) => (
+              {(recentOrders?.data ?? []).map((order) => (
                 <tr key={order.id} className="text-sm">
                   <td className="py-3">
                     <Link

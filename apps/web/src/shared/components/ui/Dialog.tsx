@@ -140,7 +140,7 @@ interface AlertDialogContentProps
 const AlertDialogContent = forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   AlertDialogContentProps
->(({ className, children, variant = 'default', ...props }, ref) => (
+>(({ className, children, variant: _variant = 'default', ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content

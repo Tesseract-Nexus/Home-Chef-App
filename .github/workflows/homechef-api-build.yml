@@ -10,15 +10,11 @@ on:
       - 'hotfix/**'
     paths:
       - 'apps/api/**'
-      - 'go.mod'
-      - 'go.sum'
       - '.github/workflows/homechef-api-build.yml'
   pull_request:
     branches: [main]
     paths:
       - 'apps/api/**'
-      - 'go.mod'
-      - 'go.sum'
       - '.github/workflows/homechef-api-build.yml'
   workflow_dispatch:
 
@@ -89,6 +85,18 @@ jobs:
         if: steps.gcp_auth.outputs.authenticated == 'true'
         run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
 
+      - name: Ensure Artifact Registry repository exists
+        if: steps.gcp_auth.outputs.authenticated == 'true'
+        run: |
+          gcloud artifacts repositories describe homechef \
+            --location=${{ env.GCP_REGION }} \
+            --project=${{ env.GCP_PROJECT_ID }} 2>/dev/null || \
+          gcloud artifacts repositories create homechef \
+            --repository-format=docker \
+            --location=${{ env.GCP_REGION }} \
+            --project=${{ env.GCP_PROJECT_ID }} \
+            --description="HomeChef container images"
+
       # --- Build and Push to GHCR ---
       - name: Extract metadata (tags, labels)
         id: meta
@@ -125,7 +133,7 @@ jobs:
         id: build_push
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: apps/api
           file: apps/api/Dockerfile
           platforms: linux/amd64
           push: ${{ github.event_name != 'pull_request' }}
@@ -222,7 +230,8 @@ jobs:
           go-version: '1.25.5'
 
       - name: Run tests
-        run: go test -v -coverprofile=coverage.out ./apps/api/...
+        working-directory: apps/api
+        run: go test -v -coverprofile=coverage.out ./...
 
       - name: Upload coverage
         uses: actions/upload-artifact@v4

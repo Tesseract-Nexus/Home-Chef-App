@@ -1,5 +1,5 @@
 /**
- * Placeholder images from Unsplash for HomeChef app
+ * Placeholder images from Unsplash for Fe3dr app
  * Replace these with actual CDN URLs in production
  */
 

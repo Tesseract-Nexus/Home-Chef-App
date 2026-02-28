@@ -30,7 +30,7 @@ export default function CartPage() {
   const belowMinimum = subtotal < minimumOrder;
 
   const handleApplyPromo = () => {
-    if (promoCode.toLowerCase() === 'homechef10') {
+    if (promoCode.toLowerCase() === 'fe3dr10') {
       setPromoApplied(true);
     }
   };
@@ -196,7 +196,7 @@ export default function CartPage() {
                   </p>
                 )}
                 <p className="mt-2 text-xs text-gray-500">
-                  Try: HOMECHEF10 for 10% off
+                  Try: FE3DR10 for 10% off
                 </p>
               </div>
 

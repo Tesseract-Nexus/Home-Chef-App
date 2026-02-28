@@ -22,7 +22,7 @@ export function DeliveryLayout() {
               <span className="text-lg font-bold text-white">H</span>
             </div>
             <div>
-              <span className="text-lg font-bold text-gray-900">HomeChef</span>
+              <span className="text-lg font-bold text-gray-900">Fe3dr</span>
               <p className="text-xs text-gray-500">Delivery</p>
             </div>
           </Link>

@@ -79,7 +79,7 @@ export function Logo({
               isLight ? 'text-white' : 'text-gray-900'
             )}
           >
-            Home<span className="text-brand-500">Chef</span>
+            Fe<span className="text-brand-500">3dr</span>
           </span>
           {showTagline && (
             <span
@@ -125,7 +125,7 @@ export function LogoText({
         className
       )}
     >
-      Home<span className="text-brand-500">Chef</span>
+      Fe<span className="text-brand-500">3dr</span>
     </span>
   );
 }
@@ -136,7 +136,7 @@ export function LogoFooter() {
     <div className="flex items-center gap-2">
       <Logo size="sm" linkTo="/" />
       <span className="text-xs text-gray-400">
-        &copy; {new Date().getFullYear()} HomeChef. All rights reserved.
+        &copy; {new Date().getFullYear()} Fe3dr. All rights reserved.
       </span>
     </div>
   );

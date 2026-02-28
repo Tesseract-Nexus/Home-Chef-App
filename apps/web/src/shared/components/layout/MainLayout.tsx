@@ -319,7 +319,7 @@ export function MainLayout() {
           </div>
 
           <div className="mt-12 border-t border-gray-200 pt-8 text-center text-sm text-gray-500">
-            <p>&copy; {new Date().getFullYear()} HomeChef. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} Fe3dr. All rights reserved.</p>
           </div>
         </div>
       </footer>

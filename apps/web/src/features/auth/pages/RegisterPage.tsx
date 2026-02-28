@@ -87,7 +87,7 @@ export default function RegisterPage() {
             transition={{ delay: 0.4 }}
             className="max-w-lg text-center text-white"
           >
-            <h2 className="font-display text-display-sm font-bold">Join HomeChef Today</h2>
+            <h2 className="font-display text-display-sm font-bold">Join Fe3dr Today</h2>
             <p className="mt-4 text-lg text-white/90">
               Get access to hundreds of home chefs serving authentic, homemade food in your area.
             </p>
@@ -125,7 +125,7 @@ export default function RegisterPage() {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 shadow-md group-hover:shadow-lg transition-shadow">
               <ChefHat className="h-5 w-5 text-white" />
             </div>
-            <span className="font-display text-2xl font-bold text-gray-900">HomeChef</span>
+            <span className="font-display text-2xl font-bold text-gray-900">Fe3dr</span>
           </Link>
 
           <motion.div

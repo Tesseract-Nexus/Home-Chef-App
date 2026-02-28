@@ -433,7 +433,7 @@ export default function HomePage() {
             <motion.div variants={fadeInUp} className="text-center">
               <Badge variant="brand" className="mb-4">Why Choose Us</Badge>
               <h2 className="font-display text-display-md text-gray-900">
-                The HomeChef Difference
+                The Fe3dr Difference
               </h2>
               <p className="mt-3 text-gray-600 max-w-xl mx-auto">
                 Join thousands of happy customers enjoying homemade food

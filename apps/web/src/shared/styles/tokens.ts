@@ -1,5 +1,5 @@
 /**
- * Design Tokens for HomeChef
+ * Design Tokens for Fe3dr
  * Aligned with CSS variable system in globals.css
  */
 

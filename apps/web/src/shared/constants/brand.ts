@@ -1,14 +1,14 @@
 /**
- * HomeChef Brand Constants
+ * Fe3dr Brand Constants
  * Food & Chef themed design system
  */
 
 // Brand Information
 export const BRAND = {
-  name: 'HomeChef',
+  name: 'Fe3dr',
   tagline: 'Homemade Food Delivered',
   description: 'Connect with home chefs for authentic homemade food delivered to your doorstep',
-  copyright: `© ${new Date().getFullYear()} HomeChef. All rights reserved.`,
+  copyright: `© ${new Date().getFullYear()} Fe3dr. All rights reserved.`,
   trademark: '™',
 };
 

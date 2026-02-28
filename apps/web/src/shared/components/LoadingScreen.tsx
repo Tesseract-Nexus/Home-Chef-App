@@ -13,7 +13,7 @@ export function LoadingScreen({ message = 'Loading...' }: LoadingScreenProps) {
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-500">
             <span className="text-2xl font-bold text-white">H</span>
           </div>
-          <span className="text-2xl font-bold text-gray-900">HomeChef</span>
+          <span className="text-2xl font-bold text-gray-900">Fe3dr</span>
         </div>
 
         {/* Spinner */}

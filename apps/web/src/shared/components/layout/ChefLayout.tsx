@@ -50,7 +50,7 @@ export function ChefLayout() {
               <span className="text-lg font-bold text-white">H</span>
             </div>
             <div>
-              <span className="text-lg font-bold text-gray-900">HomeChef</span>
+              <span className="text-lg font-bold text-gray-900">Fe3dr</span>
               <p className="text-xs text-gray-500">Chef Dashboard</p>
             </div>
           </div>
@@ -138,7 +138,7 @@ export function ChefLayout() {
                   <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-500">
                     <span className="text-lg font-bold text-white">H</span>
                   </div>
-                  <span className="text-lg font-bold text-gray-900">HomeChef</span>
+                  <span className="text-lg font-bold text-gray-900">Fe3dr</span>
                 </Link>
                 <button onClick={() => setSidebarOpen(false)}>
                   <X className="h-6 w-6 text-gray-500" />

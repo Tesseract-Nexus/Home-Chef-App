@@ -80,7 +80,7 @@ export default function ForgotPasswordPage() {
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500">
             <span className="text-xl font-bold text-white">H</span>
           </div>
-          <span className="text-2xl font-bold text-gray-900">HomeChef</span>
+          <span className="text-2xl font-bold text-gray-900">Fe3dr</span>
         </Link>
 
         <div className="mt-8 rounded-xl bg-white p-8 shadow-sm">

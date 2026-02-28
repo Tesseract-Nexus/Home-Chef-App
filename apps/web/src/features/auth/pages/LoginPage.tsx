@@ -72,7 +72,7 @@ export default function LoginPage() {
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 shadow-md group-hover:shadow-lg transition-shadow">
               <ChefHat className="h-5 w-5 text-white" />
             </div>
-            <span className="font-display text-2xl font-bold text-gray-900">HomeChef</span>
+            <span className="font-display text-2xl font-bold text-gray-900">Fe3dr</span>
           </Link>
 
           <motion.div
@@ -255,7 +255,7 @@ export default function LoginPage() {
             className="text-white"
           >
             <p className="font-display text-xl font-medium leading-relaxed">
-              "HomeChef has changed how I eat. Finally, real homemade food that
+              "Fe3dr has changed how I eat. Finally, real homemade food that
               reminds me of my mom's cooking!"
             </p>
             <footer className="mt-4">

@@ -48,7 +48,7 @@ export function AdminLayout() {
               <span className="text-lg font-bold text-white">H</span>
             </div>
             <div>
-              <span className="text-lg font-bold text-white">HomeChef</span>
+              <span className="text-lg font-bold text-white">Fe3dr</span>
               <p className="text-xs text-gray-400">Admin Panel</p>
             </div>
           </div>
@@ -110,7 +110,7 @@ export function AdminLayout() {
           <aside className="fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 lg:hidden">
             <div className="flex h-full flex-col">
               <div className="flex h-16 items-center justify-between px-4">
-                <span className="text-lg font-bold text-white">HomeChef Admin</span>
+                <span className="text-lg font-bold text-white">Fe3dr Admin</span>
                 <button onClick={() => setSidebarOpen(false)}>
                   <X className="h-6 w-6 text-gray-400" />
                 </button>

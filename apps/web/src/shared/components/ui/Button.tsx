@@ -5,81 +5,70 @@ import { Loader2 } from 'lucide-react';
 import { cn } from '@/shared/utils/cn';
 
 const buttonVariants = cva(
-  // Base styles
   [
-    'inline-flex items-center justify-center gap-2',
-    'font-medium transition-all duration-200 ease-premium',
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+    'inline-flex items-center justify-center gap-2 whitespace-nowrap',
+    'font-semibold transition-all duration-200 ease-premium',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
     'disabled:pointer-events-none disabled:opacity-50',
+    '[&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0',
     'active:scale-[0.98]',
   ],
   {
     variants: {
       variant: {
-        // Primary - Brand orange, filled
+        default: [
+          'bg-primary text-primary-foreground',
+          'hover:bg-primary/90',
+          'shadow-md hover:shadow-lg',
+        ],
         primary: [
-          'bg-brand-500 text-white',
-          'hover:bg-brand-600',
-          'focus-visible:ring-brand-500',
-          'shadow-sm hover:shadow-md',
+          'bg-primary text-primary-foreground',
+          'hover:bg-primary/90',
+          'shadow-md hover:shadow-lg',
         ],
-        // Secondary - Subtle gray background
-        secondary: [
-          'bg-gray-100 text-gray-900',
-          'hover:bg-gray-200',
-          'focus-visible:ring-gray-500',
+        destructive: [
+          'bg-destructive text-destructive-foreground',
+          'hover:bg-destructive/90',
+          'shadow-md hover:shadow-lg',
         ],
-        // Outline - Bordered
         outline: [
-          'border-2 border-gray-200 bg-transparent text-gray-700',
-          'hover:bg-gray-50 hover:border-gray-300',
-          'focus-visible:ring-gray-500',
+          'border-2 border-border bg-transparent text-foreground',
+          'hover:bg-secondary hover:border-primary/30',
         ],
-        // Ghost - No background until hover
+        secondary: [
+          'bg-secondary text-secondary-foreground',
+          'hover:bg-secondary/80',
+        ],
         ghost: [
-          'text-gray-700',
-          'hover:bg-gray-100',
-          'focus-visible:ring-gray-500',
+          'text-foreground',
+          'hover:bg-secondary',
         ],
-        // Danger - Red for destructive actions
-        danger: [
-          'bg-red-500 text-white',
-          'hover:bg-red-600',
-          'focus-visible:ring-red-500',
-          'shadow-sm hover:shadow-md',
-        ],
-        // Premium - Golden gradient for special CTAs
-        premium: [
-          'bg-gradient-to-r from-golden-500 to-golden-600 text-white',
-          'hover:from-golden-600 hover:to-golden-700',
-          'focus-visible:ring-golden-500',
-          'shadow-sm hover:shadow-glow-golden',
-        ],
-        // Brand outline - Brand colored border
-        'brand-outline': [
-          'border-2 border-brand-500 bg-transparent text-brand-600',
-          'hover:bg-brand-50',
-          'focus-visible:ring-brand-500',
-        ],
-        // Success - Green for confirmations
-        success: [
-          'bg-fresh-500 text-white',
-          'hover:bg-fresh-600',
-          'focus-visible:ring-fresh-500',
-          'shadow-sm hover:shadow-md',
-        ],
-        // Link style
         link: [
-          'text-brand-600 underline-offset-4',
+          'text-primary underline-offset-4',
           'hover:underline',
-          'focus-visible:ring-brand-500',
           'p-0 h-auto',
+        ],
+        // Backward compat aliases
+        danger: [
+          'bg-destructive text-destructive-foreground',
+          'hover:bg-destructive/90',
+          'shadow-md hover:shadow-lg',
+        ],
+        success: [
+          'bg-success text-success-foreground',
+          'hover:bg-success/90',
+          'shadow-md hover:shadow-lg',
+        ],
+        'brand-outline': [
+          'border-2 border-primary bg-transparent text-primary',
+          'hover:bg-primary/5',
         ],
       },
       size: {
         xs: 'h-7 px-2 text-xs rounded-md',
         sm: 'h-8 px-3 text-sm rounded-lg',
         md: 'h-10 px-4 text-sm rounded-lg',
+        default: 'h-10 px-4 text-sm rounded-lg',
         lg: 'h-11 px-5 text-base rounded-xl',
         xl: 'h-12 px-6 text-base rounded-xl',
         icon: 'h-10 w-10 rounded-lg',
@@ -92,7 +81,7 @@ const buttonVariants = cva(
       },
     },
     defaultVariants: {
-      variant: 'primary',
+      variant: 'default',
       size: 'md',
       fullWidth: false,
     },

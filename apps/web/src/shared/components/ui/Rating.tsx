@@ -55,35 +55,32 @@ const Rating = forwardRef<HTMLDivElement, RatingProps>(
 
     for (let i = 1; i <= max; i++) {
       if (i <= fullStars) {
-        // Full star
         stars.push(
           <Star
             key={i}
             className={cn(
-              'fill-golden-400 text-golden-400',
+              'fill-warning text-warning',
               !readonly && 'cursor-pointer hover:scale-110 transition-transform'
             )}
             onClick={() => !readonly && onValueChange?.(i)}
           />
         );
       } else if (i === fullStars + 1 && hasHalfStar) {
-        // Half star
         stars.push(
           <div key={i} className="relative">
-            <Star className="text-gray-200" />
+            <Star className="text-border" />
             <div className="absolute inset-0 overflow-hidden w-1/2">
-              <Star className="fill-golden-400 text-golden-400" />
+              <Star className="fill-warning text-warning" />
             </div>
           </div>
         );
       } else {
-        // Empty star
         stars.push(
           <Star
             key={i}
             className={cn(
-              'text-gray-200',
-              !readonly && 'cursor-pointer hover:text-golden-300 transition-colors'
+              'text-border',
+              !readonly && 'cursor-pointer hover:text-warning/60 transition-colors'
             )}
             onClick={() => !readonly && onValueChange?.(i)}
           />
@@ -99,12 +96,12 @@ const Rating = forwardRef<HTMLDivElement, RatingProps>(
       >
         {stars}
         {showValue && (
-          <span className="ml-1.5 font-medium text-gray-900">
+          <span className="ml-1.5 font-medium text-foreground">
             {value.toFixed(1)}
           </span>
         )}
         {showCount && count !== undefined && (
-          <span className="ml-1 text-gray-500">
+          <span className="ml-1 text-muted-foreground">
             ({count.toLocaleString()})
           </span>
         )}
@@ -115,11 +112,11 @@ const Rating = forwardRef<HTMLDivElement, RatingProps>(
 
 Rating.displayName = 'Rating';
 
-// Rating Badge - compact display with golden background
+// Rating Badge
 const ratingBadgeVariants = cva(
   [
     'inline-flex items-center gap-1 font-medium',
-    'bg-golden-50 text-golden-700',
+    'bg-accent text-accent-foreground',
     'rounded-lg',
   ],
   {
@@ -151,10 +148,10 @@ const RatingBadge = forwardRef<HTMLDivElement, RatingBadgeProps>(
       className={cn(ratingBadgeVariants({ size }), className)}
       {...props}
     >
-      <Star className="fill-golden-500 text-golden-500" />
+      <Star className="fill-warning text-warning" />
       <span>{value.toFixed(1)}</span>
       {showCount && count !== undefined && (
-        <span className="text-golden-600/70">({count})</span>
+        <span className="opacity-70">({count})</span>
       )}
     </div>
   )
@@ -162,7 +159,7 @@ const RatingBadge = forwardRef<HTMLDivElement, RatingBadgeProps>(
 
 RatingBadge.displayName = 'RatingBadge';
 
-// Simple Star Rating Display - just the stars inline
+// Simple Star Rating Display
 interface StarRatingProps {
   rating: number;
   size?: 'xs' | 'sm' | 'md' | 'lg';
@@ -185,8 +182,8 @@ const StarRating = ({ rating, size = 'sm', className }: StarRatingProps) => {
           className={cn(
             sizeClasses[size],
             star <= rating
-              ? 'fill-golden-400 text-golden-400'
-              : 'text-gray-200'
+              ? 'fill-warning text-warning'
+              : 'text-border'
           )}
         />
       ))}
@@ -194,7 +191,7 @@ const StarRating = ({ rating, size = 'sm', className }: StarRatingProps) => {
   );
 };
 
-// Compact Rating - just number and one star
+// Compact Rating
 interface CompactRatingProps {
   value: number;
   className?: string;
@@ -202,8 +199,8 @@ interface CompactRatingProps {
 
 const CompactRating = ({ value, className }: CompactRatingProps) => (
   <div className={cn('inline-flex items-center gap-1', className)}>
-    <Star className="h-4 w-4 fill-golden-400 text-golden-400" />
-    <span className="font-medium text-gray-900">{value.toFixed(1)}</span>
+    <Star className="h-4 w-4 fill-warning text-warning" />
+    <span className="font-medium text-foreground">{value.toFixed(1)}</span>
   </div>
 );
 

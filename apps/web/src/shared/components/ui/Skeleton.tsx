@@ -32,7 +32,7 @@ function Skeleton({
   return (
     <div
       className={cn(
-        'bg-gray-200',
+        'bg-muted',
         variantClasses[variant],
         animationClasses[animation],
         className
@@ -47,7 +47,6 @@ function Skeleton({
   );
 }
 
-// Pre-built skeleton components
 function SkeletonText({
   lines = 3,
   className,
@@ -63,7 +62,7 @@ function SkeletonText({
           variant="text"
           className={cn(
             'h-4',
-            i === lines - 1 && lines > 1 && 'w-4/5' // Last line shorter
+            i === lines - 1 && lines > 1 && 'w-4/5'
           )}
         />
       ))}
@@ -142,10 +141,9 @@ function SkeletonImage({
   );
 }
 
-// Card skeleton
 function SkeletonCard({ className }: { className?: string }) {
   return (
-    <div className={cn('rounded-2xl bg-white p-6 shadow-card', className)}>
+    <div className={cn('rounded-xl bg-card border border-border p-6 shadow-sm', className)}>
       <SkeletonImage aspectRatio="video" className="mb-4" />
       <Skeleton className="h-5 w-3/4 mb-2" />
       <Skeleton className="h-4 w-1/2 mb-4" />
@@ -160,10 +158,9 @@ function SkeletonCard({ className }: { className?: string }) {
   );
 }
 
-// Food card skeleton
 function SkeletonFoodCard({ className }: { className?: string }) {
   return (
-    <div className={cn('rounded-2xl bg-white overflow-hidden shadow-card', className)}>
+    <div className={cn('rounded-xl bg-card border border-border overflow-hidden shadow-sm', className)}>
       <SkeletonImage aspectRatio="square" className="rounded-none" />
       <div className="p-4">
         <div className="flex items-start justify-between mb-2">
@@ -181,15 +178,14 @@ function SkeletonFoodCard({ className }: { className?: string }) {
   );
 }
 
-// Chef card skeleton
 function SkeletonChefCard({ className }: { className?: string }) {
   return (
-    <div className={cn('rounded-2xl bg-white overflow-hidden shadow-card', className)}>
+    <div className={cn('rounded-xl bg-card border border-border overflow-hidden shadow-sm', className)}>
       <Skeleton className="h-32 rounded-none" />
       <div className="p-4 pt-10 relative">
         <SkeletonAvatar
           size="xl"
-          className="absolute -top-8 left-4 border-4 border-white"
+          className="absolute -top-8 left-4 border-4 border-card"
         />
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
@@ -209,7 +205,6 @@ function SkeletonChefCard({ className }: { className?: string }) {
   );
 }
 
-// Table row skeleton
 function SkeletonTableRow({
   columns = 5,
   className,

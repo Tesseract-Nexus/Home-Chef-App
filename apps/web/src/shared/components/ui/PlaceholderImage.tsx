@@ -73,7 +73,7 @@ export function PlaceholderImage({
     return (
       <div
         className={cn(
-          'flex items-center justify-center bg-gray-100',
+          'flex items-center justify-center bg-muted',
           aspectRatioClasses[aspectRatio],
           className
         )}
@@ -106,7 +106,6 @@ export function PlaceholderImage({
   );
 }
 
-// Pre-built image components for common use cases
 export function FoodImage({
   index,
   alt,

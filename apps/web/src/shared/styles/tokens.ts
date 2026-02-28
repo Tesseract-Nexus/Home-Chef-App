@@ -1,60 +1,56 @@
 /**
  * Design Tokens for HomeChef
- * Centralized design values for consistency across the app
+ * Aligned with CSS variable system in globals.css
  */
 
-// Color palette
+// Semantic colors (matching CSS variables)
 export const colors = {
-  // Brand orange - Primary CTA and brand identity
+  background: 'var(--background)',       // #FFFAF5
+  foreground: 'var(--foreground)',       // #1C1917
+  card: 'var(--card)',                   // #FFFFFF
+  cardForeground: 'var(--card-foreground)', // #1C1917
+  popover: 'var(--popover)',             // #FFFFFF
+  popoverForeground: 'var(--popover-foreground)', // #1C1917
+  primary: 'var(--primary)',             // #C2410C
+  primaryForeground: 'var(--primary-foreground)', // #FFFFFF
+  secondary: 'var(--secondary)',         // #F5F0EB
+  secondaryForeground: 'var(--secondary-foreground)', // #44403C
+  muted: 'var(--muted)',                 // #FAF5F0
+  mutedForeground: 'var(--muted-foreground)', // #78716C
+  accent: 'var(--accent)',               // #FEF3C7
+  accentForeground: 'var(--accent-foreground)', // #92400E
+  destructive: 'var(--destructive)',     // #DC2626
+  destructiveForeground: 'var(--destructive-foreground)', // #FFFFFF
+  border: 'var(--border)',               // #E7E0D9
+  input: 'var(--input)',                 // #E7E0D9
+  ring: 'var(--ring)',                   // #C2410C
+  success: 'var(--success)',             // #059669
+  successForeground: 'var(--success-foreground)', // #FFFFFF
+  warning: 'var(--warning)',             // #D97706
+  warningForeground: 'var(--warning-foreground)', // #1C1917
+  error: 'var(--error)',                 // #DC2626
+  errorForeground: 'var(--error-foreground)', // #FFFFFF
+  info: 'var(--info)',                   // #2563EB
+  infoForeground: 'var(--info-foreground)', // #FFFFFF
+  sidebar: 'var(--sidebar)',             // #1C1917
+  sidebarForeground: 'var(--sidebar-foreground)', // #F5F0EB
+  sidebarPrimary: 'var(--sidebar-primary)', // #C2410C
+  sidebarAccent: 'var(--sidebar-accent)', // #292524
+  sidebarBorder: 'var(--sidebar-border)', // #44403C
+
+  // Brand scale - terracotta shades for direct access
   brand: {
     50: '#fff7ed',
     100: '#ffedd5',
     200: '#fed7aa',
     300: '#fdba74',
     400: '#fb923c',
-    500: '#f97316',
-    600: '#ea580c',
-    700: '#c2410c',
-    800: '#9a3412',
-    900: '#7c2d12',
+    500: '#ea580c',
+    600: '#c2410c',
+    700: '#9a3412',
+    800: '#7c2d12',
+    900: '#6c2710',
     950: '#431407',
-  },
-  // Spice red - For accents and warnings
-  spice: {
-    50: '#fef2f2',
-    100: '#fee2e2',
-    200: '#fecaca',
-    300: '#fca5a5',
-    400: '#f87171',
-    500: '#ef4444',
-    600: '#dc2626',
-  },
-  // Fresh green - For success states
-  fresh: {
-    50: '#f0fdf4',
-    100: '#dcfce7',
-    200: '#bbf7d0',
-    300: '#86efac',
-    400: '#4ade80',
-    500: '#22c55e',
-    600: '#16a34a',
-  },
-  // Golden - For ratings and premium elements
-  golden: {
-    50: '#fffbeb',
-    100: '#fef3c7',
-    200: '#fde68a',
-    300: '#fcd34d',
-    400: '#fbbf24',
-    500: '#f59e0b',
-    600: '#d97706',
-    700: '#b45309',
-  },
-  // Cream - For backgrounds
-  cream: {
-    50: '#fffbf5',
-    100: '#fef7ed',
-    200: '#fdf2e3',
   },
 } as const;
 
@@ -89,27 +85,27 @@ export const typography = {
 // Spacing scale (8px base)
 export const spacing = {
   0: '0',
-  0.5: '0.125rem', // 2px
-  1: '0.25rem',    // 4px
-  1.5: '0.375rem', // 6px
-  2: '0.5rem',     // 8px
-  2.5: '0.625rem', // 10px
-  3: '0.75rem',    // 12px
-  3.5: '0.875rem', // 14px
-  4: '1rem',       // 16px
-  5: '1.25rem',    // 20px
-  6: '1.5rem',     // 24px
-  7: '1.75rem',    // 28px
-  8: '2rem',       // 32px
-  9: '2.25rem',    // 36px
-  10: '2.5rem',    // 40px
-  11: '2.75rem',   // 44px
-  12: '3rem',      // 48px
-  14: '3.5rem',    // 56px
-  16: '4rem',      // 64px
-  18: '4.5rem',    // 72px
-  20: '5rem',      // 80px
-  24: '6rem',      // 96px
+  0.5: '0.125rem',
+  1: '0.25rem',
+  1.5: '0.375rem',
+  2: '0.5rem',
+  2.5: '0.625rem',
+  3: '0.75rem',
+  3.5: '0.875rem',
+  4: '1rem',
+  5: '1.25rem',
+  6: '1.5rem',
+  7: '1.75rem',
+  8: '2rem',
+  9: '2.25rem',
+  10: '2.5rem',
+  11: '2.75rem',
+  12: '3rem',
+  14: '3.5rem',
+  16: '4rem',
+  18: '4.5rem',
+  20: '5rem',
+  24: '6rem',
 } as const;
 
 // Border radius scale
@@ -117,7 +113,7 @@ export const borderRadius = {
   none: '0',
   sm: '0.375rem',
   md: '0.5rem',
-  lg: '0.75rem',
+  lg: 'var(--radius)',
   xl: '1rem',
   '2xl': '1.25rem',
   '3xl': '1.5rem',
@@ -125,43 +121,31 @@ export const borderRadius = {
   full: '9999px',
 } as const;
 
-// Shadow scale - Premium soft shadows
+// Shadow scale
 export const shadows = {
   none: 'none',
   sm: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
   md: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
   lg: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
   xl: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
-  // Premium soft shadows
   'soft-sm': '0 2px 8px -2px rgb(0 0 0 / 0.08)',
   'soft-md': '0 4px 16px -4px rgb(0 0 0 / 0.1)',
   'soft-lg': '0 8px 24px -6px rgb(0 0 0 / 0.12)',
   'soft-xl': '0 16px 40px -8px rgb(0 0 0 / 0.15)',
   'soft-2xl': '0 24px 56px -12px rgb(0 0 0 / 0.18)',
-  // Card shadows
   card: '0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.02)',
   'card-hover': '0 8px 24px -4px rgb(0 0 0 / 0.1), 0 4px 8px -2px rgb(0 0 0 / 0.04)',
-  // Elevated
   elevated: '0 4px 12px -2px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.04)',
   'elevated-lg': '0 12px 32px -4px rgb(0 0 0 / 0.12), 0 4px 8px -2px rgb(0 0 0 / 0.06)',
-  // Modal
   modal: '0 24px 48px -12px rgb(0 0 0 / 0.2), 0 12px 24px -8px rgb(0 0 0 / 0.1)',
-  // Glow
-  'glow-brand': '0 0 24px -4px rgb(249 115 22 / 0.35)',
-  'glow-golden': '0 0 24px -4px rgb(251 191 36 / 0.35)',
 } as const;
 
 // Animation timing functions
 export const easing = {
-  // Premium smooth easing - best for most UI interactions
   premium: 'cubic-bezier(0.16, 1, 0.3, 1)',
-  // Bounce easing - for playful interactions
   bounce: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
-  // Smooth easing - for subtle transitions
   smooth: 'cubic-bezier(0.4, 0, 0.2, 1)',
-  // Linear
   linear: 'linear',
-  // Standard easing
   in: 'cubic-bezier(0.4, 0, 1, 1)',
   out: 'cubic-bezier(0, 0, 0.2, 1)',
   inOut: 'cubic-bezier(0.4, 0, 0.2, 1)',
@@ -215,11 +199,11 @@ export const iconSizes = {
 export const components = {
   button: {
     height: {
-      xs: '1.75rem',   // 28px
-      sm: '2rem',      // 32px
-      md: '2.5rem',    // 40px
-      lg: '2.75rem',   // 44px
-      xl: '3rem',      // 48px
+      xs: '1.75rem',
+      sm: '2rem',
+      md: '2.5rem',
+      lg: '2.75rem',
+      xl: '3rem',
     },
     padding: {
       xs: '0 0.5rem',
@@ -235,7 +219,7 @@ export const components = {
       lg: '1rem',
       xl: '1rem',
     },
-    borderRadius: '0.75rem', // rounded-lg
+    borderRadius: 'var(--radius)',
   },
   card: {
     padding: {
@@ -243,36 +227,36 @@ export const components = {
       md: '1.5rem',
       lg: '2rem',
     },
-    borderRadius: '1.25rem', // rounded-2xl
+    borderRadius: '1.25rem',
   },
   input: {
     height: {
-      sm: '2.25rem',  // 36px
-      md: '2.5rem',   // 40px
-      lg: '2.75rem',  // 44px
+      sm: '2.25rem',
+      md: '2.5rem',
+      lg: '2.75rem',
     },
     padding: {
       sm: '0 0.75rem',
       md: '0 1rem',
       lg: '0 1.25rem',
     },
-    borderRadius: '0.5rem', // rounded-md
+    borderRadius: '0.5rem',
   },
   avatar: {
     size: {
-      xs: '1.5rem',   // 24px
-      sm: '2rem',     // 32px
-      md: '2.5rem',   // 40px
-      lg: '3rem',     // 48px
-      xl: '4rem',     // 64px
-      '2xl': '5rem',  // 80px
+      xs: '1.5rem',
+      sm: '2rem',
+      md: '2.5rem',
+      lg: '3rem',
+      xl: '4rem',
+      '2xl': '5rem',
     },
   },
   badge: {
     height: {
-      sm: '1.25rem',  // 20px
-      md: '1.5rem',   // 24px
-      lg: '1.75rem',  // 28px
+      sm: '1.25rem',
+      md: '1.5rem',
+      lg: '1.75rem',
     },
     padding: {
       sm: '0 0.5rem',
@@ -280,11 +264,11 @@ export const components = {
       lg: '0 0.75rem',
     },
     fontSize: {
-      sm: '0.625rem', // 10px
-      md: '0.75rem',  // 12px
-      lg: '0.875rem', // 14px
+      sm: '0.625rem',
+      md: '0.75rem',
+      lg: '0.875rem',
     },
-    borderRadius: '9999px', // rounded-full
+    borderRadius: '9999px',
   },
 } as const;
 

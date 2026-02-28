@@ -7,69 +7,76 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Semantic colors from CSS variables (HSL format with alpha support)
+        background: 'hsl(var(--background) / <alpha-value>)',
+        foreground: 'hsl(var(--foreground) / <alpha-value>)',
+        card: {
+          DEFAULT: 'hsl(var(--card) / <alpha-value>)',
+          foreground: 'hsl(var(--card-foreground) / <alpha-value>)',
+        },
+        popover: {
+          DEFAULT: 'hsl(var(--popover) / <alpha-value>)',
+          foreground: 'hsl(var(--popover-foreground) / <alpha-value>)',
+        },
+        primary: {
+          DEFAULT: 'hsl(var(--primary) / <alpha-value>)',
+          foreground: 'hsl(var(--primary-foreground) / <alpha-value>)',
+        },
+        secondary: {
+          DEFAULT: 'hsl(var(--secondary) / <alpha-value>)',
+          foreground: 'hsl(var(--secondary-foreground) / <alpha-value>)',
+        },
+        muted: {
+          DEFAULT: 'hsl(var(--muted) / <alpha-value>)',
+          foreground: 'hsl(var(--muted-foreground) / <alpha-value>)',
+        },
+        accent: {
+          DEFAULT: 'hsl(var(--accent) / <alpha-value>)',
+          foreground: 'hsl(var(--accent-foreground) / <alpha-value>)',
+        },
+        destructive: {
+          DEFAULT: 'hsl(var(--destructive) / <alpha-value>)',
+          foreground: 'hsl(var(--destructive-foreground) / <alpha-value>)',
+        },
+        border: 'hsl(var(--border) / <alpha-value>)',
+        input: 'hsl(var(--input) / <alpha-value>)',
+        ring: 'hsl(var(--ring) / <alpha-value>)',
+        success: {
+          DEFAULT: 'hsl(var(--success) / <alpha-value>)',
+          foreground: 'hsl(var(--success-foreground) / <alpha-value>)',
+        },
+        warning: {
+          DEFAULT: 'hsl(var(--warning) / <alpha-value>)',
+          foreground: 'hsl(var(--warning-foreground) / <alpha-value>)',
+        },
+        error: {
+          DEFAULT: 'hsl(var(--error) / <alpha-value>)',
+          foreground: 'hsl(var(--error-foreground) / <alpha-value>)',
+        },
+        info: {
+          DEFAULT: 'hsl(var(--info) / <alpha-value>)',
+          foreground: 'hsl(var(--info-foreground) / <alpha-value>)',
+        },
+        sidebar: {
+          DEFAULT: 'hsl(var(--sidebar) / <alpha-value>)',
+          foreground: 'hsl(var(--sidebar-foreground) / <alpha-value>)',
+          primary: 'hsl(var(--sidebar-primary) / <alpha-value>)',
+          accent: 'hsl(var(--sidebar-accent) / <alpha-value>)',
+          border: 'hsl(var(--sidebar-border) / <alpha-value>)',
+        },
+        // Brand scale - explicit terracotta shades for direct access
         brand: {
           50: '#fff7ed',
           100: '#ffedd5',
           200: '#fed7aa',
           300: '#fdba74',
           400: '#fb923c',
-          500: '#f97316',
-          600: '#ea580c',
-          700: '#c2410c',
-          800: '#9a3412',
-          900: '#7c2d12',
+          500: '#ea580c',
+          600: '#c2410c',
+          700: '#9a3412',
+          800: '#7c2d12',
+          900: '#6c2710',
           950: '#431407',
-        },
-        spice: {
-          50: '#fef2f2',
-          100: '#fee2e2',
-          200: '#fecaca',
-          300: '#fca5a5',
-          400: '#f87171',
-          500: '#ef4444',
-          600: '#dc2626',
-        },
-        fresh: {
-          50: '#f0fdf4',
-          100: '#dcfce7',
-          200: '#bbf7d0',
-          300: '#86efac',
-          400: '#4ade80',
-          500: '#22c55e',
-          600: '#16a34a',
-        },
-        golden: {
-          50: '#fffbeb',
-          100: '#fef3c7',
-          200: '#fde68a',
-          300: '#fcd34d',
-          400: '#fbbf24',
-          500: '#f59e0b',
-          600: '#d97706',
-          700: '#b45309',
-        },
-        cream: {
-          50: '#fffbf5',
-          100: '#fef7ed',
-          200: '#fdf2e3',
-        },
-        success: {
-          50: '#f0fdf4',
-          100: '#dcfce7',
-          500: '#22c55e',
-          600: '#16a34a',
-        },
-        warning: {
-          50: '#fffbeb',
-          100: '#fef3c7',
-          500: '#f59e0b',
-          600: '#d97706',
-        },
-        error: {
-          50: '#fef2f2',
-          100: '#fee2e2',
-          500: '#ef4444',
-          600: '#dc2626',
         },
       },
       fontFamily: {
@@ -78,7 +85,6 @@ export default {
         accent: ['Caveat', 'cursive'],
       },
       fontSize: {
-        // Premium display sizes for headings
         'display-2xl': ['4.5rem', { lineHeight: '1', letterSpacing: '-0.02em', fontWeight: '700' }],
         'display-xl': ['3.75rem', { lineHeight: '1.05', letterSpacing: '-0.02em', fontWeight: '700' }],
         'display-lg': ['3rem', { lineHeight: '1.1', letterSpacing: '-0.02em', fontWeight: '700' }],
@@ -93,38 +99,29 @@ export default {
         '30': '7.5rem',
       },
       borderRadius: {
-        sm: '0.375rem',
-        md: '0.5rem',
-        lg: '0.75rem',
+        sm: 'calc(var(--radius) - 4px)',
+        md: 'calc(var(--radius) - 2px)',
+        lg: 'var(--radius)',
         xl: '1rem',
         '2xl': '1.25rem',
         '3xl': '1.5rem',
         '4xl': '2rem',
       },
       boxShadow: {
-        // Standard shadows
         sm: '0 1px 2px 0 rgb(0 0 0 / 0.05)',
         md: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
         lg: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
         xl: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
-        // Premium soft shadows for elegant look
         'soft-sm': '0 2px 8px -2px rgb(0 0 0 / 0.08)',
         'soft-md': '0 4px 16px -4px rgb(0 0 0 / 0.1)',
         'soft-lg': '0 8px 24px -6px rgb(0 0 0 / 0.12)',
         'soft-xl': '0 16px 40px -8px rgb(0 0 0 / 0.15)',
         'soft-2xl': '0 24px 56px -12px rgb(0 0 0 / 0.18)',
-        // Card shadows with subtle lift
         'card': '0 1px 3px 0 rgb(0 0 0 / 0.04), 0 1px 2px -1px rgb(0 0 0 / 0.02)',
         'card-hover': '0 8px 24px -4px rgb(0 0 0 / 0.1), 0 4px 8px -2px rgb(0 0 0 / 0.04)',
-        // Elevated elements
         'elevated': '0 4px 12px -2px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.04)',
         'elevated-lg': '0 12px 32px -4px rgb(0 0 0 / 0.12), 0 4px 8px -2px rgb(0 0 0 / 0.06)',
-        // Modal/dialog shadow
         'modal': '0 24px 48px -12px rgb(0 0 0 / 0.2), 0 12px 24px -8px rgb(0 0 0 / 0.1)',
-        // Glow effects
-        'glow-brand': '0 0 24px -4px rgb(249 115 22 / 0.35)',
-        'glow-golden': '0 0 24px -4px rgb(251 191 36 / 0.35)',
-        // Inner shadows
         'inner-soft': 'inset 0 2px 4px 0 rgb(0 0 0 / 0.04)',
       },
       transitionTimingFunction: {

@@ -2,31 +2,217 @@ name: HomeChef Web - CI Build
 
 on:
   push:
-    branches: [main, 'feat/**', 'feature/**']
+    branches:
+      - main
+      - 'feat/**'
+      - 'feature/**'
+      - 'bugfix/**'
+      - 'hotfix/**'
     paths:
       - 'apps/web/**'
       - 'packages/**'
-      - '.github/workflows/homechef-web-build.yml'
       - 'pnpm-lock.yaml'
+      - '.github/workflows/homechef-web-build.yml'
   pull_request:
     branches: [main]
     paths:
       - 'apps/web/**'
       - 'packages/**'
+      - '.github/workflows/homechef-web-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+  security-events: write
+  id-token: write
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}/homechef-web
+  AR_REGISTRY: asia-south1-docker.pkg.dev/tesseracthub-480811/homechef
+  GCP_PROJECT_ID: tesseracthub-480811
+  GCP_REGION: asia-south1
+  CLOUD_RUN_SERVICE: homechef-web
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
+    name: Build and Push HomeChef Web
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
 
     steps:
-      - name: Checkout repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # --- GCP Authentication (best-effort: WIF → SA Key → skip) ---
+      - name: Authenticate to Google Cloud (WIF)
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        id: auth_wif
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/849928263410/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: github-actions@tesseracthub-480811.iam.gserviceaccount.com
+          project_id: ${{ env.GCP_PROJECT_ID }}
+        continue-on-error: true
+
+      - name: Authenticate to Google Cloud (SA Key Fallback)
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && steps.auth_wif.outcome == 'failure'
+        id: auth_sa
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_PROD_SA_KEY }}
+        continue-on-error: true
+
+      - name: Check GCP auth status
+        id: gcp_auth
+        run: |
+          if [[ "${{ steps.auth_wif.outcome }}" == "success" || "${{ steps.auth_sa.outcome }}" == "success" ]]; then
+            echo "authenticated=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "authenticated=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::GCP authentication unavailable — skipping Artifact Registry push and Cloud Run deploy"
+          fi
+
+      - name: Configure Docker for Artifact Registry
+        if: steps.gcp_auth.outputs.authenticated == 'true'
+        run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
+
+      # --- Build and Push to GHCR ---
+      - name: Extract metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.title=homechef-web
+            org.opencontainers.image.description=HomeChef Web Application
+
+      - name: Compute cache ref
+        id: cache
+        run: echo "ref=$(echo '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+      - name: Generate AR tags
+        if: steps.gcp_auth.outputs.authenticated == 'true'
+        id: ar_tags
+        run: |
+          SHA_SHORT=$(echo "${{ github.sha }}" | cut -c1-7)
+          {
+            echo "tags<<EOF"
+            echo "${{ env.AR_REGISTRY }}/homechef-web:main-${SHA_SHORT}"
+            echo "${{ env.AR_REGISTRY }}/homechef-web:latest"
+            echo "EOF"
+            echo "sha_tag=main-${SHA_SHORT}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build and push Docker image
+        id: build_push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/web/Dockerfile
+          platforms: linux/amd64
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: |
+            ${{ steps.meta.outputs.tags }}
+            ${{ steps.ar_tags.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            VITE_API_URL=${{ vars.VITE_API_URL || 'https://homechef.tesseracthub.com/api' }}
+          cache-from: type=registry,ref=${{ steps.cache.outputs.ref }}
+          cache-to: type=registry,ref=${{ steps.cache.outputs.ref }},mode=max
+
+      # --- Deploy to Cloud Run ---
+      # Infrastructure (VPC, IAM, scaling, ingress, probes) is managed by Terraform (stack 10-cloud-run).
+      # CI only updates the container image.
+      - name: Deploy to Cloud Run
+        if: steps.gcp_auth.outputs.authenticated == 'true'
+        id: cloud_run_deploy
+        run: |
+          gcloud run deploy ${{ env.CLOUD_RUN_SERVICE }} \
+            --image ${{ env.AR_REGISTRY }}/homechef-web:${{ steps.ar_tags.outputs.sha_tag }} \
+            --region ${{ env.GCP_REGION }} \
+            --project ${{ env.GCP_PROJECT_ID }} \
+            --min-instances=0
+        continue-on-error: true
+
+      - name: Route traffic to latest
+        if: steps.cloud_run_deploy.outcome == 'success'
+        run: |
+          gcloud run services update-traffic ${{ env.CLOUD_RUN_SERVICE }} \
+            --to-latest \
+            --region ${{ env.GCP_REGION }} \
+            --project ${{ env.GCP_PROJECT_ID }}
+        continue-on-error: true
+
+      # --- Security scanning ---
+      - name: Run Trivy vulnerability scanner
+        if: github.event_name != 'pull_request'
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          format: sarif
+          output: trivy-results.sarif
+          severity: CRITICAL,HIGH
+        continue-on-error: true
+
+      - name: Upload Trivy results to GitHub Security tab
+        if: github.event_name != 'pull_request'
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-results.sarif
+        continue-on-error: true
+
+      - name: Build Summary
+        if: always()
+        run: |
+          echo "## Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Application:** HomeChef Web" >> $GITHUB_STEP_SUMMARY
+          echo "**Architecture:** AMD64" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [[ "${{ github.event_name }}" != "pull_request" ]]; then
+            echo "✅ **Docker Image:** Pushed to ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" >> $GITHUB_STEP_SUMMARY
+            if [[ "${{ steps.gcp_auth.outputs.authenticated }}" == "true" && "${{ steps.build_push.outcome }}" == "success" ]]; then
+              echo "✅ **Artifact Registry:** Pushed to ${{ env.AR_REGISTRY }}/homechef-web" >> $GITHUB_STEP_SUMMARY
+            elif [[ "${{ steps.gcp_auth.outputs.authenticated }}" == "true" ]]; then
+              echo "⚠️ **Artifact Registry:** Push failed (repo may not exist yet)" >> $GITHUB_STEP_SUMMARY
+            else
+              echo "⏭️ **GCP:** Skipped (auth not configured)" >> $GITHUB_STEP_SUMMARY
+            fi
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Tags:**" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            echo "${{ steps.meta.outputs.tags }}" >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          else
+            echo "🔨 **Docker Image:** Built successfully (not pushed)" >> $GITHUB_STEP_SUMMARY
+          fi
+
+  test:
+    name: Run Tests
+    runs-on: ${{ vars.RUNNER_LABEL || 'ubuntu-latest' }}
+
+    steps:
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Set up Node.js
@@ -39,8 +225,7 @@ jobs:
 
       - name: Get pnpm store directory
         shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
 
       - name: Setup pnpm cache
         uses: actions/cache@v4
@@ -66,57 +251,10 @@ jobs:
         run: pnpm test -- --passWithNoTests
         continue-on-error: true
 
-      - name: Build application
-        working-directory: apps/web
-        run: pnpm build
-        env:
-          VITE_API_URL: ${{ vars.VITE_API_URL }}
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=sha,prefix=
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: apps/web/Dockerfile
-          push: ${{ github.event_name != 'pull_request' }}
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            VITE_API_URL=${{ vars.VITE_API_URL }}
-
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
-        continue-on-error: true
-        with:
-          image-ref: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-        if: github.event_name != 'pull_request'
-
-      - name: Upload Trivy scan results
-        uses: github/codeql-action/upload-sarif@v3
-        continue-on-error: true
-        with:
-          sarif_file: 'trivy-results.sarif'
-        if: github.event_name != 'pull_request'
+      - name: Test Summary
+        if: always()
+        run: |
+          echo "## Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Application:** HomeChef Web" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** Tests completed" >> $GITHUB_STEP_SUMMARY

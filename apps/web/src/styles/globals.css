@@ -2,8 +2,61 @@
 @tailwind components;
 @tailwind utilities;
 
-/* HomeChef Design System - Core Styles */
+/* HomeChef Design System - CSS Variables (HSL format for Tailwind opacity support) */
 :root {
+  /* Core */
+  --background: 30 100% 98%;         /* #FFFAF5 warm cream */
+  --foreground: 24 10% 10%;          /* #1C1917 stone 900 */
+  --card: 0 0% 100%;                 /* #FFFFFF */
+  --card-foreground: 24 10% 10%;     /* #1C1917 */
+  --popover: 0 0% 100%;             /* #FFFFFF */
+  --popover-foreground: 24 10% 10%; /* #1C1917 */
+
+  /* Primary - Terracotta */
+  --primary: 17 88% 40%;             /* #C2410C */
+  --primary-foreground: 0 0% 100%;   /* #FFFFFF */
+
+  /* Secondary - Warm stone */
+  --secondary: 29 33% 94%;           /* #F5F0EB */
+  --secondary-foreground: 30 6% 25%; /* #44403C */
+
+  /* Muted */
+  --muted: 30 50% 96%;               /* #FAF5F0 */
+  --muted-foreground: 25 5% 45%;     /* #78716C */
+
+  /* Accent - Amber/Golden */
+  --accent: 48 96% 89%;              /* #FEF3C7 */
+  --accent-foreground: 23 83% 31%;   /* #92400E */
+
+  /* Destructive */
+  --destructive: 0 72% 51%;          /* #DC2626 */
+  --destructive-foreground: 0 0% 100%; /* #FFFFFF */
+
+  /* Border & Input */
+  --border: 30 23% 88%;              /* #E7E0D9 */
+  --input: 30 23% 88%;               /* #E7E0D9 */
+  --ring: 17 88% 40%;                /* #C2410C */
+
+  /* Status */
+  --success: 161 93% 30%;            /* #059669 */
+  --success-foreground: 0 0% 100%;   /* #FFFFFF */
+  --warning: 32 95% 44%;             /* #D97706 */
+  --warning-foreground: 24 10% 10%;  /* #1C1917 */
+  --error: 0 72% 51%;                /* #DC2626 */
+  --error-foreground: 0 0% 100%;     /* #FFFFFF */
+  --info: 221 83% 53%;               /* #2563EB */
+  --info-foreground: 0 0% 100%;      /* #FFFFFF */
+
+  /* Sidebar (Chef/Admin) */
+  --sidebar: 24 10% 10%;             /* #1C1917 */
+  --sidebar-foreground: 29 33% 94%;  /* #F5F0EB */
+  --sidebar-primary: 17 88% 40%;     /* #C2410C */
+  --sidebar-accent: 12 7% 15%;       /* #292524 */
+  --sidebar-border: 30 6% 25%;       /* #44403C */
+
+  /* Radius */
+  --radius: 0.625rem;
+
   /* Mobile-specific spacing */
   --spacing-safe-top: env(safe-area-inset-top);
   --spacing-safe-bottom: env(safe-area-inset-bottom);
@@ -52,7 +105,7 @@
 /* Base styles */
 @layer base {
   * {
-    @apply border-gray-200;
+    @apply border-border;
   }
 
   html {
@@ -62,7 +115,7 @@
   }
 
   body {
-    @apply bg-gray-50 text-gray-900 font-sans;
+    @apply bg-background text-foreground font-sans;
     overscroll-behavior-y: contain;
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
@@ -70,7 +123,7 @@
 
   /* Focus styles */
   :focus-visible {
-    @apply outline-none ring-2 ring-brand-500 ring-offset-2;
+    @apply outline-none ring-2 ring-ring ring-offset-2;
   }
 
   /* Better tap targets on mobile */
@@ -105,41 +158,19 @@
     display: none;
   }
 
-  /* Gradient backgrounds */
-  .bg-gradient-brand {
-    @apply bg-gradient-to-r from-brand-500 to-brand-600;
+  /* Card hover effects */
+  .card-hover-lift {
+    @apply transition-all duration-200;
+  }
+  .card-hover-lift:hover {
+    @apply -translate-y-1 shadow-card-hover;
   }
 
-  .bg-gradient-hero {
-    @apply bg-gradient-to-br from-brand-50 via-white to-orange-50;
+  .card-hover-scale {
+    @apply transition-transform duration-200;
   }
-
-  .bg-gradient-sunset {
-    background: linear-gradient(135deg, #f97316 0%, #ef4444 100%);
-  }
-
-  .bg-gradient-warm {
-    background: linear-gradient(135deg, #f59e0b 0%, #f97316 100%);
-  }
-
-  .bg-gradient-fresh {
-    background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-  }
-
-  .bg-gradient-cream {
-    background: linear-gradient(135deg, #fffbf5 0%, #fef7ed 50%, #fff7ed 100%);
-  }
-
-  .bg-gradient-spice {
-    background: linear-gradient(135deg, #fef2f2 0%, #fff7ed 100%);
-  }
-
-  .bg-gradient-food-overlay {
-    background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.7) 100%);
-  }
-
-  .bg-gradient-chef {
-    background: linear-gradient(135deg, #f97316 0%, #ea580c 50%, #c2410c 100%);
+  .card-hover-scale:hover {
+    @apply scale-[1.02];
   }
 
   /* Glass effect */
@@ -148,7 +179,12 @@
   }
 
   .glass-dark {
-    @apply bg-gray-900/80 backdrop-blur-md;
+    @apply bg-[#1C1917]/80 backdrop-blur-md;
+  }
+
+  /* Food overlay gradient */
+  .bg-gradient-food-overlay {
+    background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.7) 100%);
   }
 
   /* Mobile-specific utilities */
@@ -186,7 +222,7 @@
 
   /* Skeleton loading */
   .skeleton {
-    @apply bg-gray-200 animate-pulse rounded;
+    @apply bg-muted animate-pulse rounded;
   }
 
   .skeleton-shimmer {
@@ -255,7 +291,7 @@
 
   /* Image loading placeholder */
   .img-loading {
-    @apply bg-gray-100 animate-pulse;
+    @apply bg-muted animate-pulse;
   }
 }
 
@@ -277,11 +313,11 @@
   }
 
   .page-title {
-    @apply text-2xl font-bold tracking-tight text-gray-900 md:text-3xl;
+    @apply text-2xl font-bold tracking-tight text-foreground md:text-3xl;
   }
 
   .page-description {
-    @apply text-gray-600 text-sm md:text-base;
+    @apply text-muted-foreground text-sm md:text-base;
   }
 
   .section {
@@ -290,28 +326,28 @@
 
   /* Mobile bottom navigation */
   .bottom-nav {
-    @apply fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white
+    @apply fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card
            safe-bottom md:hidden;
   }
 
   .bottom-nav-item {
     @apply flex flex-1 flex-col items-center justify-center gap-1 py-2
-           text-xs font-medium text-gray-500 transition-colors
-           active:bg-gray-100;
+           text-xs font-medium text-muted-foreground transition-colors
+           active:bg-secondary;
   }
 
   .bottom-nav-item-active {
-    @apply bottom-nav-item text-brand-600;
+    @apply bottom-nav-item text-primary;
   }
 
   /* Mobile sheet */
   .mobile-sheet {
-    @apply fixed inset-x-0 bottom-0 z-50 rounded-t-2xl bg-white
+    @apply fixed inset-x-0 bottom-0 z-50 rounded-t-2xl bg-card
            shadow-2xl safe-bottom transform transition-transform duration-300;
   }
 
   .mobile-sheet-handle {
-    @apply mx-auto mt-3 h-1 w-10 rounded-full bg-gray-300;
+    @apply mx-auto mt-3 h-1 w-10 rounded-full bg-border;
   }
 
   /* Swipe indicator dots */
@@ -320,31 +356,31 @@
   }
 
   .swipe-dot {
-    @apply h-1.5 w-1.5 rounded-full bg-gray-300 transition-all duration-200;
+    @apply h-1.5 w-1.5 rounded-full bg-border transition-all duration-200;
   }
 
   .swipe-dot-active {
-    @apply swipe-dot w-4 bg-brand-500;
+    @apply swipe-dot w-4 bg-primary;
   }
 
   /* List items */
   .list-item {
-    @apply flex items-center gap-4 px-4 py-3 transition-colors active:bg-gray-50;
+    @apply flex items-center gap-4 px-4 py-3 transition-colors active:bg-secondary;
   }
 
   .list-item-border {
-    @apply list-item border-b border-gray-100;
+    @apply list-item border-b border-border;
   }
 
   /* Sticky header */
   .sticky-header {
-    @apply sticky top-0 z-40 border-b border-gray-200 bg-white/95 backdrop-blur safe-top;
+    @apply sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur safe-top;
   }
 
   /* Notification dot */
   .notification-dot {
-    @apply absolute -right-1 -top-1 h-3 w-3 rounded-full bg-error-500
-           ring-2 ring-white;
+    @apply absolute -right-1 -top-1 h-3 w-3 rounded-full bg-destructive
+           ring-2 ring-card;
   }
 
   /* Empty state */
@@ -353,15 +389,15 @@
   }
 
   .empty-state-icon {
-    @apply h-16 w-16 text-gray-300;
+    @apply h-16 w-16 text-border;
   }
 
   .empty-state-title {
-    @apply mt-4 text-lg font-semibold text-gray-900;
+    @apply mt-4 text-lg font-semibold text-foreground;
   }
 
   .empty-state-description {
-    @apply mt-2 max-w-sm text-gray-500;
+    @apply mt-2 max-w-sm text-muted-foreground;
   }
 
   /* Logo */
@@ -370,18 +406,18 @@
   }
 
   .logo-icon {
-    @apply flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-brand;
+    @apply flex h-10 w-10 items-center justify-center rounded-xl bg-primary;
   }
 
   .logo-icon span {
-    @apply text-xl font-bold text-white;
+    @apply text-xl font-bold text-primary-foreground;
   }
 
   .logo-text {
-    @apply text-xl font-bold text-gray-900;
+    @apply text-xl font-bold text-foreground;
   }
 
   .logo-tagline {
-    @apply text-xs text-gray-500;
+    @apply text-xs text-muted-foreground;
   }
 }

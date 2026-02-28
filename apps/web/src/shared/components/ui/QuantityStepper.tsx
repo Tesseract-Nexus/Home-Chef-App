@@ -8,9 +8,9 @@ const quantityStepperVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-gray-100 rounded-xl',
-        outlined: 'border border-gray-200 rounded-xl',
-        filled: 'bg-brand-50 rounded-xl',
+        default: 'bg-secondary rounded-xl',
+        outlined: 'border border-border rounded-xl',
+        filled: 'bg-primary/10 rounded-xl',
       },
       size: {
         sm: 'h-8 gap-1',
@@ -25,19 +25,19 @@ const quantityStepperVariants = cva(
   }
 );
 
-const buttonVariants = cva(
+const stepperButtonVariants = cva(
   [
     'flex items-center justify-center',
     'transition-all duration-200',
-    'focus:outline-none focus:ring-2 focus:ring-brand-500/50',
+    'focus:outline-none focus:ring-2 focus:ring-ring/50',
     'disabled:opacity-40 disabled:cursor-not-allowed',
   ],
   {
     variants: {
       variant: {
-        default: 'text-gray-600 hover:bg-gray-200 hover:text-gray-900',
-        outlined: 'text-gray-600 hover:bg-gray-50 hover:text-gray-900',
-        filled: 'text-brand-600 hover:bg-brand-100 hover:text-brand-700',
+        default: 'text-secondary-foreground hover:bg-secondary/80 hover:text-foreground',
+        outlined: 'text-secondary-foreground hover:bg-secondary hover:text-foreground',
+        filled: 'text-primary hover:bg-primary/20 hover:text-primary',
       },
       size: {
         sm: 'w-7 h-7 rounded-lg [&_svg]:h-3 [&_svg]:w-3',
@@ -105,14 +105,14 @@ const QuantityStepper = forwardRef<HTMLDivElement, QuantityStepperProps>(
           type="button"
           onClick={handleDecrement}
           disabled={disabled || value <= min}
-          className={cn(buttonVariants({ variant, size }))}
+          className={cn(stepperButtonVariants({ variant, size }))}
           aria-label="Decrease quantity"
         >
           <Minus />
         </button>
         <span
           className={cn(
-            'font-medium text-center tabular-nums text-gray-900',
+            'font-medium text-center tabular-nums text-foreground',
             displaySizes[size || 'md']
           )}
         >
@@ -122,7 +122,7 @@ const QuantityStepper = forwardRef<HTMLDivElement, QuantityStepperProps>(
           type="button"
           onClick={handleIncrement}
           disabled={disabled || value >= max}
-          className={cn(buttonVariants({ variant, size }))}
+          className={cn(stepperButtonVariants({ variant, size }))}
           aria-label="Increase quantity"
         >
           <Plus />
@@ -134,7 +134,7 @@ const QuantityStepper = forwardRef<HTMLDivElement, QuantityStepperProps>(
 
 QuantityStepper.displayName = 'QuantityStepper';
 
-// Compact version for inline use
+// Compact version
 const CompactQuantityStepper = forwardRef<HTMLDivElement, QuantityStepperProps>(
   ({ className, value, onChange, min = 0, max = 99, disabled = false, ...props }, ref) => (
     <div ref={ref} className={cn('inline-flex items-center gap-2', className)} {...props}>
@@ -142,19 +142,19 @@ const CompactQuantityStepper = forwardRef<HTMLDivElement, QuantityStepperProps>(
         type="button"
         onClick={() => onChange(Math.max(min, value - 1))}
         disabled={disabled || value <= min}
-        className="flex h-8 w-8 items-center justify-center rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        className="flex h-8 w-8 items-center justify-center rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         aria-label="Decrease quantity"
       >
         <Minus className="h-4 w-4" />
       </button>
-      <span className="w-8 text-center font-medium text-gray-900 tabular-nums">
+      <span className="w-8 text-center font-medium text-foreground tabular-nums">
         {value}
       </span>
       <button
         type="button"
         onClick={() => onChange(Math.min(max, value + 1))}
         disabled={disabled || value >= max}
-        className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-500 text-white hover:bg-brand-600 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
         aria-label="Increase quantity"
       >
         <Plus className="h-4 w-4" />
@@ -204,8 +204,8 @@ const AddToCartQuantity = ({
       disabled={disabled}
       className={cn(
         'flex h-9 w-9 items-center justify-center',
-        'rounded-xl bg-brand-500 text-white',
-        'hover:bg-brand-600 active:scale-95',
+        'rounded-xl bg-primary text-primary-foreground',
+        'hover:bg-primary/90 active:scale-95',
         'transition-all duration-200',
         'disabled:opacity-50 disabled:cursor-not-allowed',
         className

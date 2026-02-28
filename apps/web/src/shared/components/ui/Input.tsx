@@ -3,41 +3,31 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/shared/utils/cn';
 
 const inputVariants = cva(
-  // Base styles
   [
     'w-full',
-    'text-gray-900 placeholder:text-gray-400',
+    'text-foreground placeholder:text-muted-foreground',
     'transition-all duration-200 ease-premium',
-    'focus:outline-none focus:ring-2 focus:ring-offset-0',
-    'disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-gray-50',
-    'file:border-0 file:bg-transparent file:text-sm file:font-medium',
+    'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring/20',
+    'disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-muted',
+    'file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground',
   ],
   {
     variants: {
       variant: {
-        // Default - bordered input
         default: [
-          'border border-gray-200 bg-white',
-          'hover:border-gray-300',
-          'focus:border-brand-500 focus:ring-brand-500/20',
+          'border-2 border-input bg-background shadow-sm',
+          'hover:border-primary/30',
+          'focus-visible:border-ring',
         ],
-        // Filled - gray background
         filled: [
-          'border-transparent bg-gray-100',
-          'hover:bg-gray-50',
-          'focus:bg-white focus:border-brand-500 focus:ring-brand-500/20',
+          'border-2 border-transparent bg-secondary',
+          'hover:bg-secondary/80',
+          'focus-visible:bg-background focus-visible:border-ring',
         ],
-        // Flushed - only bottom border
-        flushed: [
-          'border-0 border-b-2 border-gray-200 rounded-none bg-transparent px-0',
-          'hover:border-gray-300',
-          'focus:border-brand-500 focus:ring-0',
-        ],
-        // Ghost - no border until focus
         ghost: [
-          'border-transparent bg-transparent',
-          'hover:bg-gray-50',
-          'focus:bg-white focus:border-brand-500 focus:ring-brand-500/20',
+          'border-2 border-transparent bg-transparent',
+          'hover:bg-secondary',
+          'focus-visible:bg-background focus-visible:border-ring',
         ],
       },
       inputSize: {
@@ -48,9 +38,9 @@ const inputVariants = cva(
       },
       hasError: {
         true: [
-          'border-red-500 text-red-900',
-          'focus:border-red-500 focus:ring-red-500/20',
-          'placeholder:text-red-300',
+          'border-destructive text-destructive',
+          'focus-visible:border-destructive focus-visible:ring-destructive/20',
+          'placeholder:text-destructive/50',
         ],
         false: '',
       },
@@ -98,14 +88,14 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="mb-1.5 block text-sm font-medium text-gray-700"
+            className="mb-1.5 block text-sm font-medium text-foreground"
           >
             {label}
           </label>
         )}
         <div className="relative">
           {leftIcon && (
-            <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+            <div className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
               {leftIcon}
             </div>
           )}
@@ -121,16 +111,16 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             {...props}
           />
           {rightIcon && (
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
               {rightIcon}
             </div>
           )}
         </div>
         {error && (
-          <p className="mt-1.5 text-sm text-red-500">{error}</p>
+          <p className="mt-1.5 text-sm text-destructive">{error}</p>
         )}
         {hint && !error && (
-          <p className="mt-1.5 text-sm text-gray-500">{hint}</p>
+          <p className="mt-1.5 text-sm text-muted-foreground">{hint}</p>
         )}
       </div>
     );
@@ -139,33 +129,33 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
 
 Input.displayName = 'Input';
 
-// Textarea variant
+// Textarea
 const textareaVariants = cva(
   [
     'w-full min-h-[80px] resize-y',
-    'text-gray-900 placeholder:text-gray-400',
+    'text-foreground placeholder:text-muted-foreground',
     'transition-all duration-200 ease-premium',
-    'focus:outline-none focus:ring-2 focus:ring-offset-0',
-    'disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-gray-50',
+    'focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring/20',
+    'disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-muted',
   ],
   {
     variants: {
       variant: {
         default: [
-          'border border-gray-200 bg-white',
-          'hover:border-gray-300',
-          'focus:border-brand-500 focus:ring-brand-500/20',
+          'border-2 border-input bg-background shadow-sm',
+          'hover:border-primary/30',
+          'focus-visible:border-ring',
         ],
         filled: [
-          'border-transparent bg-gray-100',
-          'hover:bg-gray-50',
-          'focus:bg-white focus:border-brand-500 focus:ring-brand-500/20',
+          'border-2 border-transparent bg-secondary',
+          'hover:bg-secondary/80',
+          'focus-visible:bg-background focus-visible:border-ring',
         ],
       },
       hasError: {
         true: [
-          'border-red-500',
-          'focus:border-red-500 focus:ring-red-500/20',
+          'border-destructive',
+          'focus-visible:border-destructive focus-visible:ring-destructive/20',
         ],
         false: '',
       },
@@ -195,7 +185,7 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
         {label && (
           <label
             htmlFor={inputId}
-            className="mb-1.5 block text-sm font-medium text-gray-700"
+            className="mb-1.5 block text-sm font-medium text-foreground"
           >
             {label}
           </label>
@@ -211,10 +201,10 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           {...props}
         />
         {error && (
-          <p className="mt-1.5 text-sm text-red-500">{error}</p>
+          <p className="mt-1.5 text-sm text-destructive">{error}</p>
         )}
         {hint && !error && (
-          <p className="mt-1.5 text-sm text-gray-500">{hint}</p>
+          <p className="mt-1.5 text-sm text-muted-foreground">{hint}</p>
         )}
       </div>
     );

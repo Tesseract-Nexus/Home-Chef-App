@@ -6,7 +6,7 @@ import { cn } from '@/shared/utils/cn';
 const avatarVariants = cva(
   [
     'relative flex shrink-0 overflow-hidden',
-    'bg-gray-100',
+    'bg-muted',
   ],
   {
     variants: {
@@ -24,10 +24,10 @@ const avatarVariants = cva(
       },
       ring: {
         none: '',
-        default: 'ring-2 ring-white',
-        brand: 'ring-2 ring-brand-500',
-        golden: 'ring-2 ring-golden-400',
-        success: 'ring-2 ring-fresh-500',
+        default: 'ring-2 ring-card',
+        brand: 'ring-2 ring-primary',
+        golden: 'ring-2 ring-warning',
+        success: 'ring-2 ring-success',
       },
     },
     defaultVariants: {
@@ -63,7 +63,7 @@ const Avatar = forwardRef<
     />
     <AvatarPrimitive.Fallback
       className={cn(
-        'flex h-full w-full items-center justify-center bg-gray-100 font-medium text-gray-600',
+        'flex h-full w-full items-center justify-center bg-muted font-medium text-muted-foreground',
         fallbackClassName
       )}
     >
@@ -74,7 +74,6 @@ const Avatar = forwardRef<
 
 Avatar.displayName = 'Avatar';
 
-// Helper to get initials from name
 function getInitials(name?: string): string {
   if (!name) return '?';
   const parts = name.trim().split(' ').filter(Boolean);
@@ -85,7 +84,7 @@ function getInitials(name?: string): string {
   return (first.charAt(0) + last.charAt(0)).toUpperCase();
 }
 
-// Avatar Group - for stacked avatars
+// Avatar Group
 interface AvatarGroupProps extends React.HTMLAttributes<HTMLDivElement> {
   max?: number;
   size?: VariantProps<typeof avatarVariants>['size'];
@@ -130,7 +129,7 @@ const AvatarGroup = forwardRef<HTMLDivElement, AvatarGroupProps>(
             <div
               className={cn(
                 avatarVariants({ size, shape: 'circle' }),
-                'flex items-center justify-center bg-gray-200 font-medium text-gray-600'
+                'flex items-center justify-center bg-secondary font-medium text-secondary-foreground'
               )}
             >
               +{remainingCount}
@@ -155,10 +154,10 @@ const AvatarWithStatus = forwardRef<
   AvatarWithStatusProps
 >(({ status, statusPosition = 'bottom-right', size = 'md', ...props }, ref) => {
   const statusColors = {
-    online: 'bg-fresh-500',
-    offline: 'bg-gray-400',
-    away: 'bg-golden-500',
-    busy: 'bg-red-500',
+    online: 'bg-success',
+    offline: 'bg-muted-foreground',
+    away: 'bg-warning',
+    busy: 'bg-destructive',
   };
 
   const statusSizes = {
@@ -181,7 +180,7 @@ const AvatarWithStatus = forwardRef<
       {status && (
         <span
           className={cn(
-            'absolute rounded-full ring-2 ring-white',
+            'absolute rounded-full ring-2 ring-card',
             statusColors[status],
             statusSizes[size || 'md'],
             positionClasses[statusPosition]

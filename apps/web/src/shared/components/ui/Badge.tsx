@@ -3,59 +3,37 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/shared/utils/cn';
 
 const badgeVariants = cva(
-  // Base styles
   [
-    'inline-flex items-center justify-center',
-    'font-medium whitespace-nowrap',
+    'inline-flex items-center justify-center border',
+    'font-semibold whitespace-nowrap rounded-full',
     'transition-colors duration-200',
+    'focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
   ],
   {
     variants: {
       variant: {
-        // Default gray
-        default: 'bg-gray-100 text-gray-700',
-        // Brand orange
-        brand: 'bg-brand-100 text-brand-700',
-        // Success green
-        success: 'bg-fresh-100 text-fresh-700',
-        // Warning yellow/golden
-        warning: 'bg-golden-100 text-golden-700',
-        // Error red
-        error: 'bg-red-100 text-red-700',
-        // Info blue
-        info: 'bg-blue-100 text-blue-700',
-        // Premium golden
-        premium: 'bg-gradient-to-r from-golden-100 to-golden-200 text-golden-800',
-        // Outlined variants
-        'outline-default': 'border border-gray-200 text-gray-700 bg-transparent',
-        'outline-brand': 'border border-brand-300 text-brand-600 bg-transparent',
-        'outline-success': 'border border-fresh-300 text-fresh-600 bg-transparent',
-        // Solid variants
-        'solid-brand': 'bg-brand-500 text-white',
-        'solid-success': 'bg-fresh-500 text-white',
-        'solid-error': 'bg-red-500 text-white',
+        default: 'border-transparent bg-primary text-primary-foreground shadow hover:bg-primary/80',
+        secondary: 'border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80',
+        destructive: 'border-transparent bg-destructive text-destructive-foreground shadow hover:bg-destructive/80',
+        outline: 'border-border text-foreground bg-transparent',
+        success: 'border-transparent bg-success/10 text-success',
+        warning: 'border-transparent bg-warning/10 text-warning',
+        error: 'border-transparent bg-destructive/10 text-destructive',
+        info: 'border-transparent bg-info/10 text-info',
+        // Backward compat
+        brand: 'border-transparent bg-primary/10 text-primary',
+        'solid-brand': 'border-transparent bg-primary text-primary-foreground shadow',
+        premium: 'border-transparent bg-accent text-accent-foreground',
       },
       size: {
-        sm: 'h-5 px-2 text-[10px] rounded-full',
-        md: 'h-6 px-2.5 text-xs rounded-full',
-        lg: 'h-7 px-3 text-sm rounded-full',
-      },
-      dot: {
-        true: '',
-        false: '',
+        sm: 'h-5 px-2 text-[10px]',
+        md: 'h-6 px-2.5 text-xs',
+        lg: 'h-7 px-3 text-sm',
       },
     },
-    compoundVariants: [
-      // Add left margin for dot when present
-      {
-        dot: true,
-        className: 'pl-1.5',
-      },
-    ],
     defaultVariants: {
       variant: 'default',
       size: 'md',
-      dot: false,
     },
   }
 );
@@ -63,39 +41,36 @@ const badgeVariants = cva(
 export interface BadgeProps
   extends React.HTMLAttributes<HTMLSpanElement>,
     VariantProps<typeof badgeVariants> {
+  dot?: boolean;
   dotColor?: string;
 }
 
 const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
   ({ className, variant, size, dot, dotColor, children, ...props }, ref) => {
-    // Determine dot color based on variant
     const getDotColorClass = () => {
       if (dotColor) return dotColor;
       switch (variant) {
         case 'success':
-        case 'outline-success':
-        case 'solid-success':
-          return 'bg-fresh-500';
+          return 'bg-success';
+        case 'destructive':
         case 'error':
-        case 'solid-error':
-          return 'bg-red-500';
+          return 'bg-destructive';
         case 'warning':
-          return 'bg-golden-500';
+          return 'bg-warning';
         case 'brand':
-        case 'outline-brand':
         case 'solid-brand':
-          return 'bg-brand-500';
+          return 'bg-primary';
         case 'info':
-          return 'bg-blue-500';
+          return 'bg-info';
         default:
-          return 'bg-gray-500';
+          return 'bg-muted-foreground';
       }
     };
 
     return (
       <span
         ref={ref}
-        className={cn(badgeVariants({ variant, size, dot }), className)}
+        className={cn(badgeVariants({ variant, size }), dot && 'pl-1.5', className)}
         {...props}
       >
         {dot && (
@@ -109,7 +84,7 @@ const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
 
 Badge.displayName = 'Badge';
 
-// Status Badge - pre-configured badges for common statuses
+// Status Badge
 export interface StatusBadgeProps extends Omit<BadgeProps, 'variant'> {
   status: 'active' | 'inactive' | 'pending' | 'success' | 'error' | 'warning';
 }
@@ -121,7 +96,7 @@ const StatusBadge = forwardRef<HTMLSpanElement, StatusBadgeProps>(
       inactive: { variant: 'default' as const, label: 'Inactive', dot: true },
       pending: { variant: 'warning' as const, label: 'Pending', dot: true },
       success: { variant: 'success' as const, label: 'Success', dot: false },
-      error: { variant: 'error' as const, label: 'Error', dot: false },
+      error: { variant: 'destructive' as const, label: 'Error', dot: false },
       warning: { variant: 'warning' as const, label: 'Warning', dot: false },
     };
 
@@ -157,7 +132,7 @@ const OrderStatusBadge = forwardRef<HTMLSpanElement, OrderStatusBadgeProps>(
       picked_up: { variant: 'info', label: 'Picked Up' },
       delivering: { variant: 'brand', label: 'Delivering' },
       delivered: { variant: 'default', label: 'Delivered' },
-      cancelled: { variant: 'error', label: 'Cancelled' },
+      cancelled: { variant: 'destructive', label: 'Cancelled' },
     };
 
     const config = statusConfig[status] || { variant: 'default', label: status };

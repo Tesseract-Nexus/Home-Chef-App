@@ -157,6 +157,8 @@ jobs:
             --image ${{ env.AR_REGISTRY }}/homechef-web:${{ steps.ar_tags.outputs.sha_tag }} \
             --region ${{ env.GCP_REGION }} \
             --project ${{ env.GCP_PROJECT_ID }} \
+            --port=80 \
+            --allow-unauthenticated \
             --min-instances=0
         continue-on-error: true
 

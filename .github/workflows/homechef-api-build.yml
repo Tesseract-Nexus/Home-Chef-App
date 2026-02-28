@@ -153,7 +153,7 @@ jobs:
             --region ${{ env.GCP_REGION }} \
             --project ${{ env.GCP_PROJECT_ID }} \
             --min-instances=0 \
-            --set-env-vars="^||^SERVER_PORT=8080||GIN_MODE=release||RUN_MIGRATIONS=true||CORS_ORIGINS=https://homechef.tesseracthub.com,https://homechef.app||REDIS_HOST=10.10.15.220||REDIS_PORT=6379||REDIS_DB=2" \
+            --set-env-vars="^||^SERVER_PORT=8080||GIN_MODE=release||RUN_MIGRATIONS=true||CORS_ORIGINS=https://fe3dr.com,https://www.fe3dr.com||REDIS_HOST=10.10.15.220||REDIS_PORT=6379||REDIS_DB=2" \
             --set-secrets="DATABASE_URL=prod-homechef-postgresql-url:latest,JWT_SECRET=prod-homechef-jwt-secret:latest,JWT_REFRESH_SECRET=prod-homechef-jwt-refresh-secret:latest,REDIS_PASSWORD=prod-homechef-redis-password:latest"
         continue-on-error: true
 

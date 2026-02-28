@@ -142,7 +142,7 @@ jobs:
             ${{ steps.ar_tags.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
-            VITE_API_URL=${{ vars.VITE_API_URL || 'https://homechef.tesseracthub.com/api' }}
+            VITE_API_URL=${{ vars.VITE_API_URL || 'https://fe3dr.com/api' }}
           cache-from: type=registry,ref=${{ steps.cache.outputs.ref }}
           cache-to: type=registry,ref=${{ steps.cache.outputs.ref }},mode=max
 

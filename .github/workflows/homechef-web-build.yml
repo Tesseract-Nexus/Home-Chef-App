@@ -91,14 +91,11 @@ jobs:
       - name: Ensure Artifact Registry repository exists
         if: steps.gcp_auth.outputs.authenticated == 'true'
         run: |
-          gcloud artifacts repositories describe homechef \
-            --location=${{ env.GCP_REGION }} \
-            --project=${{ env.GCP_PROJECT_ID }} 2>/dev/null || \
           gcloud artifacts repositories create homechef \
             --repository-format=docker \
             --location=${{ env.GCP_REGION }} \
             --project=${{ env.GCP_PROJECT_ID }} \
-            --description="HomeChef container images"
+            --description="HomeChef container images" 2>&1 || true
 
       # --- Build and Push to GHCR ---
       - name: Extract metadata (tags, labels)

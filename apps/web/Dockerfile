@@ -40,8 +40,11 @@ RUN pnpm build
 # Production stage
 FROM nginx:alpine
 
-# Copy custom nginx config
-COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
+# Copy nginx config as template (envsubst resolves ${API_URL} at runtime)
+COPY apps/web/nginx.conf /etc/nginx/templates/default.conf.template
+
+# Default API_URL if not set at runtime
+ENV API_URL=http://localhost:8080
 
 # Copy built assets from builder
 COPY --from=builder /app/apps/web/dist /usr/share/nginx/html

@@ -144,7 +144,7 @@ jobs:
           build-args: |
             VITE_API_URL=${{ vars.VITE_API_URL || 'https://vendors.fe3dr.com/api' }}
           secrets: |
-            npm_token=${{ secrets.GITHUB_TOKEN }}
+            npm_token=${{ secrets.GO_PRIVATE_TOKEN }}
           cache-from: type=registry,ref=${{ steps.cache.outputs.ref }}
           cache-to: type=registry,ref=${{ steps.cache.outputs.ref }},mode=max
 
@@ -248,7 +248,7 @@ jobs:
 
       - name: Configure npm for GitHub Packages
         run: |
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GO_PRIVATE_TOKEN }}" >> .npmrc
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

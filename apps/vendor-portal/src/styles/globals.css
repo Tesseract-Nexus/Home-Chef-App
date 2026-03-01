@@ -1,6 +1,30 @@
 @import "tailwindcss";
 @config "../../tailwind.config.js";
 
+/* Custom utilities (Tailwind 4 @utility — available in @apply) */
+@utility safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+@utility safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@utility safe-left {
+  padding-left: env(safe-area-inset-left);
+}
+
+@utility safe-right {
+  padding-right: env(safe-area-inset-right);
+}
+
+@utility safe-area-inset {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
 /* HomeChef Design System - CSS Variables (full HSL values for Tailwind 4) */
 :root {
   /* Core */
@@ -186,30 +210,6 @@
     background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.7) 100%);
   }
 
-  /* Mobile-specific utilities */
-  .safe-top {
-    padding-top: env(safe-area-inset-top);
-  }
-
-  .safe-bottom {
-    padding-bottom: env(safe-area-inset-bottom);
-  }
-
-  .safe-left {
-    padding-left: env(safe-area-inset-left);
-  }
-
-  .safe-right {
-    padding-right: env(safe-area-inset-right);
-  }
-
-  .safe-area-inset {
-    padding-top: env(safe-area-inset-top);
-    padding-bottom: env(safe-area-inset-bottom);
-    padding-left: env(safe-area-inset-left);
-    padding-right: env(safe-area-inset-right);
-  }
-
   /* Touch-friendly sizing */
   .touch-target {
     @apply min-h-[44px] min-w-[44px];
@@ -336,7 +336,9 @@
   }
 
   .bottom-nav-item-active {
-    @apply bottom-nav-item text-primary;
+    @apply flex flex-1 flex-col items-center justify-center gap-1 py-2
+           text-xs font-medium text-primary transition-colors
+           active:bg-secondary;
   }
 
   /* Mobile sheet */
@@ -359,7 +361,7 @@
   }
 
   .swipe-dot-active {
-    @apply swipe-dot w-4 bg-primary;
+    @apply h-1.5 w-4 rounded-full bg-primary transition-all duration-200;
   }
 
   /* List items */
@@ -368,7 +370,8 @@
   }
 
   .list-item-border {
-    @apply list-item border-b border-border;
+    @apply flex items-center gap-4 px-4 py-3 transition-colors active:bg-secondary
+           border-b border-border;
   }
 
   /* Sticky header */

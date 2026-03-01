@@ -8,20 +8,19 @@ WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@9 --activate
 
 # Copy monorepo root files needed for pnpm workspace
-COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json .npmrc ./
 
 # Copy vendor-portal package.json and .npmrc
 COPY apps/vendor-portal/package.json ./apps/vendor-portal/
 COPY apps/vendor-portal/.npmrc ./apps/vendor-portal/
 
-# Configure GitHub Packages auth for @tesserix scope
-ARG NPM_TOKEN
-RUN echo "//npm.pkg.github.com/:_authToken=${NPM_TOKEN}" >> .npmrc && \
-    echo "@tesserix:registry=https://npm.pkg.github.com" >> .npmrc
-
 # Install dependencies for vendor-portal workspace only
-RUN pnpm install --frozen-lockfile --filter @homechef/vendor-portal... && \
-    rm -f .npmrc
+# Uses BuildKit secret mount so the token never lands in a layer
+RUN --mount=type=secret,id=npm_token \
+    NPM_TOKEN=$(cat /run/secrets/npm_token) && \
+    echo "//npm.pkg.github.com/:_authToken=${NPM_TOKEN}" >> .npmrc && \
+    pnpm install --frozen-lockfile --filter @homechef/vendor-portal... && \
+    sed -i '/_authToken/d' .npmrc
 
 # Copy vendor-portal source code
 COPY apps/vendor-portal ./apps/vendor-portal

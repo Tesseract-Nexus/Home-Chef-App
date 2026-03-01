@@ -1,8 +1,18 @@
 import { forwardRef } from 'react';
-import * as AvatarPrimitive from '@radix-ui/react-avatar';
+import {
+  Avatar as DSAvatar,
+  AvatarImage as DSAvatarImage,
+  AvatarFallback as DSAvatarFallback,
+} from '@tesserix/web';
+import { cn } from '@tesserix/web';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { cn } from '@/shared/utils/cn';
+import * as AvatarPrimitive from '@radix-ui/react-avatar';
 
+/**
+ * Extended Avatar with additional sizes and features beyond the design system.
+ * DS has: size (sm/default/lg/xl), src/alt/fallback.
+ * We add: xs/2xl sizes, shape, ring, AvatarGroup, AvatarWithStatus.
+ */
 const avatarVariants = cva(
   [
     'relative flex shrink-0 overflow-hidden',
@@ -50,27 +60,45 @@ export interface AvatarProps
 const Avatar = forwardRef<
   React.ElementRef<typeof AvatarPrimitive.Root>,
   AvatarProps
->(({ className, size, shape, ring, src, alt, fallback, fallbackClassName, ...props }, ref) => (
-  <AvatarPrimitive.Root
-    ref={ref}
-    className={cn(avatarVariants({ size, shape, ring }), className)}
-    {...props}
-  >
-    <AvatarPrimitive.Image
-      className="h-full w-full object-cover"
-      src={src}
-      alt={alt}
-    />
-    <AvatarPrimitive.Fallback
-      className={cn(
-        'flex h-full w-full items-center justify-center bg-muted font-medium text-muted-foreground',
-        fallbackClassName
-      )}
+>(({ className, size, shape, ring, src, alt, fallback, fallbackClassName, ...props }, ref) => {
+  // For simple DS-compatible usage (circle, no ring, standard sizes)
+  const dsCompatibleSizes = ['sm', 'md', 'lg', 'xl'] as const;
+  const isDSSize = !size || dsCompatibleSizes.includes(size as typeof dsCompatibleSizes[number]);
+  const isSimple = isDSSize && shape !== 'square' && ring === 'none' && !fallbackClassName;
+
+  if (isSimple) {
+    // Map to DS size naming: DS uses 'default' instead of 'md'
+    const dsSize = size === 'md' || !size ? 'default' : size as 'sm' | 'lg' | 'xl';
+    return (
+      <DSAvatar ref={ref} className={className} {...props}>
+        <DSAvatarImage src={src} alt={alt} />
+        <DSAvatarFallback>{fallback || getInitials(alt)}</DSAvatarFallback>
+      </DSAvatar>
+    );
+  }
+
+  return (
+    <AvatarPrimitive.Root
+      ref={ref}
+      className={cn(avatarVariants({ size, shape, ring }), className)}
+      {...props}
     >
-      {fallback || getInitials(alt)}
-    </AvatarPrimitive.Fallback>
-  </AvatarPrimitive.Root>
-));
+      <AvatarPrimitive.Image
+        className="h-full w-full object-cover"
+        src={src}
+        alt={alt}
+      />
+      <AvatarPrimitive.Fallback
+        className={cn(
+          'flex h-full w-full items-center justify-center bg-muted font-medium text-muted-foreground',
+          fallbackClassName
+        )}
+      >
+        {fallback || getInitials(alt)}
+      </AvatarPrimitive.Fallback>
+    </AvatarPrimitive.Root>
+  );
+});
 
 Avatar.displayName = 'Avatar';
 

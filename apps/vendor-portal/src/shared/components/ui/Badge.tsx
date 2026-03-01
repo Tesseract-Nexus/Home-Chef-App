@@ -1,7 +1,13 @@
 import { forwardRef } from 'react';
+import { Badge as DSBadge, badgeVariants as dsBadgeVariants } from '@tesserix/web';
+import { cn } from '@tesserix/web';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { cn } from '@/shared/utils/cn';
 
+/**
+ * Extended Badge with additional variants beyond the design system.
+ * DS has: default, secondary, destructive, outline, success, warning.
+ * We add: error, info, brand, solid-brand, premium + size + dot props.
+ */
 const badgeVariants = cva(
   [
     'inline-flex items-center justify-center border',
@@ -20,7 +26,6 @@ const badgeVariants = cva(
         warning: 'border-transparent bg-warning/10 text-warning',
         error: 'border-transparent bg-destructive/10 text-destructive',
         info: 'border-transparent bg-info/10 text-info',
-        // Backward compat
         brand: 'border-transparent bg-primary/10 text-primary',
         'solid-brand': 'border-transparent bg-primary text-primary-foreground shadow',
         premium: 'border-transparent bg-accent text-accent-foreground',
@@ -66,6 +71,24 @@ const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
           return 'bg-muted-foreground';
       }
     };
+
+    // For DS-compatible variants without extended props, delegate to DSBadge
+    const dsVariants = ['default', 'secondary', 'destructive', 'outline', 'success', 'warning'] as const;
+    type DSVariant = typeof dsVariants[number];
+    const isDSVariant = !variant || dsVariants.includes(variant as DSVariant);
+
+    if (isDSVariant && !dot && !size) {
+      return (
+        <DSBadge
+          ref={ref as React.Ref<HTMLDivElement>}
+          variant={variant as DSVariant}
+          className={className}
+          {...(props as React.HTMLAttributes<HTMLDivElement>)}
+        >
+          {children}
+        </DSBadge>
+      );
+    }
 
     return (
       <span
@@ -147,4 +170,4 @@ const OrderStatusBadge = forwardRef<HTMLSpanElement, OrderStatusBadgeProps>(
 
 OrderStatusBadge.displayName = 'OrderStatusBadge';
 
-export { Badge, StatusBadge, OrderStatusBadge, badgeVariants };
+export { Badge, StatusBadge, OrderStatusBadge, badgeVariants, dsBadgeVariants };

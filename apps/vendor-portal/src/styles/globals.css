@@ -1,58 +1,57 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../../tailwind.config.js";
 
-/* HomeChef Design System - CSS Variables (HSL format for Tailwind opacity support) */
+/* HomeChef Design System - CSS Variables (full HSL values for Tailwind 4) */
 :root {
   /* Core */
-  --background: 30 100% 98%;         /* #FFFAF5 warm cream */
-  --foreground: 24 10% 10%;          /* #1C1917 stone 900 */
-  --card: 0 0% 100%;                 /* #FFFFFF */
-  --card-foreground: 24 10% 10%;     /* #1C1917 */
-  --popover: 0 0% 100%;             /* #FFFFFF */
-  --popover-foreground: 24 10% 10%; /* #1C1917 */
+  --background: hsl(30 100% 98%);         /* #FFFAF5 warm cream */
+  --foreground: hsl(24 10% 10%);          /* #1C1917 stone 900 */
+  --card: hsl(0 0% 100%);                 /* #FFFFFF */
+  --card-foreground: hsl(24 10% 10%);     /* #1C1917 */
+  --popover: hsl(0 0% 100%);             /* #FFFFFF */
+  --popover-foreground: hsl(24 10% 10%); /* #1C1917 */
 
   /* Primary - Terracotta */
-  --primary: 17 88% 40%;             /* #C2410C */
-  --primary-foreground: 0 0% 100%;   /* #FFFFFF */
+  --primary: hsl(17 88% 40%);             /* #C2410C */
+  --primary-foreground: hsl(0 0% 100%);   /* #FFFFFF */
 
   /* Secondary - Warm stone */
-  --secondary: 29 33% 94%;           /* #F5F0EB */
-  --secondary-foreground: 30 6% 25%; /* #44403C */
+  --secondary: hsl(29 33% 94%);           /* #F5F0EB */
+  --secondary-foreground: hsl(30 6% 25%); /* #44403C */
 
   /* Muted */
-  --muted: 30 50% 96%;               /* #FAF5F0 */
-  --muted-foreground: 25 5% 45%;     /* #78716C */
+  --muted: hsl(30 50% 96%);               /* #FAF5F0 */
+  --muted-foreground: hsl(25 5% 45%);     /* #78716C */
 
   /* Accent - Amber/Golden */
-  --accent: 48 96% 89%;              /* #FEF3C7 */
-  --accent-foreground: 23 83% 31%;   /* #92400E */
+  --accent: hsl(48 96% 89%);              /* #FEF3C7 */
+  --accent-foreground: hsl(23 83% 31%);   /* #92400E */
 
   /* Destructive */
-  --destructive: 0 72% 51%;          /* #DC2626 */
-  --destructive-foreground: 0 0% 100%; /* #FFFFFF */
+  --destructive: hsl(0 72% 51%);          /* #DC2626 */
+  --destructive-foreground: hsl(0 0% 100%); /* #FFFFFF */
 
   /* Border & Input */
-  --border: 30 23% 88%;              /* #E7E0D9 */
-  --input: 30 23% 88%;               /* #E7E0D9 */
-  --ring: 17 88% 40%;                /* #C2410C */
+  --border: hsl(30 23% 88%);              /* #E7E0D9 */
+  --input: hsl(30 23% 88%);               /* #E7E0D9 */
+  --ring: hsl(17 88% 40%);                /* #C2410C */
 
   /* Status */
-  --success: 161 93% 30%;            /* #059669 */
-  --success-foreground: 0 0% 100%;   /* #FFFFFF */
-  --warning: 32 95% 44%;             /* #D97706 */
-  --warning-foreground: 24 10% 10%;  /* #1C1917 */
-  --error: 0 72% 51%;                /* #DC2626 */
-  --error-foreground: 0 0% 100%;     /* #FFFFFF */
-  --info: 221 83% 53%;               /* #2563EB */
-  --info-foreground: 0 0% 100%;      /* #FFFFFF */
+  --success: hsl(161 93% 30%);            /* #059669 */
+  --success-foreground: hsl(0 0% 100%);   /* #FFFFFF */
+  --warning: hsl(32 95% 44%);             /* #D97706 */
+  --warning-foreground: hsl(24 10% 10%);  /* #1C1917 */
+  --error: hsl(0 72% 51%);                /* #DC2626 */
+  --error-foreground: hsl(0 0% 100%);     /* #FFFFFF */
+  --info: hsl(221 83% 53%);               /* #2563EB */
+  --info-foreground: hsl(0 0% 100%);      /* #FFFFFF */
 
   /* Sidebar (Chef/Admin) */
-  --sidebar: 24 10% 10%;             /* #1C1917 */
-  --sidebar-foreground: 29 33% 94%;  /* #F5F0EB */
-  --sidebar-primary: 17 88% 40%;     /* #C2410C */
-  --sidebar-accent: 12 7% 15%;       /* #292524 */
-  --sidebar-border: 30 6% 25%;       /* #44403C */
+  --sidebar: hsl(24 10% 10%);             /* #1C1917 */
+  --sidebar-foreground: hsl(29 33% 94%);  /* #F5F0EB */
+  --sidebar-primary: hsl(17 88% 40%);     /* #C2410C */
+  --sidebar-accent: hsl(12 7% 15%);       /* #292524 */
+  --sidebar-border: hsl(30 6% 25%);       /* #44403C */
 
   /* Radius */
   --radius: 0.625rem;

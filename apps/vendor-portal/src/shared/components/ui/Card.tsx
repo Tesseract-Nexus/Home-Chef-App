@@ -1,7 +1,19 @@
 import { forwardRef } from 'react';
+import {
+  Card as DSCard,
+  CardHeader as DSCardHeader,
+  CardTitle as DSCardTitle,
+  CardDescription as DSCardDescription,
+  CardContent as DSCardContent,
+  CardFooter as DSCardFooter,
+} from '@tesserix/web';
+import { cn } from '@tesserix/web';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { cn } from '@/shared/utils/cn';
 
+/**
+ * Extended Card with additional variants beyond the design system.
+ * DS has: default, glass. We add: elevated, outlined, filled, ghost, premium.
+ */
 const cardVariants = cva(
   ['rounded-xl transition-all duration-200 ease-premium'],
   {
@@ -39,16 +51,24 @@ export interface CardProps
     VariantProps<typeof cardVariants> {}
 
 const Card = forwardRef<HTMLDivElement, CardProps>(
-  ({ className, variant, padding, hover, ...props }, ref) => (
-    <div
-      ref={ref}
-      className={cn(cardVariants({ variant, padding, hover, className }))}
-      {...props}
-    />
-  )
+  ({ className, variant, padding, hover, ...props }, ref) => {
+    // For the default variant with no special padding/hover, delegate to DS
+    if (variant === 'default' && padding === 'md' && hover === 'none' && !className) {
+      return <DSCard ref={ref} {...props} />;
+    }
+
+    return (
+      <div
+        ref={ref}
+        className={cn(cardVariants({ variant, padding, hover, className }))}
+        {...props}
+      />
+    );
+  }
 );
 Card.displayName = 'Card';
 
+// Re-export DS sub-components with matching interfaces
 const CardHeader = forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
@@ -130,6 +150,16 @@ const CardImage = forwardRef<
   );
 });
 CardImage.displayName = 'CardImage';
+
+// Re-export DS card components for advanced usage
+export {
+  DSCard as DSCardBase,
+  DSCardHeader as DSCardHeaderBase,
+  DSCardTitle as DSCardTitleBase,
+  DSCardDescription as DSCardDescriptionBase,
+  DSCardContent as DSCardContentBase,
+  DSCardFooter as DSCardFooterBase,
+};
 
 export {
   Card,

@@ -1,9 +1,17 @@
 import { forwardRef } from 'react';
+import {
+  Button as DSButton,
+  buttonVariants as dsButtonVariants,
+} from '@tesserix/web';
+import { cn } from '@tesserix/web';
 import { Slot } from '@radix-ui/react-slot';
 import { cva, type VariantProps } from 'class-variance-authority';
 import { Loader2 } from 'lucide-react';
-import { cn } from '@/shared/utils/cn';
 
+/**
+ * Extended Button variants that map to the design system and add
+ * app-specific variants not present in @tesserix/web.
+ */
 const buttonVariants = cva(
   [
     'inline-flex items-center justify-center gap-2 whitespace-nowrap',
@@ -48,7 +56,6 @@ const buttonVariants = cva(
           'hover:underline',
           'p-0 h-auto',
         ],
-        // Backward compat aliases
         danger: [
           'bg-destructive text-destructive-foreground',
           'hover:bg-destructive/90',
@@ -88,6 +95,49 @@ const buttonVariants = cva(
   }
 );
 
+/** Map local variant names to design system variant names */
+type DSVariant = 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
+type DSSize = 'default' | 'sm' | 'lg' | 'icon';
+
+function mapVariant(variant?: string | null): DSVariant {
+  switch (variant) {
+    case 'primary':
+    case 'default':
+      return 'default';
+    case 'danger':
+    case 'destructive':
+      return 'destructive';
+    case 'outline':
+    case 'brand-outline':
+      return 'outline';
+    case 'secondary':
+      return 'secondary';
+    case 'ghost':
+      return 'ghost';
+    case 'link':
+      return 'link';
+    default:
+      return 'default';
+  }
+}
+
+function mapSize(size?: string | null): DSSize {
+  switch (size) {
+    case 'xs':
+    case 'sm':
+    case 'icon-sm':
+      return 'sm';
+    case 'lg':
+    case 'xl':
+    case 'icon-lg':
+      return 'lg';
+    case 'icon':
+      return 'icon';
+    default:
+      return 'default';
+  }
+}
+
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
@@ -114,6 +164,38 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     },
     ref
   ) => {
+    // For simple cases that map cleanly to DS, delegate to DSButton
+    const needsLocalStyling =
+      variant === 'success' ||
+      variant === 'brand-outline' ||
+      variant === 'danger' ||
+      variant === 'primary' ||
+      size === 'xs' ||
+      size === 'xl' ||
+      size === 'icon-sm' ||
+      size === 'icon-lg' ||
+      size === 'md' ||
+      fullWidth ||
+      leftIcon ||
+      rightIcon ||
+      isLoading;
+
+    if (!needsLocalStyling && !asChild) {
+      return (
+        <DSButton
+          ref={ref}
+          variant={mapVariant(variant)}
+          size={mapSize(size)}
+          className={className}
+          disabled={disabled}
+          {...props}
+        >
+          {children}
+        </DSButton>
+      );
+    }
+
+    // For extended variants/features, use local CVA with wrapper
     const Comp = asChild ? Slot : 'button';
 
     return (
@@ -142,4 +224,4 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 
 Button.displayName = 'Button';
 
-export { Button, buttonVariants };
+export { Button, buttonVariants, dsButtonVariants };

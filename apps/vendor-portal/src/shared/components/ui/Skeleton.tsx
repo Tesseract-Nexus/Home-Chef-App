@@ -1,4 +1,5 @@
-import { cn } from '@/shared/utils/cn';
+import { Skeleton as DSSkeleton } from '@tesserix/web';
+import { cn } from '@tesserix/web';
 
 interface SkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: 'default' | 'circular' | 'rectangular' | 'text';
@@ -28,6 +29,11 @@ function Skeleton({
     shimmer: 'relative overflow-hidden before:absolute before:inset-0 before:-translate-x-full before:animate-shimmer before:bg-shimmer',
     none: '',
   };
+
+  // For simple default usage, delegate to DS Skeleton
+  if (variant === 'default' && animation === 'pulse' && !width && !height) {
+    return <DSSkeleton className={className} style={style} {...props} />;
+  }
 
   return (
     <div

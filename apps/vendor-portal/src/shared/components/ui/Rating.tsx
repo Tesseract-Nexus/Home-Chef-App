@@ -1,7 +1,7 @@
 import { forwardRef } from 'react';
 import { Star } from 'lucide-react';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { cn } from '@/shared/utils/cn';
+import { cn } from '@tesserix/web';
 
 const ratingVariants = cva(
   'inline-flex items-center gap-0.5',

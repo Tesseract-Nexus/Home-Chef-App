@@ -1,18 +1,9 @@
 import { forwardRef } from 'react';
-import {
-  Avatar as DSAvatar,
-  AvatarImage as DSAvatarImage,
-  AvatarFallback as DSAvatarFallback,
-} from '@tesserix/web';
+import { Avatar as DSAvatar } from '@tesserix/web';
 import { cn } from '@tesserix/web';
 import { cva, type VariantProps } from 'class-variance-authority';
 import * as AvatarPrimitive from '@radix-ui/react-avatar';
 
-/**
- * Extended Avatar with additional sizes and features beyond the design system.
- * DS has: size (sm/default/lg/xl), src/alt/fallback.
- * We add: xs/2xl sizes, shape, ring, AvatarGroup, AvatarWithStatus.
- */
 const avatarVariants = cva(
   [
     'relative flex shrink-0 overflow-hidden',
@@ -57,48 +48,51 @@ export interface AvatarProps
   fallbackClassName?: string;
 }
 
-const Avatar = forwardRef<
-  React.ElementRef<typeof AvatarPrimitive.Root>,
-  AvatarProps
->(({ className, size, shape, ring, src, alt, fallback, fallbackClassName, ...props }, ref) => {
-  // For simple DS-compatible usage (circle, no ring, standard sizes)
-  const dsCompatibleSizes = ['sm', 'md', 'lg', 'xl'] as const;
-  const isDSSize = !size || dsCompatibleSizes.includes(size as typeof dsCompatibleSizes[number]);
-  const isSimple = isDSSize && shape !== 'square' && ring === 'none' && !fallbackClassName;
+const Avatar = forwardRef<HTMLDivElement, AvatarProps>(
+  ({ className, size, shape, ring, src, alt, fallback, fallbackClassName, ...props }, ref) => {
+    // For simple DS-compatible usage (circle, no ring, standard sizes, no custom fallback)
+    const dsCompatibleSizes = ['sm', 'md', 'lg', 'xl'] as const;
+    type DSSizeType = typeof dsCompatibleSizes[number];
+    const isDSSize = !size || dsCompatibleSizes.includes(size as DSSizeType);
+    const isSimple = isDSSize && shape !== 'square' && ring === 'none' && !fallbackClassName;
 
-  if (isSimple) {
-    // Map to DS size naming: DS uses 'default' instead of 'md'
-    const dsSize = size === 'md' || !size ? 'default' : size as 'sm' | 'lg' | 'xl';
+    if (isSimple) {
+      return (
+        <DSAvatar
+          ref={ref}
+          src={src}
+          alt={alt}
+          fallback={fallback || getInitials(alt)}
+          size={size === 'md' || !size ? 'default' : (size as 'sm' | 'lg' | 'xl')}
+          className={className}
+          {...props}
+        />
+      );
+    }
+
     return (
-      <DSAvatar ref={ref} className={className} {...props}>
-        <DSAvatarImage src={src} alt={alt} />
-        <DSAvatarFallback>{fallback || getInitials(alt)}</DSAvatarFallback>
-      </DSAvatar>
+      <AvatarPrimitive.Root
+        ref={ref}
+        className={cn(avatarVariants({ size, shape, ring }), className)}
+        {...props}
+      >
+        <AvatarPrimitive.Image
+          className="h-full w-full object-cover"
+          src={src}
+          alt={alt}
+        />
+        <AvatarPrimitive.Fallback
+          className={cn(
+            'flex h-full w-full items-center justify-center bg-muted font-medium text-muted-foreground',
+            fallbackClassName
+          )}
+        >
+          {fallback || getInitials(alt)}
+        </AvatarPrimitive.Fallback>
+      </AvatarPrimitive.Root>
     );
   }
-
-  return (
-    <AvatarPrimitive.Root
-      ref={ref}
-      className={cn(avatarVariants({ size, shape, ring }), className)}
-      {...props}
-    >
-      <AvatarPrimitive.Image
-        className="h-full w-full object-cover"
-        src={src}
-        alt={alt}
-      />
-      <AvatarPrimitive.Fallback
-        className={cn(
-          'flex h-full w-full items-center justify-center bg-muted font-medium text-muted-foreground',
-          fallbackClassName
-        )}
-      >
-        {fallback || getInitials(alt)}
-      </AvatarPrimitive.Fallback>
-    </AvatarPrimitive.Root>
-  );
-});
+);
 
 Avatar.displayName = 'Avatar';
 
@@ -177,47 +171,46 @@ interface AvatarWithStatusProps extends AvatarProps {
   statusPosition?: 'top-right' | 'bottom-right';
 }
 
-const AvatarWithStatus = forwardRef<
-  React.ElementRef<typeof AvatarPrimitive.Root>,
-  AvatarWithStatusProps
->(({ status, statusPosition = 'bottom-right', size = 'md', ...props }, ref) => {
-  const statusColors = {
-    online: 'bg-success',
-    offline: 'bg-muted-foreground',
-    away: 'bg-warning',
-    busy: 'bg-destructive',
-  };
+const AvatarWithStatus = forwardRef<HTMLDivElement, AvatarWithStatusProps>(
+  ({ status, statusPosition = 'bottom-right', size = 'md', ...props }, ref) => {
+    const statusColors = {
+      online: 'bg-success',
+      offline: 'bg-muted-foreground',
+      away: 'bg-warning',
+      busy: 'bg-destructive',
+    };
 
-  const statusSizes = {
-    xs: 'h-1.5 w-1.5',
-    sm: 'h-2 w-2',
-    md: 'h-2.5 w-2.5',
-    lg: 'h-3 w-3',
-    xl: 'h-3.5 w-3.5',
-    '2xl': 'h-4 w-4',
-  };
+    const statusSizes = {
+      xs: 'h-1.5 w-1.5',
+      sm: 'h-2 w-2',
+      md: 'h-2.5 w-2.5',
+      lg: 'h-3 w-3',
+      xl: 'h-3.5 w-3.5',
+      '2xl': 'h-4 w-4',
+    };
 
-  const positionClasses = {
-    'top-right': 'top-0 right-0',
-    'bottom-right': 'bottom-0 right-0',
-  };
+    const positionClasses = {
+      'top-right': 'top-0 right-0',
+      'bottom-right': 'bottom-0 right-0',
+    };
 
-  return (
-    <div className="relative inline-block">
-      <Avatar ref={ref} size={size} {...props} />
-      {status && (
-        <span
-          className={cn(
-            'absolute rounded-full ring-2 ring-card',
-            statusColors[status],
-            statusSizes[size || 'md'],
-            positionClasses[statusPosition]
-          )}
-        />
-      )}
-    </div>
-  );
-});
+    return (
+      <div className="relative inline-block">
+        <Avatar ref={ref} size={size} {...props} />
+        {status && (
+          <span
+            className={cn(
+              'absolute rounded-full ring-2 ring-card',
+              statusColors[status],
+              statusSizes[size || 'md'],
+              positionClasses[statusPosition]
+            )}
+          />
+        )}
+      </div>
+    );
+  }
+);
 
 AvatarWithStatus.displayName = 'AvatarWithStatus';
 

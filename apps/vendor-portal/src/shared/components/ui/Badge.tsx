@@ -1,5 +1,5 @@
 import { forwardRef } from 'react';
-import { Badge as DSBadge, badgeVariants as dsBadgeVariants } from '@tesserix/web';
+import { badgeVariants as dsBadgeVariants } from '@tesserix/web';
 import { cn } from '@tesserix/web';
 import { cva, type VariantProps } from 'class-variance-authority';
 
@@ -7,6 +7,9 @@ import { cva, type VariantProps } from 'class-variance-authority';
  * Extended Badge with additional variants beyond the design system.
  * DS has: default, secondary, destructive, outline, success, warning.
  * We add: error, info, brand, solid-brand, premium + size + dot props.
+ *
+ * Kept as local span-based component since DS Badge is div-based
+ * and the vendor portal uses span semantics.
  */
 const badgeVariants = cva(
   [
@@ -71,24 +74,6 @@ const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
           return 'bg-muted-foreground';
       }
     };
-
-    // For DS-compatible variants without extended props, delegate to DSBadge
-    const dsVariants = ['default', 'secondary', 'destructive', 'outline', 'success', 'warning'] as const;
-    type DSVariant = typeof dsVariants[number];
-    const isDSVariant = !variant || dsVariants.includes(variant as DSVariant);
-
-    if (isDSVariant && !dot && !size) {
-      return (
-        <DSBadge
-          ref={ref as React.Ref<HTMLDivElement>}
-          variant={variant as DSVariant}
-          className={className}
-          {...(props as React.HTMLAttributes<HTMLDivElement>)}
-        >
-          {children}
-        </DSBadge>
-      );
-    }
 
     return (
       <span

@@ -1,11 +1,8 @@
 import { forwardRef } from 'react';
 import {
   Dialog as DSDialog,
-  DialogPortal as DSDialogPortal,
-  DialogOverlay as DSDialogOverlay,
   DialogClose as DSDialogClose,
   DialogTrigger as DSDialogTrigger,
-  DialogContent as DSDialogContent,
   DialogHeader as DSDialogHeader,
   DialogFooter as DSDialogFooter,
   DialogTitle as DSDialogTitle,
@@ -18,13 +15,29 @@ import { X } from 'lucide-react';
 // Re-export core DS Dialog components
 const Dialog = DSDialog;
 const DialogTrigger = DSDialogTrigger;
-const DialogPortal = DSDialogPortal;
 const DialogClose = DSDialogClose;
 
-// Overlay - use DS version
-const DialogOverlay = DSDialogOverlay;
+// Portal & Overlay — kept local since DS doesn't export them separately
+const DialogPortal = DialogPrimitive.Portal;
 
-// Content - extend DS version with size + showClose props
+const DialogOverlay = forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Overlay>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Overlay>
+>(({ className, ...props }, ref) => (
+  <DialogPrimitive.Overlay
+    ref={ref}
+    className={cn(
+      'fixed inset-0 z-50 bg-background/80 backdrop-blur-sm',
+      'data-[state=open]:animate-in data-[state=closed]:animate-out',
+      'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
+      className
+    )}
+    {...props}
+  />
+));
+DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
+
+// Content — extend with showClose prop (DS has size built-in but not showClose)
 interface DialogContentProps
   extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
   size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
@@ -76,13 +89,13 @@ const DialogContent = forwardRef<
 });
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 
-// Header/Footer - use DS versions
+// Header/Footer/Title/Description — use DS versions
 const DialogHeader = DSDialogHeader;
 const DialogFooter = DSDialogFooter;
 const DialogTitle = DSDialogTitle;
 const DialogDescription = DSDialogDescription;
 
-// Alert Dialog - kept local (built on top of dialog primitives)
+// Alert Dialog — kept local (built on top of dialog primitives)
 const AlertDialog = DialogPrimitive.Root;
 const AlertDialogTrigger = DialogPrimitive.Trigger;
 

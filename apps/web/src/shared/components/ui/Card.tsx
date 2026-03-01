@@ -1,6 +1,6 @@
 import { forwardRef } from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { cn } from '@/shared/utils/cn';
+import { cn } from '@tesserix/web';
 
 const cardVariants = cva(
   ['rounded-xl transition-all duration-200 ease-premium'],

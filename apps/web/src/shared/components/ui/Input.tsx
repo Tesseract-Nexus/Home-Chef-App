@@ -1,6 +1,7 @@
 import { forwardRef } from 'react';
+import { Input as DSInput, Label as DSLabel } from '@tesserix/web';
+import { cn } from '@tesserix/web';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { cn } from '@/shared/utils/cn';
 
 const inputVariants = cva(
   [
@@ -82,16 +83,30 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
   ) => {
     const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
     const showError = error || hasError;
+    const needsWrapper = label || error || hint || leftIcon || rightIcon;
 
+    // Simple case: no wrapper needed, delegate to DS Input
+    if (!needsWrapper && variant === 'default' && !inputSize) {
+      return (
+        <DSInput
+          id={inputId}
+          ref={ref}
+          className={cn(showError && 'border-destructive', className)}
+          {...props}
+        />
+      );
+    }
+
+    // Extended case: wrap DS input with label/error/hint/icons
     return (
       <div className="w-full">
         {label && (
-          <label
+          <DSLabel
             htmlFor={inputId}
             className="mb-1.5 block text-sm font-medium text-foreground"
           >
             {label}
-          </label>
+          </DSLabel>
         )}
         <div className="relative">
           {leftIcon && (
@@ -129,7 +144,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
 
 Input.displayName = 'Input';
 
-// Textarea
+// Textarea - kept local as DS may not have an equivalent
 const textareaVariants = cva(
   [
     'w-full min-h-[80px] resize-y',
@@ -183,12 +198,12 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     return (
       <div className="w-full">
         {label && (
-          <label
+          <DSLabel
             htmlFor={inputId}
             className="mb-1.5 block text-sm font-medium text-foreground"
           >
             {label}
-          </label>
+          </DSLabel>
         )}
         <textarea
           id={inputId}

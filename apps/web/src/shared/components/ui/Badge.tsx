@@ -1,6 +1,7 @@
 import { forwardRef } from 'react';
+import { badgeVariants as dsBadgeVariants } from '@tesserix/web';
+import { cn } from '@tesserix/web';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { cn } from '@/shared/utils/cn';
 
 const badgeVariants = cva(
   [
@@ -147,4 +148,4 @@ const OrderStatusBadge = forwardRef<HTMLSpanElement, OrderStatusBadgeProps>(
 
 OrderStatusBadge.displayName = 'OrderStatusBadge';
 
-export { Badge, StatusBadge, OrderStatusBadge, badgeVariants };
+export { Badge, StatusBadge, OrderStatusBadge, badgeVariants, dsBadgeVariants };

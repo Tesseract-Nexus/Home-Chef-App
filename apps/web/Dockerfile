@@ -10,11 +10,21 @@ RUN corepack enable && corepack prepare pnpm@9 --activate
 # Copy monorepo root files needed for pnpm workspace
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 
+# Copy root .npmrc (pnpm reads from workspace root for registry config)
+COPY .npmrc ./
+
+# Copy web-specific .npmrc if it exists
+COPY apps/web/.npmrc* ./apps/web/
+
 # Copy web package.json
 COPY apps/web/package.json ./apps/web/
 
-# Install dependencies for web workspace only
-RUN pnpm install --frozen-lockfile --filter @homechef/web...
+# Install dependencies for web workspace only (with GitHub Packages auth)
+RUN --mount=type=secret,id=npm_token \
+    NPM_TOKEN=$(cat /run/secrets/npm_token) && \
+    echo "//npm.pkg.github.com/:_authToken=${NPM_TOKEN}" >> .npmrc && \
+    pnpm install --frozen-lockfile --filter @homechef/web... && \
+    sed -i '/_authToken/d' .npmrc
 
 # Copy web source code
 COPY apps/web ./apps/web

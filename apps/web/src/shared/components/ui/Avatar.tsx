@@ -1,7 +1,7 @@
 import { forwardRef } from 'react';
 import * as AvatarPrimitive from '@radix-ui/react-avatar';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { cn } from '@/shared/utils/cn';
+import { cn } from '@tesserix/web';
 
 const avatarVariants = cva(
   [

@@ -2,7 +2,7 @@ import { forwardRef } from 'react';
 import * as SelectPrimitive from '@radix-ui/react-select';
 import { Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { cn } from '@/shared/utils/cn';
+import { cn } from '@tesserix/web';
 
 const selectTriggerVariants = cva(
   [

@@ -159,6 +159,7 @@ jobs:
             --project ${{ env.GCP_PROJECT_ID }} \
             --port=80 \
             --ingress=internal-and-cloud-load-balancing \
+            --allow-unauthenticated \
             --min-instances=0
         continue-on-error: true
 

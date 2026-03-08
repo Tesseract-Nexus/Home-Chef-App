@@ -27,10 +27,9 @@ permissions:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}/homechef-api
-  AR_REGISTRY: asia-south1-docker.pkg.dev/tesseracthub-480811/homechef
   GCP_PROJECT_ID: tesseracthub-480811
-  GCP_REGION: asia-south1
-  CLOUD_RUN_SERVICE: homechef-api
+  GKE_CLUSTER: tesseract-prod-in-gke
+  GKE_REGION: asia-south1
 
 jobs:
   build:
@@ -52,7 +51,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # --- GCP Authentication (best-effort: WIF → SA Key → skip) ---
+      # --- GCP Authentication (WIF for GKE deploy) ---
       - name: Authenticate to Google Cloud (WIF)
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         id: auth_wif
@@ -61,38 +60,6 @@ jobs:
           workload_identity_provider: projects/849928263410/locations/global/workloadIdentityPools/github-pool/providers/github-provider
           service_account: github-actions@tesseracthub-480811.iam.gserviceaccount.com
           project_id: ${{ env.GCP_PROJECT_ID }}
-        continue-on-error: true
-
-      - name: Authenticate to Google Cloud (SA Key Fallback)
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && steps.auth_wif.outcome == 'failure'
-        id: auth_sa
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_PROD_SA_KEY }}
-        continue-on-error: true
-
-      - name: Check GCP auth status
-        id: gcp_auth
-        run: |
-          if [[ "${{ steps.auth_wif.outcome }}" == "success" || "${{ steps.auth_sa.outcome }}" == "success" ]]; then
-            echo "authenticated=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "authenticated=false" >> "$GITHUB_OUTPUT"
-            echo "::warning::GCP authentication unavailable — skipping Artifact Registry push and Cloud Run deploy"
-          fi
-
-      - name: Configure Docker for Artifact Registry
-        if: steps.gcp_auth.outputs.authenticated == 'true'
-        run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
-
-      - name: Ensure Artifact Registry repository exists
-        if: steps.gcp_auth.outputs.authenticated == 'true'
-        run: |
-          gcloud artifacts repositories create homechef \
-            --repository-format=docker \
-            --location=${{ env.GCP_REGION }} \
-            --project=${{ env.GCP_PROJECT_ID }} \
-            --description="HomeChef container images" 2>&1 || true
 
       # --- Build and Push to GHCR ---
       - name: Extract metadata (tags, labels)
@@ -113,19 +80,6 @@ jobs:
         id: cache
         run: echo "ref=$(echo '${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
 
-      - name: Generate AR tags
-        if: steps.gcp_auth.outputs.authenticated == 'true'
-        id: ar_tags
-        run: |
-          SHA_SHORT=$(echo "${{ github.sha }}" | cut -c1-7)
-          {
-            echo "tags<<EOF"
-            echo "${{ env.AR_REGISTRY }}/homechef-api:main-${SHA_SHORT}"
-            echo "${{ env.AR_REGISTRY }}/homechef-api:latest"
-            echo "EOF"
-            echo "sha_tag=main-${SHA_SHORT}"
-          } >> "$GITHUB_OUTPUT"
-
       - name: Build and push Docker image
         id: build_push
         uses: docker/build-push-action@v6
@@ -134,38 +88,26 @@ jobs:
           file: apps/api/Dockerfile
           platforms: linux/amd64
           push: ${{ github.event_name != 'pull_request' }}
-          tags: |
-            ${{ steps.meta.outputs.tags }}
-            ${{ steps.ar_tags.outputs.tags }}
+          tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=registry,ref=${{ steps.cache.outputs.ref }}
           cache-to: type=registry,ref=${{ steps.cache.outputs.ref }},mode=max
 
-      # --- Deploy to Cloud Run ---
-      # Infrastructure (VPC, IAM, scaling, ingress, probes) is managed by Terraform (stack 10-cloud-run).
-      # CI only updates the container image and runtime configuration (env vars, secrets).
-      - name: Deploy to Cloud Run
-        if: steps.gcp_auth.outputs.authenticated == 'true'
-        id: cloud_run_deploy
-        run: |
-          gcloud run deploy ${{ env.CLOUD_RUN_SERVICE }} \
-            --image ${{ env.AR_REGISTRY }}/homechef-api:${{ steps.ar_tags.outputs.sha_tag }} \
-            --region ${{ env.GCP_REGION }} \
-            --project ${{ env.GCP_PROJECT_ID }} \
-            --ingress=internal-and-cloud-load-balancing \
-            --min-instances=0 \
-            --set-env-vars="^||^SERVER_PORT=8080||GIN_MODE=release||RUN_MIGRATIONS=true||CORS_ORIGINS=https://fe3dr.com,https://www.fe3dr.com||REDIS_HOST=10.10.15.220||REDIS_PORT=6379||REDIS_DB=2" \
-            --set-secrets="DATABASE_URL=prod-homechef-postgresql-url:latest,JWT_SECRET=prod-homechef-jwt-secret:latest,JWT_REFRESH_SECRET=prod-homechef-jwt-refresh-secret:latest,REDIS_PASSWORD=prod-homechef-redis-password:latest"
-        continue-on-error: true
+      # --- Deploy to GKE (Knative) ---
+      - name: Get GKE credentials
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && steps.auth_wif.outcome == 'success'
+        uses: google-github-actions/get-gke-credentials@v2
+        with:
+          cluster_name: ${{ env.GKE_CLUSTER }}
+          location: ${{ env.GKE_REGION }}
+          project_id: ${{ env.GCP_PROJECT_ID }}
 
-      - name: Route traffic to latest
-        if: steps.cloud_run_deploy.outcome == 'success'
+      - name: Restart Knative service
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && steps.auth_wif.outcome == 'success'
         run: |
-          gcloud run services update-traffic ${{ env.CLOUD_RUN_SERVICE }} \
-            --to-latest \
-            --region ${{ env.GCP_REGION }} \
-            --project ${{ env.GCP_PROJECT_ID }}
-        continue-on-error: true
+          kubectl patch ksvc homechef-api -n homechef \
+            --type merge \
+            -p "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"client.knative.dev/updateTimestamp\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}}}}}"
 
       # --- Security scanning ---
       - name: Run Trivy vulnerability scanner
@@ -198,12 +140,10 @@ jobs:
 
           if [[ "${{ github.event_name }}" != "pull_request" ]]; then
             echo "✅ **Docker Image:** Pushed to ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}" >> $GITHUB_STEP_SUMMARY
-            if [[ "${{ steps.gcp_auth.outputs.authenticated }}" == "true" && "${{ steps.build_push.outcome }}" == "success" ]]; then
-              echo "✅ **Artifact Registry:** Pushed to ${{ env.AR_REGISTRY }}/homechef-api" >> $GITHUB_STEP_SUMMARY
-            elif [[ "${{ steps.gcp_auth.outputs.authenticated }}" == "true" ]]; then
-              echo "⚠️ **Artifact Registry:** Push failed (repo may not exist yet)" >> $GITHUB_STEP_SUMMARY
+            if [[ "${{ steps.auth_wif.outcome }}" == "success" ]]; then
+              echo "✅ **GKE Knative:** Service restarted" >> $GITHUB_STEP_SUMMARY
             else
-              echo "⏭️ **GCP:** Skipped (auth not configured)" >> $GITHUB_STEP_SUMMARY
+              echo "⏭️ **GKE:** Skipped (auth not configured)" >> $GITHUB_STEP_SUMMARY
             fi
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "**Tags:**" >> $GITHUB_STEP_SUMMARY

@@ -73,6 +73,7 @@ func Migrate() error {
 		// Chef
 		&models.ChefProfile{},
 		&models.ChefSchedule{},
+		&models.ChefDocument{},
 
 		// Menu
 		&models.MenuItem{},

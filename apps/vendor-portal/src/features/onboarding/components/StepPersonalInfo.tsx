@@ -1,7 +1,11 @@
+import { useState } from 'react';
+import { toast } from 'sonner';
 import { useOnboardingStore } from '@/app/store/onboarding-store';
 import { Input } from '@/shared/components/ui/Input';
 import { Card } from '@/shared/components/ui/Card';
-import { User, Phone, Mail, MapPin } from 'lucide-react';
+import { FileUpload } from '@tesserix/web';
+import { User, Phone, Mail, MapPin, Camera, Loader2 } from 'lucide-react';
+import { uploadProfileImage } from '@/shared/services/upload-service';
 
 interface Props {
   errors: Record<string, string>;
@@ -18,6 +22,29 @@ const STATES = [
 
 export function StepPersonalInfo({ errors }: Props) {
   const { data, updateData, updateAddress } = useOnboardingStore();
+  const [avatarFiles, setAvatarFiles] = useState<File[]>([]);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+
+  const handleAvatarChange = async (newFiles: File[]) => {
+    if (newFiles.length > 0) {
+      const file = newFiles[0]!;
+      setAvatarFiles(newFiles);
+      setIsUploadingAvatar(true);
+      try {
+        const url = await uploadProfileImage(file);
+        updateData({ profileImage: url });
+        toast.success('Profile photo uploaded');
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Upload failed');
+        setAvatarFiles([]);
+      } finally {
+        setIsUploadingAvatar(false);
+      }
+    } else {
+      setAvatarFiles([]);
+      updateData({ profileImage: undefined });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -26,6 +53,42 @@ export function StepPersonalInfo({ errors }: Props) {
         <p className="mt-1 text-sm text-muted-foreground">
           Tell us about yourself. This information helps verify your identity.
         </p>
+
+        <div className="mt-6 flex items-center gap-5">
+          <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-full border-2 border-dashed border-border bg-secondary">
+            {data.profileImage ? (
+              <img src={data.profileImage} alt="Profile" className="h-full w-full object-cover" />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center">
+                <Camera className="h-6 w-6 text-muted-foreground" />
+              </div>
+            )}
+            {isUploadingAvatar && (
+              <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40">
+                <Loader2 className="h-5 w-5 animate-spin text-white" />
+              </div>
+            )}
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-medium text-foreground">
+              Profile Photo <span className="font-normal text-muted-foreground">(Optional)</span>
+            </p>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Shown on your kitchen page. JPEG, PNG, or WebP. Max 5 MB.
+            </p>
+            <div className="mt-2">
+              <FileUpload
+                value={avatarFiles}
+                onValueChange={handleAvatarChange}
+                accept=".jpg,.jpeg,.png,.webp"
+                multiple={false}
+                maxFiles={1}
+                maxSizeBytes={5 * 1024 * 1024}
+                helperText=""
+              />
+            </div>
+          </div>
+        </div>
 
         <div className="mt-6 space-y-4">
           <Input

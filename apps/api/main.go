@@ -31,6 +31,14 @@ func main() {
 		log.Fatalf("Failed to run migrations: %v", err)
 	}
 
+	// Initialize GCS storage
+	if err := services.InitStorage(); err != nil {
+		log.Printf("Warning: Failed to initialize GCS storage: %v", err)
+		log.Println("File uploads will be unavailable")
+	} else {
+		defer services.CloseStorage()
+	}
+
 	// Connect to NATS
 	natsClient := services.GetNATSClient()
 	if err := natsClient.Connect(); err != nil {

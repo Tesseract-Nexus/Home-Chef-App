@@ -34,6 +34,7 @@ func SetupRouter() *gin.Engine {
 	chefHandler := handlers.NewChefHandler()
 	orderHandler := handlers.NewOrderHandler()
 	healthHandler := handlers.NewHealthHandler()
+	uploadHandler := handlers.NewUploadHandler()
 
 	// Health check endpoints
 	r.GET("/health", healthHandler.Health)
@@ -75,6 +76,16 @@ func SetupRouter() *gin.Engine {
 			chefs.GET("/:id", chefHandler.GetChef)
 			chefs.GET("/:id/menu", chefHandler.GetChefMenu)
 			chefs.GET("/:id/reviews", chefHandler.GetChefReviews)
+		}
+
+		// Chef onboarding (authenticated, but no chef role required — user is becoming a chef)
+		chefOnboarding := v1.Group("/chef")
+		chefOnboarding.Use(middleware.AuthMiddleware())
+		{
+			chefOnboarding.POST("/onboarding", uploadHandler.Onboarding)
+			chefOnboarding.POST("/documents", uploadHandler.UploadDocument)
+			chefOnboarding.GET("/documents", uploadHandler.GetDocuments)
+			chefOnboarding.POST("/profile-image", uploadHandler.UploadProfileImage)
 		}
 
 		// Chef dashboard routes (chef only)

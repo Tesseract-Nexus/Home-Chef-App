@@ -76,6 +76,7 @@ export default function OnboardingPage() {
   } = useOnboardingStore();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCreatingProfile, setIsCreatingProfile] = useState(false);
   const [showReview, setShowReview] = useState(false);
 
   // Pre-fill email from session
@@ -87,13 +88,32 @@ export default function OnboardingPage() {
     useOnboardingStore.getState().updateData({ fullName: name });
   }
 
-  const handleNext = () => {
+  const ensureProfile = async (): Promise<boolean> => {
+    setIsCreatingProfile(true);
+    try {
+      await apiClient.post('/chef/onboarding', data);
+      return true;
+    } catch {
+      toast.error('Failed to save your details. Please try again.');
+      return false;
+    } finally {
+      setIsCreatingProfile(false);
+    }
+  };
+
+  const handleNext = async () => {
     const validationErrors = validateStep(currentStep, data);
     setErrors(validationErrors);
 
     if (Object.keys(validationErrors).length > 0) {
       toast.error('Please fill in all required fields');
       return;
+    }
+
+    // Create/update chef profile before documents step so file uploads have a chef ID
+    if (currentStep === 2) {
+      const ok = await ensureProfile();
+      if (!ok) return;
     }
 
     if (currentStep === TOTAL_DISPLAY_STEPS - 1) {
@@ -256,6 +276,7 @@ export default function OnboardingPage() {
                 variant="primary"
                 size="lg"
                 onClick={handleNext}
+                isLoading={isCreatingProfile}
                 rightIcon={
                   currentStep === TOTAL_DISPLAY_STEPS - 1 ? (
                     <CheckCircle2 className="h-4 w-4" />

@@ -121,6 +121,9 @@ export interface OnboardingData {
   deliveryFee: number;
   operatingHours: OperatingHours;
 
+  // Profile image
+  profileImage?: string;
+
   // Step 4: Documents
   fssaiLicenseNumber?: string;
   panNumber?: string;

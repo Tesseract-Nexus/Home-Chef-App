@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { useOnboardingStore } from '@/app/store/onboarding-store';
 import { Input } from '@/shared/components/ui/Input';
 import { Card } from '@/shared/components/ui/Card';
@@ -9,7 +10,9 @@ import {
   ShieldCheck,
   Info,
   CheckCircle2,
+  Loader2,
 } from 'lucide-react';
+import { uploadDocument } from '@/shared/services/upload-service';
 import type { DocumentType } from '@/shared/types';
 
 interface Props {
@@ -101,18 +104,31 @@ const OPTIONAL_DOCS: DocSection[] = [
 function DocUploadCard({ section }: { section: DocSection }) {
   const { data, addDocument, removeDocument } = useOnboardingStore();
   const [files, setFiles] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
   const existing = data.documents.find((d) => d.type === section.type);
 
-  const handleChange = (newFiles: File[]) => {
-    setFiles(newFiles);
+  const handleChange = async (newFiles: File[]) => {
     if (newFiles.length > 0) {
       const file = newFiles[0]!;
-      addDocument({
-        type: section.type,
-        fileName: file.name,
-        status: 'pending',
-      });
+      setFiles(newFiles);
+      setIsUploading(true);
+      try {
+        const result = await uploadDocument(file, section.type);
+        addDocument({
+          type: section.type,
+          fileName: file.name,
+          fileUrl: result.fileUrl,
+          status: 'pending',
+        });
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Upload failed');
+        setFiles([]);
+        removeDocument(section.type);
+      } finally {
+        setIsUploading(false);
+      }
     } else {
+      setFiles([]);
       removeDocument(section.type);
     }
   };
@@ -131,7 +147,8 @@ function DocUploadCard({ section }: { section: DocSection }) {
                 Required
               </span>
             )}
-            {existing && (
+            {isUploading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+            {existing && !isUploading && (
               <CheckCircle2 className="h-4 w-4 text-green-600" />
             )}
           </div>

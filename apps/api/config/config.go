@@ -36,12 +36,10 @@ type Config struct {
 	AppleTeamID        string
 	AppleKeyID         string
 
-	// Storage
-	StorageProvider string
-	S3Bucket        string
-	S3Region        string
-	S3AccessKey     string
-	S3SecretKey     string
+	// GCS Storage
+	GCSProjectID     string
+	GCSPublicBucket  string
+	GCSPrivateBucket string
 
 	// Stripe
 	StripeSecretKey      string
@@ -108,12 +106,10 @@ func Load() {
 		AppleTeamID:        getEnv("APPLE_TEAM_ID", ""),
 		AppleKeyID:         getEnv("APPLE_KEY_ID", ""),
 
-		// Storage
-		StorageProvider: getEnv("STORAGE_PROVIDER", "local"),
-		S3Bucket:        getEnv("S3_BUCKET", ""),
-		S3Region:        getEnv("S3_REGION", "us-east-1"),
-		S3AccessKey:     getEnv("S3_ACCESS_KEY", ""),
-		S3SecretKey:     getEnv("S3_SECRET_KEY", ""),
+		// GCS Storage
+		GCSProjectID:     getEnv("GCS_PROJECT_ID", "tesseracthub-480811"),
+		GCSPublicBucket:  getEnv("GCS_PUBLIC_BUCKET", "homechef-prod-assets-in"),
+		GCSPrivateBucket: getEnv("GCS_PRIVATE_BUCKET", "homechef-prod-docs-in"),
 
 		// Stripe
 		StripeSecretKey:      getEnv("STRIPE_SECRET_KEY", ""),

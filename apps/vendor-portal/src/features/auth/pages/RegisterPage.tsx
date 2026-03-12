@@ -90,16 +90,6 @@ export default function RegisterPage() {
               variant="outline"
               size="xl"
               fullWidth
-              onClick={() => login('instagram')}
-              className="justify-center border-border hover:bg-secondary/60"
-            >
-              Sign up with Instagram
-            </Button>
-
-            <Button
-              variant="outline"
-              size="xl"
-              fullWidth
               onClick={() => login('facebook')}
               className="justify-center border-border hover:bg-secondary/60"
             >

@@ -87,7 +87,6 @@ export const STORE_BADGES = {
 
 // Social media icons (use actual brand assets in production)
 export const SOCIAL = {
-  instagram: '/social/instagram.svg',
   facebook: '/social/facebook.svg',
   twitter: '/social/twitter.svg',
   tiktok: '/social/tiktok.svg',

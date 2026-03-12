@@ -16,25 +16,6 @@ function GoogleIcon({ className }: { className?: string }) {
   );
 }
 
-function InstagramIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none">
-      <defs>
-        <linearGradient id="ig-grad" x1="0%" y1="100%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#FFDC80" />
-          <stop offset="25%" stopColor="#F77737" />
-          <stop offset="50%" stopColor="#E1306C" />
-          <stop offset="75%" stopColor="#C13584" />
-          <stop offset="100%" stopColor="#833AB4" />
-        </linearGradient>
-      </defs>
-      <rect x="2" y="2" width="20" height="20" rx="5" stroke="url(#ig-grad)" strokeWidth="2" fill="none" />
-      <circle cx="12" cy="12" r="4.5" stroke="url(#ig-grad)" strokeWidth="2" fill="none" />
-      <circle cx="17.5" cy="6.5" r="1.25" fill="url(#ig-grad)" />
-    </svg>
-  );
-}
-
 function MetaIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none">
@@ -113,17 +94,6 @@ export default function LoginPage() {
               className="justify-center border-border hover:bg-secondary/60"
             >
               Continue with Google
-            </Button>
-
-            <Button
-              variant="outline"
-              size="xl"
-              fullWidth
-              leftIcon={<InstagramIcon className="h-5 w-5" />}
-              onClick={() => login('instagram')}
-              className="justify-center border-border hover:bg-secondary/60"
-            >
-              Continue with Instagram
             </Button>
 
             <Button

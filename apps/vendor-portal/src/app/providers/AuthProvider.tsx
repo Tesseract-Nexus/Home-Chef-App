@@ -2,23 +2,23 @@ import {
   createContext,
   useContext,
   useEffect,
-  useState,
   useCallback,
   type ReactNode,
 } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/auth-store';
-import type { User, LoginCredentials, RegisterData } from '@/shared/types/auth';
+import type { SessionUser, SocialProvider } from '@/shared/types/auth';
+
+const BFF_URL = import.meta.env.VITE_BFF_URL || 'https://identity.fe3dr.com';
 
 interface AuthContextValue {
-  user: User | null;
+  user: SessionUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (credentials: LoginCredentials) => Promise<void>;
-  register: (data: RegisterData) => Promise<void>;
-  logout: () => void;
-  updateUser: (user: Partial<User>) => void;
-  updateProfile: (data: Partial<User>) => Promise<void>;
+  csrfToken: string | null;
+  login: (provider?: SocialProvider) => void;
+  register: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -27,99 +27,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const {
     user,
-    token,
-    isLoading: storeLoading,
-    setUser,
-    setToken,
+    isAuthenticated,
+    isLoading,
+    csrfToken,
     clearAuth,
     initialize,
   } = useAuthStore();
-  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    const init = async () => {
-      await initialize();
-      setIsInitialized(true);
-    };
-    init();
+    initialize();
   }, [initialize]);
 
-  // Role guard: only allow chef role
-  useEffect(() => {
-    if (isInitialized && user && user.role !== 'chef') {
-      clearAuth();
-      navigate('/login?error=access-denied');
+  const login = useCallback((provider?: SocialProvider) => {
+    const params = new URLSearchParams();
+    params.set('returnTo', `${window.location.origin}/dashboard`);
+    if (provider) {
+      params.set('kc_idp_hint', provider);
     }
-  }, [isInitialized, user, clearAuth, navigate]);
+    window.location.href = `${BFF_URL}/auth/login?${params.toString()}`;
+  }, []);
 
-  const login = useCallback(
-    async (credentials: LoginCredentials) => {
-      const { authService } = await import('@/features/auth/services/auth-service');
-      const response = await authService.login(credentials);
+  const register = useCallback(() => {
+    const params = new URLSearchParams();
+    params.set('returnTo', `${window.location.origin}/dashboard`);
+    params.set('kc_action', 'register');
+    window.location.href = `${BFF_URL}/auth/login?${params.toString()}`;
+  }, []);
 
-      // Only allow chef role
-      if (response.user.role !== 'chef') {
-        throw {
-          success: false,
-          error: {
-            code: 'ACCESS_DENIED',
-            message: 'This portal is only for vendor accounts. Please use the customer app.',
-          },
-        };
-      }
-
-      setUser(response.user);
-      setToken(response.token, response.refreshToken);
-      navigate('/dashboard');
-    },
-    [navigate, setUser, setToken]
-  );
-
-  const register = useCallback(
-    async (data: RegisterData) => {
-      const { authService } = await import('@/features/auth/services/auth-service');
-      const response = await authService.register({ ...data, role: 'chef' });
-      setUser(response.user);
-      setToken(response.token, response.refreshToken);
-      navigate('/dashboard');
-    },
-    [navigate, setUser, setToken]
-  );
-
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    try {
+      await fetch(`${BFF_URL}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch {
+      // Ignore - clear local state regardless
+    }
     clearAuth();
     navigate('/login');
   }, [clearAuth, navigate]);
 
-  const updateUser = useCallback(
-    (updates: Partial<User>) => {
-      if (user) {
-        setUser({ ...user, ...updates });
-      }
-    },
-    [user, setUser]
-  );
-
-  const updateProfile = useCallback(
-    async (data: Partial<User>) => {
-      const { apiClient } = await import('@/shared/services/api-client');
-      const updatedUser = await apiClient.put<User>('/chef/profile', data);
-      if (user) {
-        setUser({ ...user, ...updatedUser });
-      }
-    },
-    [user, setUser]
-  );
-
   const value: AuthContextValue = {
     user,
-    isAuthenticated: !!token && !!user,
-    isLoading: storeLoading || !isInitialized,
+    isAuthenticated,
+    isLoading,
+    csrfToken,
     login,
     register,
     logout,
-    updateUser,
-    updateProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

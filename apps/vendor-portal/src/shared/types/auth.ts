@@ -1,5 +1,6 @@
 export type UserRole = 'customer' | 'chef' | 'delivery' | 'admin' | 'super_admin' | 'fleet_manager';
 
+/** Full user model (used by domain/API layer) */
 export interface User {
   id: string;
   email: string;
@@ -24,32 +25,29 @@ export interface UserPreferences {
   };
 }
 
-export interface LoginCredentials {
+/** Session user returned by the BFF /auth/session endpoint */
+export interface SessionUser {
+  id: string;
   email: string;
-  password: string;
+  firstName?: string;
+  lastName?: string;
+  name?: string;
+  roles?: string[];
+  tenantId?: string;
+  tenantSlug?: string;
 }
 
-export interface RegisterData {
-  email: string;
-  phone?: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  role?: UserRole;
+/** Response from GET /auth/session */
+export interface SessionResponse {
+  authenticated: boolean;
+  user?: SessionUser;
+  expiresAt?: number;
+  csrfToken?: string;
+  error?: string;
 }
 
-export interface AuthResponse {
-  user: User;
-  token: string;
-  refreshToken: string;
-  expiresIn: number;
-}
-
-export interface TokenRefreshResponse {
-  token: string;
-  refreshToken: string;
-  expiresIn: number;
-}
+/** Supported social login providers (Keycloak IDP aliases) */
+export type SocialProvider = 'google' | 'facebook' | 'instagram';
 
 // Permission types for RBAC
 export type Permission =

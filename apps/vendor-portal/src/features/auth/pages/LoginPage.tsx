@@ -1,55 +1,59 @@
-import { useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Eye, EyeOff, Mail, Lock, ChefHat } from 'lucide-react';
-import { toast } from 'sonner';
+import { ChefHat } from 'lucide-react';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { Button } from '@/shared/components/ui/Button';
 import { fadeInUp, staggerContainer } from '@/shared/utils/animations';
 
-const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-});
+function GoogleIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none">
+      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
+      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18A10.96 10.96 0 001 12c0 1.77.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+    </svg>
+  );
+}
 
-type LoginForm = z.infer<typeof loginSchema>;
+function InstagramIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none">
+      <defs>
+        <linearGradient id="ig-grad" x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#FFDC80" />
+          <stop offset="25%" stopColor="#F77737" />
+          <stop offset="50%" stopColor="#E1306C" />
+          <stop offset="75%" stopColor="#C13584" />
+          <stop offset="100%" stopColor="#833AB4" />
+        </linearGradient>
+      </defs>
+      <rect x="2" y="2" width="20" height="20" rx="5" stroke="url(#ig-grad)" strokeWidth="2" fill="none" />
+      <circle cx="12" cy="12" r="4.5" stroke="url(#ig-grad)" strokeWidth="2" fill="none" />
+      <circle cx="17.5" cy="6.5" r="1.25" fill="url(#ig-grad)" />
+    </svg>
+  );
+}
+
+function MetaIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none">
+      <path d="M12 2.04C6.5 2.04 2 6.53 2 12.06c0 5 3.66 9.13 8.44 9.88v-6.99H7.9v-2.89h2.54V9.85c0-2.5 1.49-3.89 3.78-3.89 1.09 0 2.24.2 2.24.2v2.46h-1.26c-1.24 0-1.63.77-1.63 1.56v1.88h2.78l-.45 2.89h-2.33v6.99C18.34 21.19 22 17.06 22 12.06c0-5.53-4.5-10.02-10-10.02z" fill="#1877F2" />
+    </svg>
+  );
+}
 
 export default function LoginPage() {
-  const { login } = useAuth();
+  const { login, register } = useAuth();
   const [searchParams] = useSearchParams();
-  const [showPassword, setShowPassword] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const accessDenied = searchParams.get('error') === 'access-denied';
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<LoginForm>({
-    resolver: zodResolver(loginSchema),
-  });
-
-  const onSubmit = async (data: LoginForm) => {
-    setIsSubmitting(true);
-    try {
-      await login(data);
-      toast.success('Welcome back to your kitchen!');
-    } catch (error: unknown) {
-      const apiError = error as { error?: { message?: string } };
-      toast.error(apiError?.error?.message || 'Invalid credentials');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+  const sessionExpired = searchParams.get('error') === 'session_expired';
 
   return (
     <div className="flex min-h-screen">
-      {/* Left side - Form */}
-      <div className="flex flex-1 flex-col justify-center px-6 py-12 lg:px-12">
+      {/* Left side - Login options */}
+      <div className="flex flex-1 flex-col justify-center px-6 py-12 lg:px-16">
         <motion.div
           variants={staggerContainer}
           initial="hidden"
@@ -57,146 +61,147 @@ export default function LoginPage() {
           className="mx-auto w-full max-w-md"
         >
           {/* Logo */}
-          <motion.div variants={fadeInUp} className="mb-8">
-            <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-500">
-                <ChefHat className="h-7 w-7 text-white" />
+          <motion.div variants={fadeInUp} className="mb-10">
+            <div className="logo">
+              <div className="logo-icon">
+                <span><ChefHat className="h-5 w-5" /></span>
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Fe3dr</h1>
-                <p className="text-sm text-gray-500">Vendor Portal</p>
+                <h1 className="logo-text">Fe3dr</h1>
+                <p className="logo-tagline">Vendor Portal</p>
               </div>
             </div>
           </motion.div>
 
           {/* Heading */}
           <motion.div variants={fadeInUp} className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-900">
-              Sign in to your kitchen
+            <h2 className="text-display-xs font-bold tracking-tight text-foreground font-display">
+              Welcome to your kitchen
             </h2>
-            <p className="mt-2 text-gray-600">
-              Manage your menu, orders, and earnings
+            <p className="mt-2 text-muted-foreground">
+              Sign in to manage your menu, orders, and earnings
             </p>
           </motion.div>
 
+          {/* Error messages */}
           {accessDenied && (
             <motion.div
               variants={fadeInUp}
-              className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700"
+              className="mb-6 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
             >
               This portal is only for vendor accounts. Please use the Fe3dr customer app.
             </motion.div>
           )}
 
-          {/* Form */}
-          <motion.form
-            variants={fadeInUp}
-            onSubmit={handleSubmit(onSubmit)}
-            className="space-y-5"
-          >
-            {/* Email */}
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                Email
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-                <input
-                  {...register('email')}
-                  type="email"
-                  placeholder="chef@example.com"
-                  className="w-full rounded-lg border border-gray-300 py-2.5 pl-10 pr-4 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                />
-              </div>
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
-              )}
-            </div>
-
-            {/* Password */}
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
-                <input
-                  {...register('password')}
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Enter your password"
-                  className="w-full rounded-lg border border-gray-300 py-2.5 pl-10 pr-10 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
-              </div>
-              {errors.password && (
-                <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
-              )}
-            </div>
-
-            {/* Forgot password */}
-            <div className="flex justify-end">
-              <Link
-                to="/forgot-password"
-                className="text-sm font-medium text-brand-600 hover:text-brand-700"
-              >
-                Forgot password?
-              </Link>
-            </div>
-
-            {/* Submit */}
-            <Button
-              type="submit"
-              className="w-full"
-              size="lg"
-              isLoading={isSubmitting}
+          {sessionExpired && (
+            <motion.div
+              variants={fadeInUp}
+              className="mb-6 rounded-lg border border-warning/30 bg-warning/5 p-4 text-sm text-warning"
             >
-              Sign in
+              Your session has expired. Please sign in again.
+            </motion.div>
+          )}
+
+          {/* Social login buttons */}
+          <motion.div variants={fadeInUp} className="space-y-3">
+            <Button
+              variant="outline"
+              size="xl"
+              fullWidth
+              leftIcon={<GoogleIcon className="h-5 w-5" />}
+              onClick={() => login('google')}
+              className="justify-center border-border hover:bg-secondary/60"
+            >
+              Continue with Google
             </Button>
-          </motion.form>
+
+            <Button
+              variant="outline"
+              size="xl"
+              fullWidth
+              leftIcon={<InstagramIcon className="h-5 w-5" />}
+              onClick={() => login('instagram')}
+              className="justify-center border-border hover:bg-secondary/60"
+            >
+              Continue with Instagram
+            </Button>
+
+            <Button
+              variant="outline"
+              size="xl"
+              fullWidth
+              leftIcon={<MetaIcon className="h-5 w-5" />}
+              onClick={() => login('facebook')}
+              className="justify-center border-border hover:bg-secondary/60"
+            >
+              Continue with Meta
+            </Button>
+          </motion.div>
+
+          {/* Divider */}
+          <motion.div variants={fadeInUp} className="my-6 flex items-center gap-4">
+            <div className="h-px flex-1 bg-border" />
+            <span className="text-sm text-muted-foreground">or</span>
+            <div className="h-px flex-1 bg-border" />
+          </motion.div>
+
+          {/* Email login - redirects to Keycloak login form */}
+          <motion.div variants={fadeInUp}>
+            <Button
+              variant="default"
+              size="xl"
+              fullWidth
+              onClick={() => login()}
+              className="justify-center"
+            >
+              Sign in with Email
+            </Button>
+          </motion.div>
 
           {/* Register link */}
-          <motion.p variants={fadeInUp} className="mt-6 text-center text-sm text-gray-600">
-            Want to start selling?{' '}
-            <Link to="/register" className="font-medium text-brand-600 hover:text-brand-700">
-              Register as a vendor
-            </Link>
-          </motion.p>
-
-          {/* Demo credentials */}
-          <motion.div
-            variants={fadeInUp}
-            className="mt-6 rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4"
-          >
-            <p className="mb-2 text-xs font-medium text-gray-500">Demo Credentials</p>
-            <p className="text-xs text-gray-600">
-              <span className="font-medium">Email:</span> meena@example.com
+          <motion.div variants={fadeInUp} className="mt-8 text-center">
+            <p className="text-sm text-muted-foreground">
+              Want to start selling?{' '}
+              <button
+                onClick={() => register()}
+                className="font-semibold text-primary hover:text-primary/80 transition-colors"
+              >
+                Register as a vendor
+              </button>
             </p>
-            <p className="text-xs text-gray-600">
-              <span className="font-medium">Password:</span> password123
+          </motion.div>
+
+          {/* Footer */}
+          <motion.div variants={fadeInUp} className="mt-12">
+            <p className="text-xs text-muted-foreground text-center">
+              By continuing, you agree to Fe3dr's Terms of Service and Privacy Policy
             </p>
           </motion.div>
         </motion.div>
       </div>
 
-      {/* Right side - Image */}
+      {/* Right side - Hero */}
       <div className="hidden flex-1 lg:block">
-        <div className="relative flex h-full items-center justify-center bg-gradient-to-br from-brand-500 to-brand-700 p-12">
-          <div className="max-w-lg text-white">
+        <div className="relative flex h-full items-center justify-center bg-gradient-to-br from-primary to-primary/80 p-12">
+          <div className="max-w-lg text-primary-foreground">
             <ChefHat className="mb-6 h-16 w-16 opacity-80" />
-            <h2 className="text-3xl font-bold">Grow your home kitchen business</h2>
+            <h2 className="text-3xl font-bold font-display">
+              Grow your home kitchen business
+            </h2>
             <p className="mt-4 text-lg opacity-90">
-              Manage menus, track orders in real-time, view earnings analytics, and connect with customers — all from one dashboard.
+              Manage menus, track orders in real-time, view earnings analytics,
+              and connect with customers — all from one dashboard.
             </p>
             <div className="mt-8 space-y-3">
-              {['Real-time order management', 'Earnings & analytics dashboard', 'Menu management with categories', 'Customer reviews & ratings'].map((feature) => (
+              {[
+                'Real-time order management',
+                'Earnings & analytics dashboard',
+                'Menu management with categories',
+                'Customer reviews & ratings',
+                'Document verification & compliance',
+              ].map((feature) => (
                 <div key={feature} className="flex items-center gap-3">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white/20">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-foreground/20">
                     <span className="text-xs font-bold">&#10003;</span>
                   </div>
                   <span className="text-sm">{feature}</span>

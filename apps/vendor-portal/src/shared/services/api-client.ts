@@ -1,7 +1,6 @@
 import type { ApiResponse, ApiError } from '@/shared/types';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
-const MOCK_MODE = import.meta.env.VITE_MOCK_MODE === 'true';
+const API_URL = import.meta.env.VITE_API_URL || 'https://api.fe3dr.com/api/v1';
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, string | number | boolean | undefined>;
@@ -14,9 +13,9 @@ class ApiClient {
     this.baseUrl = baseUrl;
   }
 
-  private async getAuthToken(): Promise<string | null> {
+  private async getCsrfToken(): Promise<string | null> {
     const { useAuthStore } = await import('@/app/store/auth-store');
-    return useAuthStore.getState().token;
+    return useAuthStore.getState().csrfToken;
   }
 
   private buildUrl(endpoint: string, params?: RequestOptions['params']): string {
@@ -38,34 +37,35 @@ class ApiClient {
     endpoint: string,
     options: RequestOptions = {}
   ): Promise<T> {
-    if (MOCK_MODE) {
-      const { mockService } = await import('@/mock/mock-service');
-      const mockOptions = {
-        params: options.params,
-        body: typeof options.body === 'string' ? options.body : undefined,
-      };
-      return mockService.request<T>(method, endpoint, mockOptions);
-    }
-
     const { params, ...fetchOptions } = options;
     const url = this.buildUrl(endpoint, params);
 
-    const token = await this.getAuthToken();
+    const csrfToken = await this.getCsrfToken();
 
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       ...options.headers,
     };
 
-    if (token) {
-      (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+    // Include CSRF token for state-changing requests
+    if (csrfToken && method !== 'GET') {
+      (headers as Record<string, string>)['X-CSRF-Token'] = csrfToken;
     }
 
     const response = await fetch(url, {
       method,
       headers,
+      credentials: 'include', // Send session cookies with all requests
       ...fetchOptions,
     });
+
+    // Handle 401 - session expired
+    if (response.status === 401) {
+      const { useAuthStore } = await import('@/app/store/auth-store');
+      useAuthStore.getState().clearAuth();
+      window.location.href = '/login';
+      throw { success: false, error: { code: 'SESSION_EXPIRED', message: 'Session expired' } };
+    }
 
     if (!response.ok) {
       const error: ApiError = await response.json().catch(() => ({

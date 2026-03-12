@@ -21,6 +21,12 @@ export default defineConfig({
         target: 'ws://localhost:8080',
         ws: true,
       },
+      // Proxy BFF auth calls in development
+      '/bff': {
+        target: 'http://localhost:8090',
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/bff/, ''),
+      },
     },
   },
   build: {

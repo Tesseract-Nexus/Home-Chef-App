@@ -1,6 +1,6 @@
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChefHat } from 'lucide-react';
+import { ChefHat, Check } from 'lucide-react';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { Button } from '@/shared/components/ui/Button';
 import { fadeInUp, staggerContainer } from '@/shared/utils/animations';
@@ -24,6 +24,14 @@ function MetaIcon({ className }: { className?: string }) {
   );
 }
 
+const FEATURES = [
+  'Real-time order management',
+  'Earnings & analytics dashboard',
+  'Menu management with categories',
+  'Customer reviews & ratings',
+  'Document verification & compliance',
+];
+
 export default function LoginPage() {
   const { login, register } = useAuth();
   const [searchParams] = useSearchParams();
@@ -32,32 +40,76 @@ export default function LoginPage() {
   const sessionExpired = searchParams.get('error') === 'session_expired';
 
   return (
-    <div className="flex min-h-screen">
-      {/* Left side - Login options */}
-      <div className="flex flex-1 flex-col justify-center px-6 py-12 lg:px-16">
+    <div className="flex min-h-screen bg-background">
+      {/* Left side - Image & Features */}
+      <div className="relative hidden flex-1 lg:block">
+        <img
+          src="https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=1200&h=900&fit=crop&q=80"
+          alt="Home chef preparing food in kitchen"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20" />
+
+        {/* Content overlay */}
+        <div className="relative flex h-full flex-col justify-end p-10 xl:p-14">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.6 }}
+          >
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+                <ChefHat className="h-5 w-5 text-white" />
+              </div>
+              <span className="text-xl font-bold text-white font-display">Fe3dr</span>
+            </div>
+
+            <h2 className="max-w-md text-3xl font-bold leading-tight text-white font-display xl:text-4xl">
+              Grow your home kitchen business
+            </h2>
+            <p className="mt-3 max-w-md text-base text-white/80">
+              Manage menus, track orders, view earnings — all from one dashboard.
+            </p>
+
+            <div className="mt-8 grid grid-cols-2 gap-x-6 gap-y-3">
+              {FEATURES.map((feature) => (
+                <div key={feature} className="flex items-center gap-2.5">
+                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
+                    <Check className="h-3 w-3 text-white" />
+                  </div>
+                  <span className="text-sm text-white/90">{feature}</span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Right side - Login options */}
+      <div className="flex flex-1 flex-col justify-center px-6 py-12 lg:max-w-xl lg:px-16 xl:px-20">
         <motion.div
           variants={staggerContainer}
           initial="hidden"
           animate="visible"
-          className="mx-auto w-full max-w-md"
+          className="mx-auto w-full max-w-sm"
         >
-          {/* Logo */}
+          {/* Logo (mobile only — desktop shows on image) */}
           <motion.div variants={fadeInUp} className="mb-10">
-            <div className="logo">
-              <div className="logo-icon">
-                <span><ChefHat className="h-5 w-5" /></span>
+            <div className="flex items-center gap-2.5">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary shadow-md">
+                <ChefHat className="h-5 w-5 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="logo-text">Fe3dr</h1>
-                <p className="logo-tagline">Vendor Portal</p>
+                <h1 className="text-xl font-bold text-foreground font-display">Fe3dr</h1>
+                <p className="text-xs text-muted-foreground">Vendor Portal</p>
               </div>
             </div>
           </motion.div>
 
           {/* Heading */}
           <motion.div variants={fadeInUp} className="mb-8">
-            <h2 className="text-display-xs font-bold tracking-tight text-foreground font-display">
-              Welcome to your kitchen
+            <h2 className="text-2xl font-bold tracking-tight text-foreground font-display sm:text-3xl">
+              Welcome back
             </h2>
             <p className="mt-2 text-muted-foreground">
               Sign in to manage your menu, orders, and earnings
@@ -68,7 +120,7 @@ export default function LoginPage() {
           {accessDenied && (
             <motion.div
               variants={fadeInUp}
-              className="mb-6 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
+              className="mb-6 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
             >
               This portal is only for vendor accounts. Please use the Fe3dr customer app.
             </motion.div>
@@ -77,7 +129,7 @@ export default function LoginPage() {
           {sessionExpired && (
             <motion.div
               variants={fadeInUp}
-              className="mb-6 rounded-lg border border-warning/30 bg-warning/5 p-4 text-sm text-warning"
+              className="mb-6 rounded-xl border border-warning/30 bg-warning/5 p-4 text-sm text-warning"
             >
               Your session has expired. Please sign in again.
             </motion.div>
@@ -91,7 +143,7 @@ export default function LoginPage() {
               fullWidth
               leftIcon={<GoogleIcon className="h-5 w-5" />}
               onClick={() => login('google')}
-              className="justify-center border-border hover:bg-secondary/60"
+              className="justify-center rounded-xl border-border hover:bg-secondary/60"
             >
               Continue with Google
             </Button>
@@ -102,9 +154,9 @@ export default function LoginPage() {
               fullWidth
               leftIcon={<MetaIcon className="h-5 w-5" />}
               onClick={() => login('facebook')}
-              className="justify-center border-border hover:bg-secondary/60"
+              className="justify-center rounded-xl border-border hover:bg-secondary/60"
             >
-              Continue with Meta
+              Continue with Facebook
             </Button>
           </motion.div>
 
@@ -115,14 +167,14 @@ export default function LoginPage() {
             <div className="h-px flex-1 bg-border" />
           </motion.div>
 
-          {/* Email login - redirects to Keycloak login form */}
+          {/* Email login */}
           <motion.div variants={fadeInUp}>
             <Button
               variant="default"
               size="xl"
               fullWidth
               onClick={() => login()}
-              className="justify-center"
+              className="justify-center rounded-xl"
             >
               Sign in with Email
             </Button>
@@ -143,43 +195,11 @@ export default function LoginPage() {
 
           {/* Footer */}
           <motion.div variants={fadeInUp} className="mt-12">
-            <p className="text-xs text-muted-foreground text-center">
+            <p className="text-center text-xs text-muted-foreground">
               By continuing, you agree to Fe3dr's Terms of Service and Privacy Policy
             </p>
           </motion.div>
         </motion.div>
-      </div>
-
-      {/* Right side - Hero */}
-      <div className="hidden flex-1 lg:block">
-        <div className="relative flex h-full items-center justify-center bg-gradient-to-br from-primary to-primary/80 p-12">
-          <div className="max-w-lg text-primary-foreground">
-            <ChefHat className="mb-6 h-16 w-16 opacity-80" />
-            <h2 className="text-3xl font-bold font-display">
-              Grow your home kitchen business
-            </h2>
-            <p className="mt-4 text-lg opacity-90">
-              Manage menus, track orders in real-time, view earnings analytics,
-              and connect with customers — all from one dashboard.
-            </p>
-            <div className="mt-8 space-y-3">
-              {[
-                'Real-time order management',
-                'Earnings & analytics dashboard',
-                'Menu management with categories',
-                'Customer reviews & ratings',
-                'Document verification & compliance',
-              ].map((feature) => (
-                <div key={feature} className="flex items-center gap-3">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary-foreground/20">
-                    <span className="text-xs font-bold">&#10003;</span>
-                  </div>
-                  <span className="text-sm">{feature}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

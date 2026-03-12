@@ -24,32 +24,31 @@ export interface UserPreferences {
   };
 }
 
-export interface LoginCredentials {
+/** Session user returned by the BFF /auth/session endpoint */
+export interface SessionUser {
+  id: string;
   email: string;
-  password: string;
-}
-
-export interface RegisterData {
-  email: string;
+  firstName?: string;
+  lastName?: string;
+  name?: string;
   phone?: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  role?: UserRole;
+  avatar?: string;
+  roles?: string[];
+  tenantId?: string;
+  tenantSlug?: string;
 }
 
-export interface AuthResponse {
-  user: User;
-  token: string;
-  refreshToken: string;
-  expiresIn: number;
+/** Response from GET /auth/session */
+export interface SessionResponse {
+  authenticated: boolean;
+  user?: SessionUser;
+  expiresAt?: number;
+  csrfToken?: string;
+  error?: string;
 }
 
-export interface TokenRefreshResponse {
-  token: string;
-  refreshToken: string;
-  expiresIn: number;
-}
+/** Supported social login providers (Keycloak IDP aliases) */
+export type SocialProvider = 'google' | 'facebook';
 
 // Permission types for RBAC
 export type Permission =

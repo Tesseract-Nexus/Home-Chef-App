@@ -21,6 +21,11 @@ export default defineConfig({
         target: 'ws://localhost:8080',
         ws: true,
       },
+      '/bff': {
+        target: 'https://identity.fe3dr.com',
+        changeOrigin: true,
+        rewrite: (path: string) => path.replace(/^\/bff/, ''),
+      },
     },
   },
   build: {

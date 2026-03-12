@@ -14,10 +14,10 @@ class ApiClient {
     this.baseUrl = baseUrl;
   }
 
-  private async getAuthToken(): Promise<string | null> {
+  private async getCsrfToken(): Promise<string | null> {
     // Import dynamically to avoid circular dependencies
     const { useAuthStore } = await import('@/app/store/auth-store');
-    return useAuthStore.getState().token;
+    return useAuthStore.getState().csrfToken;
   }
 
   private buildUrl(endpoint: string, params?: RequestOptions['params']): string {
@@ -52,20 +52,23 @@ class ApiClient {
     const { params, ...fetchOptions } = options;
     const url = this.buildUrl(endpoint, params);
 
-    const token = await this.getAuthToken();
-
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       ...options.headers,
     };
 
-    if (token) {
-      (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+    // Add CSRF token for state-changing requests
+    if (method !== 'GET') {
+      const csrfToken = await this.getCsrfToken();
+      if (csrfToken) {
+        (headers as Record<string, string>)['X-CSRF-Token'] = csrfToken;
+      }
     }
 
     const response = await fetch(url, {
       method,
       headers,
+      credentials: 'include',
       ...fetchOptions,
     });
 

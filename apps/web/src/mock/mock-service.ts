@@ -1,4 +1,18 @@
-import type { AuthResponse, TokenRefreshResponse, User } from '@/shared/types/auth';
+import type { User } from '@/shared/types/auth';
+
+// Mock-only auth types (production uses BFF session-based auth)
+interface AuthResponse {
+  user: User;
+  token: string;
+  refreshToken: string;
+  expiresIn: number;
+}
+
+interface TokenRefreshResponse {
+  token: string;
+  refreshToken: string;
+  expiresIn: number;
+}
 import type { Chef, MenuItem, Order, PaginatedResponse, SocialPost, CateringRequest, CateringQuote } from '@/shared/types';
 import { mockChefs, mockMenuItems, mockOrders, mockUsers, mockSocialPosts, mockCateringRequests, mockCateringQuotes } from './data';
 

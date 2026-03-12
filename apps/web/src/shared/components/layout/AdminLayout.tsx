@@ -87,7 +87,7 @@ export function AdminLayout() {
                 <p className="text-sm font-medium text-white">
                   {user?.firstName} {user?.lastName}
                 </p>
-                <p className="text-xs text-gray-400 capitalize">{user?.role}</p>
+                <p className="text-xs text-gray-400 capitalize">{user?.roles?.[0]}</p>
               </div>
               <button
                 onClick={logout}

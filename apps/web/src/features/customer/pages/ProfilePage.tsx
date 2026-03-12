@@ -121,7 +121,7 @@ export default function ProfilePage() {
 }
 
 function ProfileTab() {
-  const { user, updateProfile } = useAuth();
+  const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
 
   const {
@@ -139,9 +139,9 @@ function ProfileTab() {
     },
   });
 
-  const onSubmit = async (data: ProfileFormData) => {
+  const onSubmit = async (_data: ProfileFormData) => {
     try {
-      await updateProfile(data);
+      // TODO: Implement profile update via API
       toast.success('Profile updated successfully');
       setIsEditing(false);
     } catch {

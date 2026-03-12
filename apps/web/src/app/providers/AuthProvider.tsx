@@ -2,24 +2,23 @@ import {
   createContext,
   useContext,
   useEffect,
-  useState,
   useCallback,
   type ReactNode,
 } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/auth-store';
-import type { User, LoginCredentials, RegisterData } from '@/shared/types/auth';
+import type { SessionUser, SocialProvider } from '@/shared/types/auth';
+
+const BFF_URL = import.meta.env.VITE_BFF_URL || 'https://identity.fe3dr.com';
 
 interface AuthContextValue {
-  user: User | null;
+  user: SessionUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (credentials: LoginCredentials) => Promise<void>;
-  loginWithSocial: (provider: 'google' | 'facebook' | 'apple', token: string) => Promise<void>;
-  register: (data: RegisterData) => Promise<void>;
-  logout: () => void;
-  updateUser: (user: Partial<User>) => void;
-  updateProfile: (data: Partial<User>) => Promise<void>;
+  csrfToken: string | null;
+  login: (provider?: SocialProvider) => void;
+  register: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -28,106 +27,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const {
     user,
-    token,
-    isLoading: storeLoading,
-    setUser,
-    setToken,
+    isAuthenticated,
+    isLoading,
+    csrfToken,
     clearAuth,
     initialize,
   } = useAuthStore();
-  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    const init = async () => {
-      await initialize();
-      setIsInitialized(true);
-    };
-    init();
+    initialize();
   }, [initialize]);
 
-  const login = useCallback(
-    async (credentials: LoginCredentials) => {
-      const { authService } = await import('@/features/auth/services/auth-service');
-      const response = await authService.login(credentials);
-      setUser(response.user);
-      setToken(response.token, response.refreshToken);
+  const login = useCallback((provider?: SocialProvider) => {
+    const params = new URLSearchParams();
+    params.set('returnTo', window.location.origin);
+    if (provider) {
+      params.set('kc_idp_hint', provider);
+    }
+    window.location.href = `${BFF_URL}/auth/login?${params.toString()}`;
+  }, []);
 
-      // Redirect based on role
-      switch (response.user.role) {
-        case 'chef':
-          navigate('/chef/dashboard');
-          break;
-        case 'admin':
-        case 'super_admin':
-          navigate('/admin/dashboard');
-          break;
-        case 'delivery':
-          navigate('/delivery/dashboard');
-          break;
-        default:
-          navigate('/');
-      }
-    },
-    [navigate, setUser, setToken]
-  );
+  const register = useCallback(() => {
+    const params = new URLSearchParams();
+    params.set('returnTo', window.location.origin);
+    params.set('kc_action', 'register');
+    window.location.href = `${BFF_URL}/auth/login?${params.toString()}`;
+  }, []);
 
-  const loginWithSocial = useCallback(
-    async (provider: 'google' | 'facebook' | 'apple', token: string) => {
-      const { authService } = await import('@/features/auth/services/auth-service');
-      const response = await authService.loginWithSocial(provider, token);
-      setUser(response.user);
-      setToken(response.token, response.refreshToken);
-      navigate('/');
-    },
-    [navigate, setUser, setToken]
-  );
-
-  const register = useCallback(
-    async (data: RegisterData) => {
-      const { authService } = await import('@/features/auth/services/auth-service');
-      const response = await authService.register(data);
-      setUser(response.user);
-      setToken(response.token, response.refreshToken);
-      navigate('/');
-    },
-    [navigate, setUser, setToken]
-  );
-
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    try {
+      await fetch(`${BFF_URL}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch {
+      // Ignore - clear local state regardless
+    }
     clearAuth();
     navigate('/login');
   }, [clearAuth, navigate]);
 
-  const updateUser = useCallback(
-    (updates: Partial<User>) => {
-      if (user) {
-        setUser({ ...user, ...updates });
-      }
-    },
-    [user, setUser]
-  );
-
-  const updateProfile = useCallback(
-    async (data: Partial<User>) => {
-      const { apiClient } = await import('@/shared/services/api-client');
-      const updatedUser = await apiClient.put<User>('/profile', data);
-      if (user) {
-        setUser({ ...user, ...updatedUser });
-      }
-    },
-    [user, setUser]
-  );
-
   const value: AuthContextValue = {
     user,
-    isAuthenticated: !!token && !!user,
-    isLoading: storeLoading || !isInitialized,
+    isAuthenticated,
+    isLoading,
+    csrfToken,
     login,
-    loginWithSocial,
     register,
     logout,
-    updateUser,
-    updateProfile,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

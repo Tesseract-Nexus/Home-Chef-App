@@ -1,56 +1,94 @@
-import { apiClient } from '@/shared/services/api-client';
-import type { AuthResponse, TokenRefreshResponse, User, LoginCredentials, RegisterData } from '@/shared/types/auth';
+import type { SessionResponse, SocialProvider } from '@/shared/types/auth';
 
+const BFF_URL = import.meta.env.VITE_BFF_URL || 'https://identity.fe3dr.com';
+
+/**
+ * Auth service that integrates with the Keycloak-backed BFF at identity.fe3dr.com.
+ * Uses OIDC redirect flow for login/register and session cookies for auth state.
+ */
 export const authService = {
-  async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    return apiClient.post<AuthResponse>('/auth/login', credentials);
+  /**
+   * Build the OIDC login URL. Redirects the browser to Keycloak via the BFF.
+   * @param provider - Optional social provider (google, facebook) passed as kc_idp_hint
+   * @param returnTo - URL to redirect back to after login (defaults to /)
+   */
+  getLoginUrl(options?: { provider?: SocialProvider; returnTo?: string }): string {
+    const params = new URLSearchParams();
+    params.set('returnTo', options?.returnTo || window.location.origin);
+    if (options?.provider) {
+      params.set('kc_idp_hint', options.provider);
+    }
+    return `${BFF_URL}/auth/login?${params.toString()}`;
   },
 
-  async register(data: RegisterData): Promise<AuthResponse> {
-    return apiClient.post<AuthResponse>('/auth/register', data);
+  /**
+   * Build the registration URL. Redirects to Keycloak registration form via BFF.
+   */
+  getRegisterUrl(returnTo?: string): string {
+    const params = new URLSearchParams();
+    params.set('returnTo', returnTo || window.location.origin);
+    params.set('kc_action', 'register');
+    return `${BFF_URL}/auth/login?${params.toString()}`;
   },
 
-  async loginWithSocial(provider: 'google' | 'facebook' | 'apple', token: string): Promise<AuthResponse> {
-    return apiClient.post<AuthResponse>('/auth/social', { provider, token });
+  /**
+   * Check current session with the BFF.
+   * Returns session user data if authenticated, null otherwise.
+   */
+  async getSession(): Promise<SessionResponse | null> {
+    try {
+      const res = await fetch(`${BFF_URL}/auth/session`, {
+        credentials: 'include',
+      });
+      if (!res.ok) return null;
+      return await res.json();
+    } catch {
+      return null;
+    }
   },
 
-  async refreshToken(refreshToken: string): Promise<TokenRefreshResponse> {
-    return apiClient.post<TokenRefreshResponse>('/auth/refresh', { refreshToken });
+  /**
+   * Refresh the session access token via BFF.
+   */
+  async refreshSession(): Promise<boolean> {
+    try {
+      const res = await fetch(`${BFF_URL}/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
   },
 
-  async getCurrentUser(): Promise<User> {
-    return apiClient.get<User>('/users/me');
-  },
-
-  async updateUser(data: Partial<User>): Promise<User> {
-    return apiClient.put<User>('/users/me', data);
-  },
-
+  /**
+   * Logout: revoke session at BFF and clear cookies.
+   */
   async logout(): Promise<void> {
-    return apiClient.post('/auth/logout');
+    try {
+      await fetch(`${BFF_URL}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+      });
+    } catch {
+      // Ignore errors - we'll clear local state regardless
+    }
   },
 
-  async sendVerificationEmail(): Promise<void> {
-    return apiClient.post('/auth/verify-email/send');
-  },
-
-  async verifyEmail(token: string): Promise<void> {
-    return apiClient.post('/auth/verify-email', { token });
-  },
-
-  async sendPhoneOtp(phone: string): Promise<void> {
-    return apiClient.post('/auth/verify-phone', { phone });
-  },
-
-  async verifyPhoneOtp(phone: string, otp: string): Promise<void> {
-    return apiClient.post('/auth/verify-otp', { phone, otp });
-  },
-
-  async forgotPassword(email: string): Promise<void> {
-    return apiClient.post('/auth/forgot-password', { email });
-  },
-
-  async resetPassword(token: string, password: string): Promise<void> {
-    return apiClient.post('/auth/reset-password', { token, password });
+  /**
+   * Get CSRF token for state-changing API requests.
+   */
+  async getCsrfToken(): Promise<string | null> {
+    try {
+      const res = await fetch(`${BFF_URL}/auth/csrf`, {
+        credentials: 'include',
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.csrfToken || null;
+    } catch {
+      return null;
+    }
   },
 };

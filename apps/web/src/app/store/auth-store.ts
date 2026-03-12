@@ -1,101 +1,48 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import type { User } from '@/shared/types/auth';
+import type { SessionUser } from '@/shared/types/auth';
 
 interface AuthState {
-  user: User | null;
-  token: string | null;
-  refreshToken: string | null;
+  user: SessionUser | null;
+  isAuthenticated: boolean;
   isLoading: boolean;
-}
-
-interface AuthActions {
-  setUser: (user: User) => void;
-  setToken: (token: string, refreshToken: string) => void;
+  csrfToken: string | null;
+  setSession: (user: SessionUser, csrfToken?: string) => void;
   clearAuth: () => void;
   setLoading: (loading: boolean) => void;
   initialize: () => Promise<void>;
 }
 
-type AuthStore = AuthState & AuthActions;
-
-const initialState: AuthState = {
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
-  token: null,
-  refreshToken: null,
+  isAuthenticated: false,
   isLoading: true,
-};
+  csrfToken: null,
 
-export const useAuthStore = create<AuthStore>()(
-  persist(
-    (set, get) => ({
-      ...initialState,
+  setSession: (user, csrfToken) =>
+    set({ user, isAuthenticated: true, csrfToken: csrfToken ?? get().csrfToken }),
 
-      setUser: (user) => set({ user }),
+  clearAuth: () =>
+    set({ user: null, isAuthenticated: false, csrfToken: null }),
 
-      setToken: (token, refreshToken) => set({ token, refreshToken }),
+  setLoading: (isLoading) => set({ isLoading }),
 
-      clearAuth: () =>
+  initialize: async () => {
+    try {
+      const { authService } = await import('@/features/auth/services/auth-service');
+      const session = await authService.getSession();
+
+      if (session?.authenticated && session.user) {
         set({
-          user: null,
-          token: null,
-          refreshToken: null,
-        }),
-
-      setLoading: (isLoading) => set({ isLoading }),
-
-      initialize: async () => {
-        const { token, refreshToken } = get();
-
-        if (!token) {
-          set({ isLoading: false });
-          return;
-        }
-
-        try {
-          // Validate token and refresh if needed
-          const { authService } = await import(
-            '@/features/auth/services/auth-service'
-          );
-
-          // Try to get current user
-          const user = await authService.getCurrentUser();
-          set({ user, isLoading: false });
-        } catch {
-          // Token invalid, try refresh
-          if (refreshToken) {
-            try {
-              const { authService } = await import(
-                '@/features/auth/services/auth-service'
-              );
-              const response = await authService.refreshToken(refreshToken);
-              set({
-                token: response.token,
-                refreshToken: response.refreshToken,
-                isLoading: false,
-              });
-
-              // Get user with new token
-              const user = await authService.getCurrentUser();
-              set({ user });
-            } catch {
-              // Refresh failed, clear auth
-              set({ ...initialState, isLoading: false });
-            }
-          } else {
-            set({ ...initialState, isLoading: false });
-          }
-        }
-      },
-    }),
-    {
-      name: 'homechef-auth',
-      storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({
-        user: state.user,
-        token: state.token,
-        refreshToken: state.refreshToken,
-      }),
+          user: session.user,
+          isAuthenticated: true,
+          csrfToken: session.csrfToken ?? null,
+          isLoading: false,
+        });
+      } else {
+        set({ user: null, isAuthenticated: false, isLoading: false });
+      }
+    } catch {
+      set({ user: null, isAuthenticated: false, isLoading: false });
     }
-  )
-);
+  },
+}));

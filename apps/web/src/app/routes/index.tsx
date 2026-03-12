@@ -23,7 +23,6 @@ const CateringQuotesPage = lazy(() => import('@/features/catering/pages/Catering
 // Auth pages
 const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage'));
 const RegisterPage = lazy(() => import('@/features/auth/pages/RegisterPage'));
-const ForgotPasswordPage = lazy(() => import('@/features/auth/pages/ForgotPasswordPage'));
 
 // Chef pages
 const ChefDashboardPage = lazy(() => import('@/features/chef/pages/DashboardPage'));
@@ -65,7 +64,7 @@ function ProtectedRoute({
     return <Navigate to="/login" replace />;
   }
 
-  if (roles && user && !roles.includes(user.role)) {
+  if (roles && user && !roles.some(r => user.roles?.includes(r))) {
     return <Navigate to="/" replace />;
   }
 
@@ -79,7 +78,6 @@ export function AppRoutes() {
         {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
         {/* Customer routes */}
         <Route element={<MainLayout />}>

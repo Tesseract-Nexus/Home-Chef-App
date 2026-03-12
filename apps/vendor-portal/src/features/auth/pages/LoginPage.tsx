@@ -36,8 +36,9 @@ export default function LoginPage() {
   const { login, register } = useAuth();
   const [searchParams] = useSearchParams();
 
-  const accessDenied = searchParams.get('error') === 'access-denied';
-  const sessionExpired = searchParams.get('error') === 'session_expired';
+  const authError = searchParams.get('error');
+  const accessDenied = authError === 'access-denied';
+  const sessionExpired = authError === 'session_expired' || authError === 'invalid_state';
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -132,6 +133,15 @@ export default function LoginPage() {
               className="mb-6 rounded-xl border border-warning/30 bg-warning/5 p-4 text-sm text-warning"
             >
               Your session has expired. Please sign in again.
+            </motion.div>
+          )}
+
+          {authError && !accessDenied && !sessionExpired && (
+            <motion.div
+              variants={fadeInUp}
+              className="mb-6 rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive"
+            >
+              Something went wrong. Please try again.
             </motion.div>
           )}
 

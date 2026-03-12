@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { ChefHat } from 'lucide-react';
 import { useAuth } from '@/app/providers/AuthProvider';
@@ -7,6 +7,9 @@ import { fadeInLeft, fadeInRight } from '@/shared/utils/animations';
 
 export default function LoginPage() {
   const { login } = useAuth();
+  const [searchParams] = useSearchParams();
+  const authError = searchParams.get('error');
+  const sessionExpired = authError === 'session_expired' || authError === 'invalid_state';
 
   return (
     <div className="flex min-h-screen">
@@ -41,6 +44,28 @@ export default function LoginPage() {
               </Link>
             </p>
           </motion.div>
+
+          {/* Error messages */}
+          {sessionExpired && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className="mt-6 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800"
+            >
+              Your session has expired. Please sign in again.
+            </motion.div>
+          )}
+          {authError && !sessionExpired && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className="mt-6 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800"
+            >
+              Something went wrong. Please try again.
+            </motion.div>
+          )}
 
           <motion.div
             initial={{ opacity: 0, y: 10 }}

@@ -3,11 +3,14 @@ import {
   useContext,
   useEffect,
   useCallback,
+  useState,
   type ReactNode,
 } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/auth-store';
+import { apiClient } from '@/shared/services/api-client';
 import type { SessionUser, SocialProvider } from '@/shared/types/auth';
+import type { Chef } from '@/shared/types';
 
 const BFF_URL = import.meta.env.VITE_BFF_URL || 'https://identity.fe3dr.com';
 
@@ -16,6 +19,7 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   isLoading: boolean;
   csrfToken: string | null;
+  needsOnboarding: boolean;
   login: (provider?: SocialProvider) => void;
   register: () => void;
   logout: () => Promise<void>;
@@ -25,6 +29,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const {
     user,
     isAuthenticated,
@@ -33,10 +38,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearAuth,
     initialize,
   } = useAuthStore();
+  const [needsOnboarding, setNeedsOnboarding] = useState(false);
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
 
   useEffect(() => {
     initialize();
   }, [initialize]);
+
+  // After auth, check if chef profile exists
+  useEffect(() => {
+    if (!isAuthenticated || isLoading || onboardingChecked) return;
+
+    const checkOnboarding = async () => {
+      try {
+        const profile = await apiClient.get<Chef | null>('/chef/profile');
+        if (!profile || !profile.businessName) {
+          setNeedsOnboarding(true);
+          // Only redirect if not already on onboarding page
+          if (!location.pathname.startsWith('/onboarding')) {
+            navigate('/onboarding', { replace: true });
+          }
+        } else {
+          setNeedsOnboarding(false);
+        }
+      } catch {
+        // No profile found = new vendor, needs onboarding
+        setNeedsOnboarding(true);
+        if (!location.pathname.startsWith('/onboarding')) {
+          navigate('/onboarding', { replace: true });
+        }
+      } finally {
+        setOnboardingChecked(true);
+      }
+    };
+
+    checkOnboarding();
+  }, [isAuthenticated, isLoading, onboardingChecked, navigate, location.pathname]);
 
   const login = useCallback((provider?: SocialProvider) => {
     const params = new URLSearchParams();
@@ -64,6 +101,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Ignore - clear local state regardless
     }
     clearAuth();
+    setOnboardingChecked(false);
+    setNeedsOnboarding(false);
     navigate('/login');
   }, [clearAuth, navigate]);
 
@@ -72,6 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated,
     isLoading,
     csrfToken,
+    needsOnboarding,
     login,
     register,
     logout,

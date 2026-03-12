@@ -35,6 +35,8 @@ export interface PaginatedResponse<T> {
 }
 
 // Chef types
+export type OnboardingStatus = 'not_started' | 'in_progress' | 'submitted' | 'approved' | 'rejected';
+
 export interface Chef {
   id: string;
   userId: string;
@@ -59,7 +61,78 @@ export interface Chef {
   operatingHours: OperatingHours;
   verified: boolean;
   verifiedAt?: string;
+  onboardingStatus?: OnboardingStatus;
+  onboardingStep?: number;
   createdAt: string;
+}
+
+// Kitchen & Document types for onboarding
+export type KitchenType = 'home_kitchen' | 'cloud_kitchen' | 'shared_kitchen';
+
+export interface KitchenAddress {
+  line1: string;
+  line2?: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  landmark?: string;
+}
+
+export interface DocumentUpload {
+  id?: string;
+  type: DocumentType;
+  fileName: string;
+  fileUrl?: string;
+  status: 'pending' | 'verified' | 'rejected';
+  rejectionReason?: string;
+  uploadedAt?: string;
+}
+
+export type DocumentType =
+  | 'fssai_license'
+  | 'pan_card'
+  | 'aadhaar_card'
+  | 'kitchen_photo_1'
+  | 'kitchen_photo_2'
+  | 'kitchen_photo_3'
+  | 'food_safety_cert'
+  | 'cancelled_cheque';
+
+export interface OnboardingData {
+  // Step 1: Personal Info
+  fullName: string;
+  phone: string;
+  email: string;
+  kitchenAddress: KitchenAddress;
+
+  // Step 2: Kitchen Details
+  businessName: string;
+  description: string;
+  kitchenType: KitchenType;
+  cuisines: string[];
+  specialties: string[];
+  yearsOfExperience: string;
+  mealsPerDay: string;
+
+  // Step 3: Operations
+  prepTime: string;
+  serviceRadius: number;
+  minimumOrder: number;
+  deliveryFee: number;
+  operatingHours: OperatingHours;
+
+  // Step 4: Documents
+  fssaiLicenseNumber?: string;
+  panNumber?: string;
+  documents: DocumentUpload[];
+
+  // Step 5: Policies
+  acceptedTerms: boolean;
+  acceptedHygienePolicy: boolean;
+  acceptedCancellationPolicy: boolean;
+  bankAccountName?: string;
+  bankAccountNumber?: string;
+  bankIfscCode?: string;
 }
 
 export interface OperatingHours {

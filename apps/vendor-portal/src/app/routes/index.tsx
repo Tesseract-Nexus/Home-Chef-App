@@ -7,7 +7,9 @@ import { VendorLayout } from '@/shared/components/layout/VendorLayout';
 // Auth pages
 const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage'));
 const RegisterPage = lazy(() => import('@/features/auth/pages/RegisterPage'));
-const ForgotPasswordPage = lazy(() => import('@/features/auth/pages/ForgotPasswordPage'));
+
+// Onboarding
+const OnboardingPage = lazy(() => import('@/features/onboarding/pages/OnboardingPage'));
 
 // Feature pages
 const DashboardPage = lazy(() => import('@/features/dashboard/pages/DashboardPage'));
@@ -59,7 +61,16 @@ export function AppRoutes() {
         {/* Public routes - redirect to dashboard if already logged in */}
         <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
         <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+
+        {/* Onboarding - authenticated but no layout (standalone fullscreen wizard) */}
+        <Route
+          path="/onboarding"
+          element={
+            <ProtectedRoute>
+              <OnboardingPage />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Protected vendor routes */}
         <Route

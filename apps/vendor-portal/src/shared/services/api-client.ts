@@ -1,7 +1,7 @@
 import type { ApiResponse, ApiError } from '@/shared/types';
 
 // API calls go through the BFF proxy which handles session auth (cookies → JWT)
-const BFF_URL = import.meta.env.VITE_BFF_URL || 'https://auth.fe3dr.com';
+const BFF_URL = import.meta.env.VITE_BFF_URL || 'https://identity.fe3dr.com';
 const API_URL = `${BFF_URL}/api/v1`;
 
 interface RequestOptions extends RequestInit {
@@ -65,7 +65,8 @@ class ApiClient {
     if (response.status === 401) {
       const { useAuthStore } = await import('@/app/store/auth-store');
       useAuthStore.getState().clearAuth();
-      window.location.href = '/login';
+      // Don't hard-redirect here — the route guards (ProtectedRoute) will
+      // detect isAuthenticated=false and redirect to /login, avoiding loops.
       throw { success: false, error: { code: 'SESSION_EXPIRED', message: 'Session expired' } };
     }
 

@@ -403,6 +403,9 @@ func (h *UploadHandler) Onboarding(c *gin.Context) {
 	// Create schedules
 	h.createSchedules(&chef, req.OperatingHours)
 
+	// Seed default menu categories for the new chef
+	h.seedDefaultCategories(chef.ID)
+
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Onboarding submitted successfully",
 		"chefId":  chef.ID,
@@ -471,6 +474,33 @@ func (h *UploadHandler) createSchedules(chef *models.ChefProfile, hours map[stri
 			schedule.CloseTime = dh.Close
 		}
 		database.DB.Create(&schedule)
+	}
+}
+
+// seedDefaultCategories inserts the standard starter menu categories for a new chef.
+func (h *UploadHandler) seedDefaultCategories(chefID uuid.UUID) {
+	categories := []string{
+		"Starters & Snacks",
+		"Main Course",
+		"Rice & Biryani",
+		"Breads & Rotis",
+		"Dal & Curries",
+		"Thalis & Combos",
+		"Desserts & Sweets",
+		"Beverages",
+		"Breakfast & Tiffin",
+		"Specials of the Day",
+	}
+	for i, name := range categories {
+		cat := models.MenuCategory{
+			ChefID:    chefID,
+			Name:      name,
+			SortOrder: i,
+			IsActive:  true,
+		}
+		if err := database.DB.Create(&cat).Error; err != nil {
+			log.Printf("Failed to seed category %q for chef %s: %v", name, chefID, err)
+		}
 	}
 }
 

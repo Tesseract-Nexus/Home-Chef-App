@@ -72,14 +72,15 @@ func (h *UploadHandler) UploadDocument(c *gin.Context) {
 
 	contentType := header.Header.Get("Content-Type")
 	isPrivate := models.IsPrivateDoc(docType)
+	isPhoto := models.IsPhotoDoc(docType)
 
 	// Validate content type based on document category
-	if isPrivate && !services.IsDocContentType(contentType) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file type. Allowed: JPEG, PNG, PDF."})
+	if isPhoto && !services.IsImageContentType(contentType) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file type. Allowed: JPEG, PNG, WebP."})
 		return
 	}
-	if !isPrivate && !services.IsImageContentType(contentType) {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file type. Allowed: JPEG, PNG, WebP."})
+	if !isPhoto && !services.IsDocContentType(contentType) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file type. Allowed: JPEG, PNG, PDF."})
 		return
 	}
 

@@ -46,13 +46,26 @@ type ChefDocument struct {
 	Chef ChefProfile `gorm:"foreignKey:ChefID" json:"-"`
 }
 
-// IsPrivateDoc returns true if this document type should be stored in the private bucket
-func IsPrivateDoc(docType DocumentType) bool {
+// IsPhotoDoc returns true if this is a photo/image type (kitchen photos, profile image).
+// Photos accept JPEG, PNG, WebP. Non-photo docs accept JPEG, PNG, PDF.
+func IsPhotoDoc(docType DocumentType) bool {
 	switch docType {
-	case DocPanCard, DocAadhaarCard, DocFSSAILicense, DocFoodSafetyCert, DocCancelledCheque:
+	case DocKitchenPhoto1, DocKitchenPhoto2, DocKitchenPhoto3, DocProfileImage:
 		return true
 	default:
 		return false
+	}
+}
+
+// IsPrivateDoc returns true if this document type should be stored in the private bucket.
+// Only profile_image and menu item photos are public — everything else (ID docs, kitchen
+// photos used for verification) goes to the private bucket.
+func IsPrivateDoc(docType DocumentType) bool {
+	switch docType {
+	case DocProfileImage:
+		return false // Public: shown on chef's storefront
+	default:
+		return true // Private: ID docs, kitchen photos (for internal verification)
 	}
 }
 

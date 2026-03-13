@@ -1,6 +1,7 @@
 import type { ApiError } from '@/shared/types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
+const BFF_URL = import.meta.env.VITE_BFF_URL || 'https://identity.fe3dr.com';
 const MOCK_MODE = import.meta.env.VITE_MOCK_MODE === 'true';
 
 interface RequestOptions extends RequestInit {
@@ -9,19 +10,24 @@ interface RequestOptions extends RequestInit {
 
 class ApiClient {
   private baseUrl: string;
+  private bffUrl: string;
 
-  constructor(baseUrl: string) {
+  constructor(baseUrl: string, bffUrl: string) {
     this.baseUrl = baseUrl;
+    this.bffUrl = bffUrl;
   }
 
-  private async getCsrfToken(): Promise<string | null> {
-    // Import dynamically to avoid circular dependencies
+  private async getAuthState(): Promise<{ isAuthenticated: boolean; csrfToken: string | null }> {
     const { useAuthStore } = await import('@/app/store/auth-store');
-    return useAuthStore.getState().csrfToken;
+    const state = useAuthStore.getState();
+    return { isAuthenticated: state.isAuthenticated, csrfToken: state.csrfToken };
   }
 
-  private buildUrl(endpoint: string, params?: RequestOptions['params']): string {
-    const url = new URL(`${this.baseUrl}${endpoint}`);
+  private buildUrl(base: string, endpoint: string, params?: RequestOptions['params']): string {
+    // BFF proxies /api/* to the API, so prefix endpoint with /api/v1
+    // Direct API URL already includes /api/v1
+    const fullPath = base === this.bffUrl ? `/api/v1${endpoint}` : endpoint;
+    const url = new URL(`${base}${fullPath}`);
 
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -50,19 +56,21 @@ class ApiClient {
     }
 
     const { params, ...fetchOptions } = options;
-    const url = this.buildUrl(endpoint, params);
+    const { isAuthenticated, csrfToken } = await this.getAuthState();
+
+    // Route through BFF when authenticated so session cookie is validated
+    // and x-jwt-claim-sub header is injected for the API
+    const base = isAuthenticated ? this.bffUrl : this.baseUrl;
+    const url = this.buildUrl(base, endpoint, params);
 
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
       ...options.headers,
     };
 
-    // Add CSRF token for state-changing requests
-    if (method !== 'GET') {
-      const csrfToken = await this.getCsrfToken();
-      if (csrfToken) {
-        (headers as Record<string, string>)['X-CSRF-Token'] = csrfToken;
-      }
+    // Add CSRF token for state-changing requests (BFF requires it)
+    if (method !== 'GET' && csrfToken) {
+      (headers as Record<string, string>)['X-CSRF-Token'] = csrfToken;
     }
 
     const response = await fetch(url, {
@@ -73,14 +81,15 @@ class ApiClient {
     });
 
     if (!response.ok) {
-      const error: ApiError = await response.json().catch(() => ({
+      const body: ApiError = await response.json().catch(() => ({
         success: false,
         error: {
           code: 'UNKNOWN_ERROR',
           message: response.statusText || 'An error occurred',
         },
       }));
-      throw error;
+      // Attach HTTP status so callers can differentiate 401/403/409 etc.
+      throw Object.assign(body, { status: response.status });
     }
 
     const json = await response.json();
@@ -125,4 +134,4 @@ class ApiClient {
   }
 }
 
-export const apiClient = new ApiClient(API_URL);
+export const apiClient = new ApiClient(API_URL, BFF_URL);

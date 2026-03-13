@@ -389,9 +389,14 @@ function ChefCardItem({ chef }: { chef: Chef }) {
       return;
     }
 
-    const ok = await toggle(chef.id);
-    if (!ok && !favorited) {
+    const result = await toggle(chef.id);
+    if (result === 'max_limit') {
       toast.error('You can save up to 7 favorite chefs. Remove one first.');
+    } else if (result === 'unauthorized') {
+      toast.error('Please log in to save favorites');
+      login();
+    } else if (result === 'error') {
+      toast.error('Something went wrong. Please try again.');
     }
   };
 

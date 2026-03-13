@@ -40,6 +40,7 @@ const OrdersPage = lazyWithRetry(() => import('@/features/customer/pages/OrdersP
 const OrderDetailPage = lazyWithRetry(() => import('@/features/customer/pages/OrderDetailPage'));
 const ProfilePage = lazyWithRetry(() => import('@/features/customer/pages/ProfilePage'));
 const SocialFeedPage = lazyWithRetry(() => import('@/features/social/pages/SocialFeedPage'));
+const FavoritesPage = lazyWithRetry(() => import('@/features/customer/pages/FavoritesPage'));
 const CateringRequestPage = lazyWithRetry(() => import('@/features/catering/pages/CateringRequestPage'));
 const CateringQuotesPage = lazyWithRetry(() => import('@/features/catering/pages/CateringQuotesPage'));
 
@@ -108,6 +109,7 @@ export function AppRoutes() {
           <Route path="chefs" element={<BrowseChefsPage />} />
           <Route path="chefs/:id" element={<ChefDetailPage />} />
           <Route path="feed" element={<SocialFeedPage />} />
+          <Route path="favorites" element={<FavoritesPage />} />
           <Route
             path="cart"
             element={

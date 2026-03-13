@@ -7,9 +7,13 @@ import {
   MapPin,
   Clock,
   Filter,
+  Heart,
   X,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { apiClient } from '@/shared/services/api-client';
+import { useFavoritesStore } from '@/app/store/favorites-store';
+import { useAuth } from '@/app/providers/AuthProvider';
 import type { Chef, PaginatedResponse, ChefFilters } from '@/shared/types';
 import {
   Button,
@@ -371,6 +375,26 @@ export default function BrowseChefsPage() {
 }
 
 function ChefCardItem({ chef }: { chef: Chef }) {
+  const { isAuthenticated, login } = useAuth();
+  const { isFavorite, toggle } = useFavoritesStore();
+  const favorited = isFavorite(chef.id);
+
+  const handleFavorite = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!isAuthenticated) {
+      toast.error('Please log in to save favorites');
+      login();
+      return;
+    }
+
+    const ok = await toggle(chef.id);
+    if (!ok && !favorited) {
+      toast.error('You can save up to 7 favorite chefs. Remove one first.');
+    }
+  };
+
   return (
     <Link to={`/chefs/${chef.id}`}>
       <Card variant="default" padding="none" hover="lift" className="overflow-hidden group">
@@ -382,10 +406,20 @@ function ChefCardItem({ chef }: { chef: Chef }) {
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
           />
           {chef.verified && (
-            <Badge variant="success" size="sm" className="absolute top-2 right-2">
+            <Badge variant="success" size="sm" className="absolute top-2 left-2">
               Verified
             </Badge>
           )}
+          <button
+            onClick={handleFavorite}
+            className="absolute top-2 right-2 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-sm backdrop-blur-sm transition-all hover:bg-white hover:shadow-md"
+          >
+            <Heart
+              className={`h-4 w-4 transition-colors ${
+                favorited ? 'fill-red-500 text-red-500' : 'text-gray-600'
+              }`}
+            />
+          </button>
           <div className="absolute -bottom-8 left-4">
             <Avatar
               src={chef.profileImage}

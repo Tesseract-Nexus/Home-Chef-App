@@ -19,6 +19,8 @@ import {
 import { toast } from 'sonner';
 import { apiClient } from '@/shared/services/api-client';
 import { useCartStore } from '@/app/store/cart-store';
+import { useFavoritesStore } from '@/app/store/favorites-store';
+import { useAuth } from '@/app/providers/AuthProvider';
 import type { Chef, MenuItem, MenuCategory, Review, PaginatedResponse } from '@/shared/types';
 
 export default function ChefDetailPage() {
@@ -46,6 +48,22 @@ export default function ChefDetailPage() {
 
   const cart = useCartStore();
   const cartItemCount = cart.getItemCount();
+  const { isAuthenticated, login } = useAuth();
+  const { isFavorite, toggle } = useFavoritesStore();
+  const favorited = id ? isFavorite(id) : false;
+
+  const handleFavorite = async () => {
+    if (!isAuthenticated) {
+      toast.error('Please log in to save favorites');
+      login();
+      return;
+    }
+    if (!id) return;
+    const ok = await toggle(id);
+    if (!ok && !favorited) {
+      toast.error('You can save up to 7 favorite chefs. Remove one first.');
+    }
+  };
 
   if (chefLoading) {
     return (
@@ -116,8 +134,8 @@ export default function ChefDetailPage() {
 
                 {/* Actions */}
                 <div className="flex gap-2">
-                  <button className="btn-outline p-2">
-                    <Heart className="h-5 w-5" />
+                  <button onClick={handleFavorite} className="btn-outline p-2">
+                    <Heart className={`h-5 w-5 transition-colors ${favorited ? 'fill-red-500 text-red-500' : ''}`} />
                   </button>
                   <button className="btn-outline p-2">
                     <Share2 className="h-5 w-5" />

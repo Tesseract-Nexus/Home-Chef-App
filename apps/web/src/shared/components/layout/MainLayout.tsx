@@ -33,7 +33,7 @@ export function MainLayout() {
   const navigation = [
     { name: 'Home', href: '/', icon: Home },
     { name: 'Browse Chefs', href: '/chefs', icon: ChefHat },
-    { name: 'Feed', href: '/feed', icon: Heart },
+    { name: 'Favorites', href: '/favorites', icon: Heart },
     { name: 'Catering', href: '/catering', icon: Utensils },
   ];
 
@@ -144,6 +144,14 @@ export function MainLayout() {
                           >
                             <User className="h-4 w-4" />
                             Profile
+                          </Link>
+                          <Link
+                            to="/favorites"
+                            onClick={() => setUserMenuOpen(false)}
+                            className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                          >
+                            <Heart className="h-4 w-4" />
+                            Favorites
                           </Link>
                           <Link
                             to="/orders"

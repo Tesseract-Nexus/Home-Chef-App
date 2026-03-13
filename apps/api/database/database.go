@@ -120,6 +120,9 @@ func Migrate() error {
 		// Chef Settings
 		&models.ChefSettings{},
 
+		// Favorites
+		&models.FavoriteChef{},
+
 		// Notifications
 		&models.Notification{},
 

@@ -48,6 +48,7 @@ func SetupRouter() *gin.Engine {
 	menuHandler := handlers.NewMenuHandler()
 	locationHandler := handlers.NewLocationHandler()
 	reviewHandler := handlers.NewReviewHandler()
+	favoriteHandler := handlers.NewFavoriteHandler()
 
 	// Health check endpoints
 	r.GET("/health", healthHandler.Health)
@@ -284,6 +285,16 @@ func SetupRouter() *gin.Engine {
 		reviews.Use(middleware.AuthMiddleware())
 		{
 			reviews.POST("", reviewHandler.CreateReview)
+		}
+
+		// Favorites (authenticated customers)
+		favorites := v1.Group("/favorites")
+		favorites.Use(middleware.AuthMiddleware())
+		{
+			favorites.GET("/chefs", favoriteHandler.ListFavoriteChefs)
+			favorites.GET("/chefs/ids", favoriteHandler.ListFavoriteChefIDs)
+			favorites.POST("/chefs", favoriteHandler.AddFavoriteChef)
+			favorites.DELETE("/chefs/:chefId", favoriteHandler.RemoveFavoriteChef)
 		}
 
 		// Notifications

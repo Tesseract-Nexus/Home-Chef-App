@@ -352,3 +352,11 @@ export interface OrderFilters {
   page?: number;
   limit?: number;
 }
+
+// Favorites
+export interface FavoriteChef {
+  id: string;
+  chefId: string;
+  chef: Chef;
+  createdAt: string;
+}

@@ -21,7 +21,7 @@ export function MobileBottomNav() {
   const navItems: NavItem[] = [
     { name: 'Home', href: '/', icon: Home },
     { name: 'Chefs', href: '/chefs', icon: ChefHat },
-    { name: 'Feed', href: '/feed', icon: Heart },
+    { name: 'Favorites', href: '/favorites', icon: Heart },
     { name: 'Cart', href: '/cart', icon: ShoppingCart, badge: cartItemCount },
     { name: 'Account', href: isAuthenticated ? '/profile' : '/login', icon: User },
   ];

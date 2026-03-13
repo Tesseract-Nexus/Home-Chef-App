@@ -7,6 +7,7 @@ import {
 } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/auth-store';
+import { useFavoritesStore } from '../store/favorites-store';
 import type { SessionUser, SocialProvider } from '@/shared/types/auth';
 
 const BFF_URL = import.meta.env.VITE_BFF_URL || 'https://identity.fe3dr.com';
@@ -37,6 +38,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     initialize();
   }, [initialize]);
+
+  // Load favorite chef IDs once authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      useFavoritesStore.getState().load();
+    } else {
+      useFavoritesStore.getState().clear();
+    }
+  }, [isAuthenticated]);
 
   const login = useCallback((provider?: SocialProvider) => {
     const params = new URLSearchParams();

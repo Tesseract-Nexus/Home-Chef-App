@@ -12,7 +12,7 @@ const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 function validateFile(file: File, allowedTypes: string[], maxSize: number): string | null {
   if (!allowedTypes.includes(file.type)) {
-    const extensions = allowedTypes.map(t => t.split('/')[1].toUpperCase()).join(', ');
+    const extensions = allowedTypes.map(t => (t.split('/')[1] ?? t).toUpperCase()).join(', ');
     return `Invalid file type. Allowed: ${extensions}`;
   }
   if (file.size > maxSize) {

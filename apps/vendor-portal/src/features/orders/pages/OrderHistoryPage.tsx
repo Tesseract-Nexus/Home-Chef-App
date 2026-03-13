@@ -68,7 +68,7 @@ export default function OrderHistoryPage() {
   const cancelledCount = orders.filter((o) => o.status === 'cancelled').length;
   const totalRevenue = orders
     .filter((o) => o.status === 'delivered')
-    .reduce((sum, o) => sum + o.total, 0);
+    .reduce((sum, o) => sum + (o.total ?? 0), 0);
 
   return (
     <motion.div
@@ -187,16 +187,16 @@ export default function OrderHistoryPage() {
                     </p>
                   </div>
                   <span className="text-base font-bold text-foreground">
-                    ${order.total.toFixed(2)}
+                    ${(order.total ?? 0).toFixed(2)}
                   </span>
                 </div>
 
                 {/* Items summary */}
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span>
-                    {order.items.length} item{order.items.length !== 1 ? 's' : ''}
+                    {(order.items ?? []).length} item{(order.items ?? []).length !== 1 ? 's' : ''}
                     {' -- '}
-                    {order.items.map((item) => `${item.quantity}x ${item.name}`).join(', ')}
+                    {(order.items ?? []).map((item) => `${item.quantity}x ${item.name}`).join(', ')}
                   </span>
                 </div>
 

@@ -19,6 +19,7 @@ import { useState } from 'react';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { VendorBottomNav } from '@/shared/components/navigation';
 import { useIsMobile, useOnlineStatus } from '@/shared/hooks/useMobile';
+import { ErrorBoundary } from '@/shared/components/ErrorBoundary';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -206,7 +207,9 @@ export function VendorLayout() {
 
         {/* Page content */}
         <main className={`flex-1 overflow-y-auto p-4 lg:p-8 ${isMobile ? 'pb-20' : ''}`}>
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </main>
       </div>
 

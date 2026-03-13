@@ -153,10 +153,10 @@ export default function EarningsPage() {
     );
   }
 
-  const maxDailyAmount = Math.max(
-    ...data.dailyEarnings.map((d) => d.amount),
-    1
-  );
+  const dailyEarnings = data.dailyEarnings ?? [];
+  const maxDailyAmount = dailyEarnings.length > 0
+    ? Math.max(...dailyEarnings.map((d) => d.amount ?? 0), 1)
+    : 1;
 
   const monthOverMonthChange =
     data.lastMonthEarnings > 0
@@ -260,7 +260,7 @@ export default function EarningsPage() {
               <p className="text-sm text-gray-500">Last 14 days</p>
             </div>
             <div className="flex items-end gap-1.5 overflow-x-auto pb-2">
-              {data.dailyEarnings.map((day) => {
+              {dailyEarnings.map((day) => {
                 const heightPercent =
                   maxDailyAmount > 0
                     ? (day.amount / maxDailyAmount) * 100
@@ -308,13 +308,13 @@ export default function EarningsPage() {
                 </h2>
                 <ShoppingBag className="h-5 w-5 text-gray-400" />
               </div>
-              {data.topItems.length === 0 ? (
+              {(data.topItems ?? []).length === 0 ? (
                 <p className="py-8 text-center text-sm text-gray-400">
                   No sales data yet
                 </p>
               ) : (
                 <div className="divide-y divide-gray-100">
-                  {data.topItems.map((item, index) => (
+                  {(data.topItems ?? []).map((item, index) => (
                     <div
                       key={item.name}
                       className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
@@ -354,13 +354,13 @@ export default function EarningsPage() {
                   </Button>
                 </Link>
               </div>
-              {data.recentPayouts.length === 0 ? (
+              {(data.recentPayouts ?? []).length === 0 ? (
                 <p className="py-8 text-center text-sm text-gray-400">
                   No payouts yet
                 </p>
               ) : (
                 <div className="divide-y divide-gray-100">
-                  {data.recentPayouts.map((payout) => (
+                  {(data.recentPayouts ?? []).map((payout) => (
                     <div
                       key={payout.id}
                       className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
@@ -388,7 +388,7 @@ export default function EarningsPage() {
                 </div>
               )}
 
-              {data.recentPayouts.length > 0 && (
+              {(data.recentPayouts ?? []).length > 0 && (
                 <div className="mt-4 border-t border-gray-100 pt-4">
                   <Link
                     to="/earnings/payouts"

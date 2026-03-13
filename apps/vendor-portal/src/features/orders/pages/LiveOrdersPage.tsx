@@ -209,7 +209,7 @@ export default function LiveOrdersPage() {
                   {/* Items */}
                   <div className="rounded-lg bg-secondary/50 p-3">
                     <div className="space-y-1.5">
-                      {order.items.map((item) => (
+                      {(order.items ?? []).map((item) => (
                         <div
                           key={item.id}
                           className="flex items-center justify-between text-sm"
@@ -218,7 +218,7 @@ export default function LiveOrdersPage() {
                             {item.quantity}x {item.name}
                           </span>
                           <span className="font-medium text-foreground">
-                            ${item.subtotal.toFixed(2)}
+                            ${(item.subtotal ?? 0).toFixed(2)}
                           </span>
                         </div>
                       ))}
@@ -233,10 +233,10 @@ export default function LiveOrdersPage() {
                   {/* Total */}
                   <div className="flex items-center justify-between border-t border-border pt-3">
                     <span className="text-sm font-medium text-muted-foreground">
-                      {order.items.length} item{order.items.length !== 1 ? 's' : ''} total
+                      {(order.items ?? []).length} item{(order.items ?? []).length !== 1 ? 's' : ''} total
                     </span>
                     <span className="text-lg font-bold text-foreground">
-                      ${order.total.toFixed(2)}
+                      ${(order.total ?? 0).toFixed(2)}
                     </span>
                   </div>
 

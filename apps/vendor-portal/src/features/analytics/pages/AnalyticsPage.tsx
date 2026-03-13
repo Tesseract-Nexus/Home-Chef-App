@@ -29,9 +29,15 @@ export default function AnalyticsPage() {
     );
   }
 
-  const maxOrders = Math.max(...analytics.orderTrends.data, 1);
-  const maxRevenue = Math.max(...analytics.revenueTrends.data, 1);
-  const maxPeakHour = Math.max(...analytics.peakHours.map((h) => h.orders), 1);
+  const orderData = analytics.orderTrends?.data ?? [];
+  const revenueData = analytics.revenueTrends?.data ?? [];
+  const peakHours = analytics.peakHours ?? [];
+  const popularItems = analytics.popularItems ?? [];
+  const revenueByCategory = analytics.revenueByCategory ?? [];
+
+  const maxOrders = orderData.length > 0 ? Math.max(...orderData, 1) : 1;
+  const maxRevenue = revenueData.length > 0 ? Math.max(...revenueData, 1) : 1;
+  const maxPeakHour = peakHours.length > 0 ? Math.max(...peakHours.map((h) => h.orders ?? 0), 1) : 1;
 
   return (
     <motion.div variants={staggerContainer} initial="hidden" animate="visible" className="space-y-6">
@@ -63,15 +69,15 @@ export default function AnalyticsPage() {
           <h2 className="text-lg font-semibold text-gray-900">Order Trends</h2>
         </div>
         <div className="flex items-end gap-2" style={{ height: 200 }}>
-          {analytics.orderTrends.labels.map((label, i) => (
+          {(analytics.orderTrends?.labels ?? []).map((label, i) => (
             <div key={label} className="flex flex-1 flex-col items-center gap-1">
               <span className="text-xs font-medium text-gray-700">
-                {analytics.orderTrends.data[i]}
+                {(orderData[i] ?? 0)}
               </span>
               <div
                 className="w-full rounded-t-md bg-brand-500 transition-all"
                 style={{
-                  height: `${((analytics.orderTrends.data[i] ?? 0) / maxOrders) * 160}px`,
+                  height: `${(((orderData[i] ?? 0) ?? 0) / maxOrders) * 160}px`,
                   minHeight: 4,
                 }}
               />
@@ -88,15 +94,15 @@ export default function AnalyticsPage() {
           <h2 className="text-lg font-semibold text-gray-900">Revenue Trends</h2>
         </div>
         <div className="flex items-end gap-2" style={{ height: 200 }}>
-          {analytics.revenueTrends.labels.map((label, i) => (
+          {(analytics.revenueTrends?.labels ?? []).map((label, i) => (
             <div key={label} className="flex flex-1 flex-col items-center gap-1">
               <span className="text-xs font-medium text-gray-700">
-                ${analytics.revenueTrends.data[i]}
+                ${(revenueData[i] ?? 0)}
               </span>
               <div
                 className="w-full rounded-t-md bg-green-500 transition-all"
                 style={{
-                  height: `${((analytics.revenueTrends.data[i] ?? 0) / maxRevenue) * 160}px`,
+                  height: `${(((revenueData[i] ?? 0) ?? 0) / maxRevenue) * 160}px`,
                   minHeight: 4,
                 }}
               />
@@ -114,7 +120,7 @@ export default function AnalyticsPage() {
             <h2 className="text-lg font-semibold text-gray-900">Popular Items</h2>
           </div>
           <div className="space-y-4">
-            {analytics.popularItems.map((item, i) => (
+            {popularItems.map((item, i) => (
               <div key={item.name} className="flex items-center gap-3">
                 <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-600">
                   {i + 1}
@@ -143,11 +149,11 @@ export default function AnalyticsPage() {
             <h2 className="text-lg font-semibold text-gray-900">Revenue by Category</h2>
           </div>
           <div className="space-y-4">
-            {analytics.revenueByCategory.map((cat) => (
+            {revenueByCategory.map((cat) => (
               <div key={cat.category}>
                 <div className="flex items-center justify-between text-sm">
                   <span className="font-medium text-gray-900">{cat.category}</span>
-                  <span className="text-gray-500">${cat.revenue.toFixed(2)} ({cat.percentage}%)</span>
+                  <span className="text-gray-500">${(cat.revenue ?? 0).toFixed(2)} ({cat.percentage ?? 0}%)</span>
                 </div>
                 <div className="mt-1 h-2 rounded-full bg-gray-100">
                   <div
@@ -168,7 +174,7 @@ export default function AnalyticsPage() {
           <h2 className="text-lg font-semibold text-gray-900">Peak Hours</h2>
         </div>
         <div className="flex items-end gap-1 overflow-x-auto" style={{ height: 200 }}>
-          {analytics.peakHours.map((item) => (
+          {peakHours.map((item) => (
             <div key={item.hour} className="flex min-w-[40px] flex-1 flex-col items-center gap-1">
               <span className="text-xs font-medium text-gray-700">{item.orders}</span>
               <div

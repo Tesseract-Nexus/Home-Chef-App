@@ -249,14 +249,14 @@ function PendingOrderCard({
           </div>
           <p className="mt-1 text-sm text-gray-600">{order.customerName}</p>
           <div className="mt-2 space-y-0.5">
-            {order.items.slice(0, 3).map((item, i) => (
+            {(order.items ?? []).slice(0, 3).map((item, i) => (
               <p key={i} className="text-xs text-gray-500">
                 {item.quantity}x {item.name}
               </p>
             ))}
-            {order.items.length > 3 && (
+            {(order.items ?? []).length > 3 && (
               <p className="text-xs text-gray-400">
-                +{order.items.length - 3} more items
+                +{(order.items ?? []).length - 3} more items
               </p>
             )}
           </div>
@@ -355,7 +355,7 @@ function RecentOrdersTable({ orders }: { orders: Order[] }) {
                   {order.customerName}
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-500">
-                  {order.items.length} item{order.items.length !== 1 && 's'}
+                  {(order.items ?? []).length} item{(order.items ?? []).length !== 1 && 's'}
                 </td>
                 <td className="whitespace-nowrap px-6 py-4 text-sm font-semibold text-gray-900">
                   {formatCurrency(order.total)}
@@ -384,8 +384,8 @@ function RecentOrdersTable({ orders }: { orders: Order[] }) {
                 <OrderStatusBadge status={order.status} size="sm" />
               </div>
               <p className="mt-0.5 text-xs text-gray-500">
-                {order.customerName} &middot; {order.items.length} item
-                {order.items.length !== 1 && 's'}
+                {order.customerName} &middot; {(order.items ?? []).length} item
+                {(order.items ?? []).length !== 1 && 's'}
               </p>
             </div>
             <div className="text-right">

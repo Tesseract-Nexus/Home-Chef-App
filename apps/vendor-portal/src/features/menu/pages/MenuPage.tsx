@@ -414,9 +414,9 @@ function MenuItemCard({
         </div>
 
         {/* Dietary tags */}
-        {item.dietaryTags.length > 0 && (
+        {(item.dietaryTags ?? []).length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1">
-            {item.dietaryTags.map((tag) => (
+            {(item.dietaryTags ?? []).map((tag) => (
               <Badge key={tag} variant="outline" size="sm">
                 {tag}
               </Badge>

@@ -246,7 +246,7 @@ export default function MenuItemFormPage() {
   const isSubmitting = createItem.isPending || updateItem.isPending;
 
   const watchedImageUrl = watch('imageUrl');
-  const watchedDietaryTags = watch('dietaryTags');
+  const watchedDietaryTags = watch('dietaryTags') ?? [];
 
   // Loading state for edit mode
   if (isEditMode && isLoadingItem) {
@@ -384,7 +384,8 @@ export default function MenuItemFormPage() {
                   render={({ field }) => (
                     <div className="flex flex-wrap gap-2">
                       {DIETARY_TAG_OPTIONS.map((option) => {
-                        const isChecked = field.value.includes(option.value);
+                        const tags = field.value ?? [];
+                        const isChecked = tags.includes(option.value);
                         return (
                           <label
                             key={option.value}
@@ -401,13 +402,13 @@ export default function MenuItemFormPage() {
                               onChange={() => {
                                 if (isChecked) {
                                   field.onChange(
-                                    field.value.filter(
+                                    tags.filter(
                                       (v) => v !== option.value
                                     )
                                   );
                                 } else {
                                   field.onChange([
-                                    ...field.value,
+                                    ...tags,
                                     option.value,
                                   ]);
                                 }

@@ -34,7 +34,7 @@ const initialData: OnboardingData = {
   fullName: '',
   phone: '',
   email: '',
-  kitchenAddress: { line1: '', city: '', state: '', postalCode: '' },
+  kitchenAddress: { line1: '', country: 'IN', city: '', state: '', postalCode: '' },
   businessName: '',
   description: '',
   kitchenType: 'home_kitchen',

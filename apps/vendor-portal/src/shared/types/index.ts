@@ -73,6 +73,7 @@ export type KitchenType = 'home_kitchen' | 'cloud_kitchen' | 'shared_kitchen';
 export interface KitchenAddress {
   line1: string;
   line2?: string;
+  country: string;
   city: string;
   state: string;
   postalCode: string;

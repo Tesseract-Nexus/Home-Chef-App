@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useOnboardingStore } from '@/app/store/onboarding-store';
 import { Input } from '@/shared/components/ui/Input';
@@ -6,24 +6,126 @@ import { Card } from '@/shared/components/ui/Card';
 import { FileUpload } from '@tesserix/web';
 import { User, Phone, Mail, MapPin, Camera, Loader2 } from 'lucide-react';
 import { uploadProfileImage } from '@/shared/services/upload-service';
+import { apiClient } from '@/shared/services/api-client';
 
 interface Props {
   errors: Record<string, string>;
 }
 
-const STATES = [
-  'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
-  'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka',
-  'Kerala', 'Madhya Pradesh', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram',
-  'Nagaland', 'Odisha', 'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu',
-  'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
-  'Delhi', 'Chandigarh', 'Puducherry',
-];
+interface Country {
+  id: string;
+  code: string;
+  name: string;
+  phoneCode: string;
+}
+
+interface StateItem {
+  id: string;
+  code: string;
+  name: string;
+}
+
+interface City {
+  id: string;
+  name: string;
+  isMajor: boolean;
+}
+
+interface Postcode {
+  id: string;
+  code: string;
+  areaName: string;
+}
+
+const selectClass =
+  'w-full rounded-lg border-2 border-input bg-background px-4 py-2.5 text-sm shadow-sm transition-all hover:border-primary/30 focus:border-ring focus:outline-none focus:ring-4 focus:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50';
 
 export function StepPersonalInfo({ errors }: Props) {
   const { data, updateData, updateAddress } = useOnboardingStore();
   const [avatarFiles, setAvatarFiles] = useState<File[]>([]);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [states, setStates] = useState<StateItem[]>([]);
+  const [cities, setCities] = useState<City[]>([]);
+  const [postcodes, setPostcodes] = useState<Postcode[]>([]);
+
+  const [loadingStates, setLoadingStates] = useState(false);
+  const [loadingCities, setLoadingCities] = useState(false);
+  const [loadingPostcodes, setLoadingPostcodes] = useState(false);
+
+  // Fetch countries on mount
+  useEffect(() => {
+    apiClient.get<Country[]>('/locations/countries').then(setCountries).catch(() => {});
+  }, []);
+
+  // Fetch states when country changes
+  useEffect(() => {
+    if (!data.kitchenAddress.country) {
+      setStates([]);
+      return;
+    }
+    setLoadingStates(true);
+    apiClient
+      .get<StateItem[]>(`/locations/countries/${data.kitchenAddress.country}/states`)
+      .then(setStates)
+      .catch(() => setStates([]))
+      .finally(() => setLoadingStates(false));
+  }, [data.kitchenAddress.country]);
+
+  // Fetch cities when state changes
+  useEffect(() => {
+    if (!data.kitchenAddress.state) {
+      setCities([]);
+      return;
+    }
+    const stateObj = states.find((s) => s.name === data.kitchenAddress.state);
+    if (!stateObj) return;
+    setLoadingCities(true);
+    apiClient
+      .get<City[]>(`/locations/states/${stateObj.code}/cities`, { country: data.kitchenAddress.country })
+      .then(setCities)
+      .catch(() => setCities([]))
+      .finally(() => setLoadingCities(false));
+  }, [data.kitchenAddress.state, states, data.kitchenAddress.country]);
+
+  // Fetch postcodes when city changes
+  useEffect(() => {
+    if (!data.kitchenAddress.city) {
+      setPostcodes([]);
+      return;
+    }
+    const stateObj = states.find((s) => s.name === data.kitchenAddress.state);
+    if (!stateObj) return;
+    setLoadingPostcodes(true);
+    apiClient
+      .get<Postcode[]>(`/locations/cities/${encodeURIComponent(data.kitchenAddress.city)}/postcodes`, { state: stateObj.code })
+      .then(setPostcodes)
+      .catch(() => setPostcodes([]))
+      .finally(() => setLoadingPostcodes(false));
+  }, [data.kitchenAddress.city, states, data.kitchenAddress.state]);
+
+  const handleCountryChange = (code: string) => {
+    updateAddress({ country: code, state: '', city: '', postalCode: '' });
+    setStates([]);
+    setCities([]);
+    setPostcodes([]);
+  };
+
+  const handleStateChange = (name: string) => {
+    updateAddress({ state: name, city: '', postalCode: '' });
+    setCities([]);
+    setPostcodes([]);
+  };
+
+  const handleCityChange = (name: string) => {
+    updateAddress({ city: name, postalCode: '' });
+    setPostcodes([]);
+  };
+
+  const handlePostcodeChange = (code: string) => {
+    updateAddress({ postalCode: code });
+  };
 
   const handleAvatarChange = async (newFiles: File[]) => {
     if (newFiles.length > 0) {
@@ -45,6 +147,8 @@ export function StepPersonalInfo({ errors }: Props) {
       updateData({ profileImage: undefined });
     }
   };
+
+  const selectedCountry = countries.find((c) => c.code === data.kitchenAddress.country);
 
   return (
     <div className="space-y-6">
@@ -104,7 +208,7 @@ export function StepPersonalInfo({ errors }: Props) {
             <Input
               label="Phone Number"
               type="tel"
-              placeholder="+91 98765 43210"
+              placeholder={selectedCountry ? `${selectedCountry.phoneCode} ...` : '+91 98765 43210'}
               value={data.phone}
               onChange={(e) => updateData({ phone: e.target.value })}
               leftIcon={<Phone className="h-4 w-4" />}
@@ -153,37 +257,87 @@ export function StepPersonalInfo({ errors }: Props) {
             value={data.kitchenAddress.landmark || ''}
             onChange={(e) => updateAddress({ landmark: e.target.value })}
           />
+
+          {/* Country */}
+          <div className="w-full">
+            <label className="mb-1.5 block text-sm font-medium text-foreground">Country</label>
+            <select
+              value={data.kitchenAddress.country}
+              onChange={(e) => handleCountryChange(e.target.value)}
+              className={selectClass}
+            >
+              <option value="">Select country</option>
+              {countries.map((c) => (
+                <option key={c.code} value={c.code}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-3">
-            <Input
-              label="City"
-              placeholder="e.g. Mumbai"
-              value={data.kitchenAddress.city}
-              onChange={(e) => updateAddress({ city: e.target.value })}
-              error={errors['kitchenAddress.city']}
-            />
+            {/* State */}
             <div className="w-full">
               <label className="mb-1.5 block text-sm font-medium text-foreground">State</label>
               <select
                 value={data.kitchenAddress.state}
-                onChange={(e) => updateAddress({ state: e.target.value })}
-                className="w-full rounded-lg border-2 border-input bg-background px-4 py-2.5 text-sm shadow-sm transition-all hover:border-primary/30 focus:border-ring focus:outline-none focus:ring-4 focus:ring-ring/20"
+                onChange={(e) => handleStateChange(e.target.value)}
+                className={selectClass}
+                disabled={!data.kitchenAddress.country || loadingStates}
               >
-                <option value="">Select state</option>
-                {STATES.map((s) => (
-                  <option key={s} value={s}>{s}</option>
+                <option value="">{loadingStates ? 'Loading...' : 'Select state'}</option>
+                {states.map((s) => (
+                  <option key={s.id} value={s.name}>
+                    {s.name}
+                  </option>
                 ))}
               </select>
               {errors['kitchenAddress.state'] && (
                 <p className="mt-1.5 text-sm text-destructive">{errors['kitchenAddress.state']}</p>
               )}
             </div>
-            <Input
-              label="PIN Code"
-              placeholder="400001"
-              value={data.kitchenAddress.postalCode}
-              onChange={(e) => updateAddress({ postalCode: e.target.value })}
-              error={errors['kitchenAddress.postalCode']}
-            />
+
+            {/* City */}
+            <div className="w-full">
+              <label className="mb-1.5 block text-sm font-medium text-foreground">City</label>
+              <select
+                value={data.kitchenAddress.city}
+                onChange={(e) => handleCityChange(e.target.value)}
+                className={selectClass}
+                disabled={!data.kitchenAddress.state || loadingCities}
+              >
+                <option value="">{loadingCities ? 'Loading...' : 'Select city'}</option>
+                {cities.map((c) => (
+                  <option key={c.id} value={c.name}>
+                    {c.name} {c.isMajor ? '(Major)' : ''}
+                  </option>
+                ))}
+              </select>
+              {errors['kitchenAddress.city'] && (
+                <p className="mt-1.5 text-sm text-destructive">{errors['kitchenAddress.city']}</p>
+              )}
+            </div>
+
+            {/* Postcode / PIN Code */}
+            <div className="w-full">
+              <label className="mb-1.5 block text-sm font-medium text-foreground">PIN Code</label>
+              <select
+                value={data.kitchenAddress.postalCode}
+                onChange={(e) => handlePostcodeChange(e.target.value)}
+                className={selectClass}
+                disabled={!data.kitchenAddress.city || loadingPostcodes}
+              >
+                <option value="">{loadingPostcodes ? 'Loading...' : 'Select PIN code'}</option>
+                {postcodes.map((p) => (
+                  <option key={p.id} value={p.code}>
+                    {p.code} {p.areaName ? `— ${p.areaName}` : ''}
+                  </option>
+                ))}
+              </select>
+              {errors['kitchenAddress.postalCode'] && (
+                <p className="mt-1.5 text-sm text-destructive">{errors['kitchenAddress.postalCode']}</p>
+              )}
+            </div>
           </div>
         </div>
       </Card>

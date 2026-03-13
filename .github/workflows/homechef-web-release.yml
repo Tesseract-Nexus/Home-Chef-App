@@ -94,7 +94,7 @@ jobs:
           cache-to: type=registry,ref=${{ steps.cache.outputs.ref }},mode=max
           platforms: linux/amd64,linux/arm64
           secrets: |
-            npm_token=${{ secrets.GITHUB_TOKEN }}
+            npm_token=${{ secrets.NPM_TOKEN }}
           build-args: |
             VITE_API_URL=${{ vars.VITE_API_URL || 'https://homechef.tesseracthub.com/api' }}
             VERSION=${{ steps.version.outputs.version }}

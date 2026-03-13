@@ -195,7 +195,57 @@ func (h *ChefHandler) GetChefProfile(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, chef.ToResponse())
+	// Load schedules and convert to operatingHours map
+	var schedules []models.ChefSchedule
+	database.DB.Where("chef_id = ?", chef.ID).Find(&schedules)
+
+	dayNames := map[int]string{
+		0: "sunday", 1: "monday", 2: "tuesday", 3: "wednesday",
+		4: "thursday", 5: "friday", 6: "saturday",
+	}
+
+	operatingHours := make(map[string]interface{})
+	for _, s := range schedules {
+		name, ok := dayNames[s.DayOfWeek]
+		if !ok {
+			continue
+		}
+		if s.IsClosed {
+			// Don't include closed days — frontend treats missing = closed
+			continue
+		}
+		operatingHours[name] = map[string]string{
+			"open":  s.OpenTime,
+			"close": s.CloseTime,
+		}
+	}
+
+	resp := chef.ToResponse()
+	// Merge profile response with operating hours
+	result := map[string]interface{}{
+		"id":              resp.ID,
+		"userId":          resp.UserID,
+		"businessName":    resp.BusinessName,
+		"description":     resp.Description,
+		"profileImage":    resp.ProfileImage,
+		"bannerImage":     resp.BannerImage,
+		"cuisines":        resp.Cuisines,
+		"specialties":     resp.Specialties,
+		"prepTime":        resp.PrepTime,
+		"minimumOrder":    resp.MinimumOrder,
+		"serviceRadius":   resp.ServiceRadius,
+		"rating":          resp.Rating,
+		"totalReviews":    resp.TotalReviews,
+		"totalOrders":     resp.TotalOrders,
+		"verified":        resp.IsVerified,
+		"acceptingOrders": resp.AcceptingOrders,
+		"kitchenPhotos":   resp.KitchenPhotos,
+		"city":            resp.City,
+		"state":           resp.State,
+		"operatingHours":  operatingHours,
+	}
+
+	c.JSON(http.StatusOK, result)
 }
 
 // GetChefDashboard returns the chef's dashboard data
@@ -249,16 +299,22 @@ func (h *ChefHandler) GetChefDashboard(c *gin.Context) {
 
 // UpdateChefProfileRequest represents chef profile update
 type UpdateChefProfileRequest struct {
-	BusinessName    string   `json:"businessName"`
-	Description     string   `json:"description"`
-	ProfileImage    string   `json:"profileImage"`
-	BannerImage     string   `json:"bannerImage"`
-	Cuisines        []string `json:"cuisines"`
-	Specialties     []string `json:"specialties"`
-	PrepTime        string   `json:"prepTime"`
-	MinimumOrder    float64  `json:"minimumOrder"`
-	ServiceRadius   float64  `json:"serviceRadius"`
-	AcceptingOrders *bool    `json:"acceptingOrders"`
+	BusinessName    string                       `json:"businessName"`
+	Description     string                       `json:"description"`
+	ProfileImage    string                       `json:"profileImage"`
+	BannerImage     string                       `json:"bannerImage"`
+	Cuisines        []string                     `json:"cuisines"`
+	Specialties     []string                     `json:"specialties"`
+	PrepTime        string                       `json:"prepTime"`
+	MinimumOrder    float64                      `json:"minimumOrder"`
+	ServiceRadius   float64                      `json:"serviceRadius"`
+	AcceptingOrders *bool                        `json:"acceptingOrders"`
+	OperatingHours  map[string]*DayHoursUpdate   `json:"operatingHours"`
+}
+
+type DayHoursUpdate struct {
+	Open  string `json:"open"`
+	Close string `json:"close"`
 }
 
 // UpdateChefProfile updates the chef's profile
@@ -312,6 +368,31 @@ func (h *ChefHandler) UpdateChefProfile(c *gin.Context) {
 	if err := database.DB.Save(&chef).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile"})
 		return
+	}
+
+	// Update operating hours if provided
+	if req.OperatingHours != nil {
+		dayMap := map[string]int{
+			"sunday": 0, "monday": 1, "tuesday": 2, "wednesday": 3,
+			"thursday": 4, "friday": 5, "saturday": 6,
+		}
+
+		// Delete existing schedules and recreate
+		database.DB.Where("chef_id = ?", chef.ID).Delete(&models.ChefSchedule{})
+
+		for day, dayNum := range dayMap {
+			schedule := models.ChefSchedule{
+				ChefID:    chef.ID,
+				DayOfWeek: dayNum,
+				IsClosed:  true,
+			}
+			if dh, ok := req.OperatingHours[day]; ok && dh != nil {
+				schedule.IsClosed = false
+				schedule.OpenTime = dh.Open
+				schedule.CloseTime = dh.Close
+			}
+			database.DB.Create(&schedule)
+		}
 	}
 
 	c.JSON(http.StatusOK, chef.ToResponse())

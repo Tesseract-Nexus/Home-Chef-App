@@ -16,6 +16,10 @@ import {
   Camera,
   Check,
   UtensilsCrossed,
+  Lock,
+  Eye,
+  EyeOff,
+  Info,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/app/providers/AuthProvider';
@@ -23,6 +27,7 @@ import { apiClient } from '@/shared/services/api-client';
 import { usePreferences } from '@/shared/hooks/usePreferences';
 import { Badge } from '@/shared/components/ui/Badge';
 import { Button } from '@/shared/components/ui/Button';
+import { Input } from '@/shared/components/ui/Input';
 import { cn } from '@/shared/utils/cn';
 import type { Address, CustomerProfile } from '@/shared/types';
 
@@ -781,68 +786,153 @@ function NotificationsTab() {
 
 function SecurityTab() {
   const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [authProvider, setAuthProvider] = useState<string>('email');
+
+  useEffect(() => {
+    apiClient.get<CustomerProfile>('/customer/profile').then((profile) => {
+      setAuthProvider(profile.authProvider || 'email');
+    }).catch(() => {});
+  }, []);
+
+  const isSocialLogin = authProvider !== 'email';
+
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      toast.error('Passwords do not match');
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast.error('Password must be at least 8 characters');
+      return;
+    }
+    setSaving(true);
+    try {
+      await apiClient.put('/profile/password', {
+        currentPassword,
+        newPassword,
+      });
+      toast.success('Password updated successfully');
+      setShowPasswordForm(false);
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch {
+      toast.error('Failed to update password');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
+      {/* Password Section */}
       <div className="rounded-xl bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-gray-900">Password</h2>
         <p className="mt-1 text-sm text-gray-500">
           Change your password to keep your account secure
         </p>
 
-        {showPasswordForm ? (
-          <form className="mt-6 space-y-4">
+        {isSocialLogin ? (
+          <div className="mt-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
+            <Info className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
             <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Current password
-              </label>
-              <input type="password" className="input-base mt-1" />
+              <p className="text-sm font-medium text-amber-800">
+                Password change is not available
+              </p>
+              <p className="mt-1 text-sm text-amber-700">
+                Your account uses {authProvider.charAt(0).toUpperCase() + authProvider.slice(1)} sign-in.
+                Password management is handled by your {authProvider.charAt(0).toUpperCase() + authProvider.slice(1)} account.
+              </p>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                New password
-              </label>
-              <input type="password" className="input-base mt-1" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">
-                Confirm new password
-              </label>
-              <input type="password" className="input-base mt-1" />
-            </div>
-            <div className="flex gap-3">
-              <button type="submit" className="btn-primary">
+          </div>
+        ) : showPasswordForm ? (
+          <form onSubmit={handleChangePassword} className="mt-6 space-y-4">
+            <Input
+              label="Current password"
+              type={showCurrent ? 'text' : 'password'}
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              leftIcon={<Lock className="h-4 w-4" />}
+              rightIcon={
+                <button type="button" onClick={() => setShowCurrent(!showCurrent)} className="cursor-pointer">
+                  {showCurrent ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              }
+              required
+            />
+            <Input
+              label="New password"
+              type={showNew ? 'text' : 'password'}
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              leftIcon={<Lock className="h-4 w-4" />}
+              rightIcon={
+                <button type="button" onClick={() => setShowNew(!showNew)} className="cursor-pointer">
+                  {showNew ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              }
+              hint="Must be at least 8 characters"
+              required
+            />
+            <Input
+              label="Confirm new password"
+              type={showConfirm ? 'text' : 'password'}
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              leftIcon={<Lock className="h-4 w-4" />}
+              rightIcon={
+                <button type="button" onClick={() => setShowConfirm(!showConfirm)} className="cursor-pointer">
+                  {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              }
+              error={confirmPassword && newPassword !== confirmPassword ? 'Passwords do not match' : undefined}
+              required
+            />
+            <div className="flex gap-3 pt-2">
+              <Button type="submit" variant="primary" isLoading={saving}>
                 Update Password
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                onClick={() => setShowPasswordForm(false)}
-                className="btn-outline"
+                variant="outline"
+                onClick={() => {
+                  setShowPasswordForm(false);
+                  setCurrentPassword('');
+                  setNewPassword('');
+                  setConfirmPassword('');
+                }}
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           </form>
         ) : (
-          <button
-            onClick={() => setShowPasswordForm(true)}
-            className="btn-outline mt-4"
-          >
+          <Button variant="outline" className="mt-4" onClick={() => setShowPasswordForm(true)}>
             Change Password
-          </button>
+          </Button>
         )}
       </div>
 
+      {/* 2FA Section */}
       <div className="rounded-xl bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-gray-900">Two-Factor Authentication</h2>
         <p className="mt-1 text-sm text-gray-500">
           Add an extra layer of security to your account
         </p>
-        <button className="btn-outline mt-4">
+        <Button variant="outline" className="mt-4">
           Enable 2FA
-        </button>
+        </Button>
       </div>
 
+      {/* Connected Accounts Section */}
       <div className="rounded-xl bg-white p-6 shadow-sm">
         <h2 className="text-lg font-semibold text-gray-900">Connected Accounts</h2>
         <p className="mt-1 text-sm text-gray-500">
@@ -851,38 +941,39 @@ function SecurityTab() {
 
         <div className="mt-4 space-y-3">
           {[
-            { name: 'Google', connected: true },
-            { name: 'Facebook', connected: false },
-            { name: 'Apple', connected: false },
+            { name: 'Google', provider: 'google' },
+            { name: 'Facebook', provider: 'facebook' },
+            { name: 'Apple', provider: 'apple' },
           ].map((account) => (
             <div
               key={account.name}
-              className="flex items-center justify-between rounded-lg border p-3"
+              className="flex items-center justify-between rounded-lg border border-gray-200 p-3"
             >
               <span className="font-medium text-gray-900">{account.name}</span>
-              {account.connected ? (
+              {authProvider === account.provider ? (
                 <span className="flex items-center gap-1 text-sm text-green-600">
                   <Check className="h-4 w-4" />
                   Connected
                 </span>
               ) : (
-                <button className="text-sm text-brand-600 hover:text-brand-700">
+                <Button variant="ghost" size="sm">
                   Connect
-                </button>
+                </Button>
               )}
             </div>
           ))}
         </div>
       </div>
 
+      {/* Delete Account Section */}
       <div className="rounded-xl bg-red-50 p-6">
         <h2 className="text-lg font-semibold text-red-800">Delete Account</h2>
         <p className="mt-1 text-sm text-red-600">
           Once you delete your account, there is no going back. Please be certain.
         </p>
-        <button className="btn-base mt-4 bg-red-600 text-white hover:bg-red-700">
+        <Button variant="destructive" className="mt-4">
           Delete Account
-        </button>
+        </Button>
       </div>
     </div>
   );

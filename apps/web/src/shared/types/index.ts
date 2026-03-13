@@ -370,6 +370,7 @@ export interface CustomerProfile {
   householdSize: string;
   onboardingCompleted: boolean;
   onboardingStep: number;
+  authProvider: 'email' | 'google' | 'facebook' | 'apple';
 }
 
 export interface OnboardingStatus {

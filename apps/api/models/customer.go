@@ -38,8 +38,9 @@ type CustomerProfileResponse struct {
 	CuisinePreferences  []string   `json:"cuisinePreferences"`
 	SpiceTolerance      string     `json:"spiceTolerance"`
 	HouseholdSize       string     `json:"householdSize"`
-	OnboardingCompleted bool       `json:"onboardingCompleted"`
-	OnboardingStep      int        `json:"onboardingStep"`
+	OnboardingCompleted bool         `json:"onboardingCompleted"`
+	OnboardingStep      int          `json:"onboardingStep"`
+	AuthProvider        AuthProvider `json:"authProvider"`
 }
 
 func (cp *CustomerProfile) ToResponse(user *User) CustomerProfileResponse {
@@ -72,5 +73,6 @@ func (cp *CustomerProfile) ToResponse(user *User) CustomerProfileResponse {
 		HouseholdSize:       cp.HouseholdSize,
 		OnboardingCompleted: cp.OnboardingCompleted,
 		OnboardingStep:      cp.OnboardingStep,
+		AuthProvider:        user.AuthProvider,
 	}
 }

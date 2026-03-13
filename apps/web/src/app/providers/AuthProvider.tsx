@@ -5,10 +5,12 @@ import {
   useCallback,
   type ReactNode,
 } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/auth-store';
 import { useFavoritesStore } from '../store/favorites-store';
+import { apiClient } from '@/shared/services/api-client';
 import type { SessionUser, SocialProvider } from '@/shared/types/auth';
+import type { OnboardingStatus } from '@/shared/types';
 
 const BFF_URL = import.meta.env.VITE_BFF_URL || 'https://identity.fe3dr.com';
 
@@ -26,12 +28,15 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const {
     user,
     isAuthenticated,
     isLoading,
     csrfToken,
+    onboardingCompleted,
     clearAuth,
+    setOnboardingCompleted,
     initialize,
   } = useAuthStore();
 
@@ -47,6 +52,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       useFavoritesStore.getState().clear();
     }
   }, [isAuthenticated]);
+
+  // Check onboarding status after auth resolves
+  useEffect(() => {
+    if (!isAuthenticated || isLoading || onboardingCompleted !== null) return;
+
+    // Only check for customer role users
+    const isCustomer = !user?.roles || user.roles.includes('customer');
+    if (!isCustomer) {
+      setOnboardingCompleted(true);
+      return;
+    }
+
+    apiClient
+      .get<OnboardingStatus>('/customer/onboarding/status')
+      .then((status) => {
+        setOnboardingCompleted(status.onboardingCompleted);
+        if (!status.onboardingCompleted && location.pathname !== '/user-info') {
+          navigate('/user-info', { replace: true });
+        }
+      })
+      .catch(() => {
+        // If the check fails, don't block the user
+        setOnboardingCompleted(true);
+      });
+  }, [isAuthenticated, isLoading, onboardingCompleted, user, navigate, location.pathname, setOnboardingCompleted]);
 
   const login = useCallback((provider?: SocialProvider) => {
     const params = new URLSearchParams();

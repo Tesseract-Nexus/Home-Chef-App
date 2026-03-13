@@ -353,6 +353,33 @@ export interface OrderFilters {
   limit?: number;
 }
 
+// Customer profile types
+export interface CustomerProfile {
+  id: string;
+  userId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone?: string;
+  avatar?: string;
+  dateOfBirth?: string;
+  dietaryPreferences: string[];
+  foodAllergies: string[];
+  cuisinePreferences: string[];
+  spiceTolerance: string;
+  householdSize: string;
+  onboardingCompleted: boolean;
+  onboardingStep: number;
+}
+
+export interface OnboardingStatus {
+  onboardingCompleted: boolean;
+  onboardingStep: number;
+}
+
+export type SpiceTolerance = 'mild' | 'medium' | 'hot' | 'extra_hot';
+export type HouseholdSize = '1' | '2' | '3-4' | '5-6' | '7+';
+
 // Favorites
 export interface FavoriteChef {
   id: string;

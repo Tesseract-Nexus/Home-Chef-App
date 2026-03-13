@@ -49,6 +49,8 @@ func SetupRouter() *gin.Engine {
 	locationHandler := handlers.NewLocationHandler()
 	reviewHandler := handlers.NewReviewHandler()
 	favoriteHandler := handlers.NewFavoriteHandler()
+	customerHandler := handlers.NewCustomerHandler()
+	preferenceHandler := handlers.NewPreferenceHandler()
 
 	// Health check endpoints
 	r.GET("/health", healthHandler.Health)
@@ -71,6 +73,9 @@ func SetupRouter() *gin.Engine {
 			locations.GET("/cities/:cityName/postcodes", locationHandler.GetPostcodes)
 			locations.GET("/postcodes/search", locationHandler.SearchPostcodes)
 		}
+
+		// Preference options (public)
+		v1.GET("/preferences", preferenceHandler.GetPreferenceOptions)
 
 		// Auth routes (public)
 		auth := v1.Group("/auth")
@@ -278,6 +283,17 @@ func SetupRouter() *gin.Engine {
 			// payments.POST("", paymentHandler.AddPaymentMethod)
 			// payments.DELETE("/:id", paymentHandler.RemovePaymentMethod)
 			// payments.PUT("/:id/default", paymentHandler.SetDefaultPaymentMethod)
+		}
+
+		// Customer profile & onboarding
+		customer := v1.Group("/customer")
+		customer.Use(middleware.AuthMiddleware())
+		{
+			customer.GET("/profile", customerHandler.GetCustomerProfile)
+			customer.PUT("/profile", customerHandler.UpdateCustomerProfile)
+			customer.GET("/onboarding/status", customerHandler.GetOnboardingStatus)
+			customer.POST("/onboarding/complete", customerHandler.CompleteOnboarding)
+			customer.POST("/onboarding/skip", customerHandler.SkipOnboarding)
 		}
 
 		// Reviews (authenticated customers)

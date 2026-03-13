@@ -69,6 +69,8 @@ func Migrate() error {
 		// Users & Auth
 		&models.User{},
 		&models.RefreshToken{},
+		&models.CustomerProfile{},
+		&models.PreferenceOption{},
 
 		// Chef
 		&models.ChefProfile{},

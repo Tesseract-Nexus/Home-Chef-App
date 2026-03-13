@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -14,22 +14,30 @@ import {
   Trash2,
   Camera,
   Check,
+  UtensilsCrossed,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/app/providers/AuthProvider';
-import type { Address } from '@/shared/types';
+import { apiClient } from '@/shared/services/api-client';
+import { usePreferences } from '@/shared/hooks/usePreferences';
+import { Badge } from '@/shared/components/ui/Badge';
+import { Button } from '@/shared/components/ui/Button';
+import { cn } from '@/shared/utils/cn';
+import type { Address, CustomerProfile } from '@/shared/types';
 
 const profileSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
   lastName: z.string().min(2, 'Last name must be at least 2 characters'),
   email: z.string().email('Invalid email address'),
   phone: z.string().optional(),
+  dateOfBirth: z.string().optional(),
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
 
 const TABS = [
   { id: 'profile', label: 'Profile', icon: User },
+  { id: 'preferences', label: 'Preferences', icon: UtensilsCrossed },
   { id: 'addresses', label: 'Addresses', icon: MapPin },
   { id: 'payments', label: 'Payment Methods', icon: CreditCard },
   { id: 'notifications', label: 'Notifications', icon: Bell },
@@ -109,6 +117,7 @@ export default function ProfilePage() {
           {/* Content */}
           <div className="flex-1">
             {activeTab === 'profile' && <ProfileTab />}
+            {activeTab === 'preferences' && <PreferencesTab />}
             {activeTab === 'addresses' && <AddressesTab />}
             {activeTab === 'payments' && <PaymentsTab />}
             {activeTab === 'notifications' && <NotificationsTab />}
@@ -123,12 +132,14 @@ export default function ProfilePage() {
 function ProfileTab() {
   const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
+  const [profile, setProfile] = useState<CustomerProfile | null>(null);
 
   const {
     register,
     handleSubmit,
     formState: { errors },
     reset,
+    setValue,
   } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
@@ -136,12 +147,25 @@ function ProfileTab() {
       lastName: user?.lastName || '',
       email: user?.email || '',
       phone: user?.phone || '',
+      dateOfBirth: '',
     },
   });
 
-  const onSubmit = async (_data: ProfileFormData) => {
+  useEffect(() => {
+    apiClient.get<CustomerProfile>('/customer/profile').then((p) => {
+      setProfile(p);
+      setValue('firstName', p.firstName);
+      setValue('lastName', p.lastName);
+      setValue('email', p.email);
+      setValue('phone', p.phone ?? '');
+      setValue('dateOfBirth', p.dateOfBirth?.split('T')[0] ?? '');
+    }).catch(() => {});
+  }, [setValue]);
+
+  const onSubmit = async (formData: ProfileFormData) => {
     try {
-      // TODO: Implement profile update via API
+      const updated = await apiClient.put<CustomerProfile>('/customer/profile', formData);
+      setProfile(updated);
       toast.success('Profile updated successfully');
       setIsEditing(false);
     } catch {
@@ -240,6 +264,16 @@ function ProfileTab() {
           />
         </div>
 
+        <div>
+          <label className="block text-sm font-medium text-gray-700">Date of birth</label>
+          <input
+            {...register('dateOfBirth')}
+            type="date"
+            disabled={!isEditing}
+            className="input-base mt-1 disabled:bg-gray-50"
+          />
+        </div>
+
         {isEditing && (
           <div className="flex gap-3 pt-4">
             <button type="submit" className="btn-primary">
@@ -248,7 +282,15 @@ function ProfileTab() {
             <button
               type="button"
               onClick={() => {
-                reset();
+                if (profile) {
+                  setValue('firstName', profile.firstName);
+                  setValue('lastName', profile.lastName);
+                  setValue('email', profile.email);
+                  setValue('phone', profile.phone ?? '');
+                  setValue('dateOfBirth', profile.dateOfBirth?.split('T')[0] ?? '');
+                } else {
+                  reset();
+                }
                 setIsEditing(false);
               }}
               className="btn-outline"
@@ -258,6 +300,215 @@ function ProfileTab() {
           </div>
         )}
       </form>
+    </div>
+  );
+}
+
+function PreferencesTab() {
+  const { dietary, allergy, cuisine, spiceLevel, householdSize } = usePreferences();
+  const [profile, setProfile] = useState<CustomerProfile | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Local draft state for editing
+  const [dietaryPref, setDietaryPref] = useState<string[]>([]);
+  const [allergies, setAllergies] = useState<string[]>([]);
+  const [cuisinePref, setCuisinePref] = useState<string[]>([]);
+  const [spice, setSpice] = useState('');
+  const [household, setHousehold] = useState('');
+
+  useEffect(() => {
+    apiClient.get<CustomerProfile>('/customer/profile').then((p) => {
+      setProfile(p);
+      setDietaryPref(p.dietaryPreferences);
+      setAllergies(p.foodAllergies);
+      setCuisinePref(p.cuisinePreferences);
+      setSpice(p.spiceTolerance);
+      setHousehold(p.householdSize);
+    }).catch(() => {});
+  }, []);
+
+  const toggleItem = (
+    current: string[],
+    setter: (v: string[]) => void,
+    value: string
+  ) => {
+    setter(
+      current.includes(value)
+        ? current.filter((v) => v !== value)
+        : [...current, value]
+    );
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const updated = await apiClient.put<CustomerProfile>('/customer/profile', {
+        dietaryPreferences: dietaryPref,
+        foodAllergies: allergies,
+        cuisinePreferences: cuisinePref,
+        spiceTolerance: spice,
+        householdSize: household,
+      });
+      setProfile(updated);
+      toast.success('Preferences updated');
+      setIsEditing(false);
+    } catch {
+      toast.error('Failed to save preferences');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCancel = () => {
+    if (profile) {
+      setDietaryPref(profile.dietaryPreferences);
+      setAllergies(profile.foodAllergies);
+      setCuisinePref(profile.cuisinePreferences);
+      setSpice(profile.spiceTolerance);
+      setHousehold(profile.householdSize);
+    }
+    setIsEditing(false);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-gray-900">Food Preferences</h2>
+        {!isEditing ? (
+          <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+            Edit
+          </Button>
+        ) : (
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={handleCancel}>Cancel</Button>
+            <Button variant="primary" size="sm" onClick={handleSave} isLoading={isSaving}>Save</Button>
+          </div>
+        )}
+      </div>
+
+      {/* Dietary */}
+      <div className="rounded-xl bg-white p-6 shadow-sm">
+        <h3 className="font-medium text-gray-900 mb-3">Dietary Preferences</h3>
+        <div className="flex flex-wrap gap-2">
+          {dietary.map((opt) => {
+            const selected = dietaryPref.includes(opt.value);
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                disabled={!isEditing}
+                onClick={() => toggleItem(dietaryPref, setDietaryPref, opt.value)}
+              >
+                <Badge variant={selected ? 'default' : 'outline'} size="lg" className={isEditing ? 'cursor-pointer' : ''}>
+                  {opt.label}
+                </Badge>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Allergies */}
+      <div className="rounded-xl bg-white p-6 shadow-sm">
+        <h3 className="font-medium text-gray-900 mb-3">Food Allergies</h3>
+        <div className="flex flex-wrap gap-2">
+          {allergy.map((opt) => {
+            const selected = allergies.includes(opt.value);
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                disabled={!isEditing}
+                onClick={() => toggleItem(allergies, setAllergies, opt.value)}
+              >
+                <Badge variant={selected ? 'error' : 'outline'} size="lg" className={isEditing ? 'cursor-pointer' : ''}>
+                  {opt.label}
+                </Badge>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Cuisines */}
+      <div className="rounded-xl bg-white p-6 shadow-sm">
+        <h3 className="font-medium text-gray-900 mb-3">Favourite Cuisines</h3>
+        <div className="flex flex-wrap gap-2">
+          {cuisine.map((opt) => {
+            const selected = cuisinePref.includes(opt.value);
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                disabled={!isEditing}
+                onClick={() => toggleItem(cuisinePref, setCuisinePref, opt.value)}
+              >
+                <Badge variant={selected ? 'brand' : 'outline'} size="lg" className={isEditing ? 'cursor-pointer' : ''}>
+                  {opt.label}
+                </Badge>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Spice */}
+      <div className="rounded-xl bg-white p-6 shadow-sm">
+        <h3 className="font-medium text-gray-900 mb-3">Spice Tolerance</h3>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {spiceLevel.map((level) => {
+            const selected = spice === level.value;
+            return (
+              <button
+                key={level.value}
+                type="button"
+                disabled={!isEditing}
+                onClick={() => setSpice(level.value)}
+                className={cn(
+                  'rounded-xl border-2 p-3 text-center transition-all',
+                  selected
+                    ? 'border-primary bg-primary/5 text-primary'
+                    : 'border-border hover:border-primary/30',
+                  !isEditing && 'opacity-70'
+                )}
+              >
+                <p className="font-medium">{level.label}</p>
+                {level.description && (
+                  <p className="text-xs text-muted-foreground mt-0.5">{level.description}</p>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Household */}
+      <div className="rounded-xl bg-white p-6 shadow-sm">
+        <h3 className="font-medium text-gray-900 mb-3">Household Size</h3>
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-5">
+          {householdSize.map((size) => {
+            const selected = household === size.value;
+            return (
+              <button
+                key={size.value}
+                type="button"
+                disabled={!isEditing}
+                onClick={() => setHousehold(size.value)}
+                className={cn(
+                  'rounded-xl border-2 p-3 text-center transition-all',
+                  selected
+                    ? 'border-primary bg-primary/5 text-primary'
+                    : 'border-border hover:border-primary/30',
+                  !isEditing && 'opacity-70'
+                )}
+              >
+                <p className="text-sm font-medium">{size.label}</p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }

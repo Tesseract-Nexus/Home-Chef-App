@@ -44,6 +44,9 @@ const FavoritesPage = lazyWithRetry(() => import('@/features/customer/pages/Favo
 const CateringRequestPage = lazyWithRetry(() => import('@/features/catering/pages/CateringRequestPage'));
 const CateringQuotesPage = lazyWithRetry(() => import('@/features/catering/pages/CateringQuotesPage'));
 
+// Onboarding
+const UserInfoPage = lazyWithRetry(() => import('@/features/onboarding/pages/UserInfoPage'));
+
 // Auth pages
 const LoginPage = lazyWithRetry(() => import('@/features/auth/pages/LoginPage'));
 const RegisterPage = lazyWithRetry(() => import('@/features/auth/pages/RegisterPage'));
@@ -102,6 +105,16 @@ export function AppRoutes() {
         {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+
+        {/* Customer onboarding (no MainLayout — standalone page) */}
+        <Route
+          path="user-info"
+          element={
+            <ProtectedRoute roles={['customer']}>
+              <UserInfoPage />
+            </ProtectedRoute>
+          }
+        />
 
         {/* Customer routes */}
         <Route element={<MainLayout />}>

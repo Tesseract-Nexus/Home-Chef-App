@@ -6,9 +6,11 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   csrfToken: string | null;
+  onboardingCompleted: boolean | null; // null = not checked yet
   setSession: (user: SessionUser, csrfToken?: string) => void;
   clearAuth: () => void;
   setLoading: (loading: boolean) => void;
+  setOnboardingCompleted: (completed: boolean) => void;
   initialize: () => Promise<void>;
 }
 
@@ -17,14 +19,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: false,
   isLoading: true,
   csrfToken: null,
+  onboardingCompleted: null,
 
   setSession: (user, csrfToken) =>
     set({ user, isAuthenticated: true, csrfToken: csrfToken ?? get().csrfToken }),
 
   clearAuth: () =>
-    set({ user: null, isAuthenticated: false, csrfToken: null }),
+    set({ user: null, isAuthenticated: false, csrfToken: null, onboardingCompleted: null }),
 
   setLoading: (isLoading) => set({ isLoading }),
+
+  setOnboardingCompleted: (completed) => set({ onboardingCompleted: completed }),
 
   initialize: async () => {
     try {

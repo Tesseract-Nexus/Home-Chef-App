@@ -45,6 +45,7 @@ type User struct {
 	DeletedAt     gorm.DeletedAt `gorm:"index" json:"-"`
 
 	// Relationships
+	CustomerProfile *CustomerProfile `gorm:"foreignKey:UserID" json:"customerProfile,omitempty"`
 	ChefProfile     *ChefProfile     `gorm:"foreignKey:UserID" json:"chefProfile,omitempty"`
 	DeliveryPartner *DeliveryPartner `gorm:"foreignKey:UserID" json:"deliveryPartner,omitempty"`
 	Addresses       []Address        `gorm:"foreignKey:UserID" json:"addresses,omitempty"`
@@ -101,20 +102,21 @@ type PaymentMethod struct {
 
 // DTOs for API responses
 type UserResponse struct {
-	ID            uuid.UUID `json:"id"`
-	Email         string    `json:"email"`
-	FirstName     string    `json:"firstName"`
-	LastName      string    `json:"lastName"`
-	Phone         string    `json:"phone,omitempty"`
-	Avatar        string    `json:"avatar,omitempty"`
-	Role          UserRole  `json:"role"`
-	IsActive      bool      `json:"isActive"`
-	EmailVerified bool      `json:"emailVerified"`
-	CreatedAt     time.Time `json:"createdAt"`
+	ID                  uuid.UUID `json:"id"`
+	Email               string    `json:"email"`
+	FirstName           string    `json:"firstName"`
+	LastName            string    `json:"lastName"`
+	Phone               string    `json:"phone,omitempty"`
+	Avatar              string    `json:"avatar,omitempty"`
+	Role                UserRole  `json:"role"`
+	IsActive            bool      `json:"isActive"`
+	EmailVerified       bool      `json:"emailVerified"`
+	OnboardingCompleted bool      `json:"onboardingCompleted"`
+	CreatedAt           time.Time `json:"createdAt"`
 }
 
 func (u *User) ToResponse() UserResponse {
-	return UserResponse{
+	resp := UserResponse{
 		ID:            u.ID,
 		Email:         u.Email,
 		FirstName:     u.FirstName,
@@ -126,4 +128,8 @@ func (u *User) ToResponse() UserResponse {
 		EmailVerified: u.EmailVerified,
 		CreatedAt:     u.CreatedAt,
 	}
+	if u.CustomerProfile != nil {
+		resp.OnboardingCompleted = u.CustomerProfile.OnboardingCompleted
+	}
+	return resp
 }

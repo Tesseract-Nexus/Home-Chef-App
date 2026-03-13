@@ -8,7 +8,6 @@ import {
 } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/auth-store';
-import { apiClient } from '@/shared/services/api-client';
 import type { SessionUser, SocialProvider } from '@/shared/types/auth';
 
 const BFF_URL = import.meta.env.VITE_BFF_URL || 'https://identity.fe3dr.com';
@@ -50,21 +49,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const checkOnboarding = async () => {
       try {
-        const status = await apiClient.get<{ completed: boolean; status: string }>('/chef/onboarding/status');
-        if (!status.completed) {
+        // Direct fetch — apiClient.get expects { data: T } wrapper but
+        // the Go API returns raw JSON, so we call the BFF proxy directly
+        const res = await fetch(`${BFF_URL}/api/v1/chef/onboarding/status`, {
+          credentials: 'include',
+        });
+        if (!res.ok) {
+          // Non-200 = profile check failed, assume needs onboarding
           setNeedsOnboarding(true);
           if (!location.pathname.startsWith('/onboarding')) {
             navigate('/onboarding', { replace: true });
           }
-        } else {
+          return;
+        }
+        const status = await res.json();
+        if (status.completed) {
           setNeedsOnboarding(false);
+        } else {
+          setNeedsOnboarding(true);
+          if (!location.pathname.startsWith('/onboarding')) {
+            navigate('/onboarding', { replace: true });
+          }
         }
       } catch {
-        // API error — assume needs onboarding to be safe
-        setNeedsOnboarding(true);
-        if (!location.pathname.startsWith('/onboarding')) {
-          navigate('/onboarding', { replace: true });
-        }
+        // Network error — don't redirect, just mark as not checked
+        // so it retries on next render
+        setNeedsOnboarding(false);
       } finally {
         setOnboardingChecked(true);
       }

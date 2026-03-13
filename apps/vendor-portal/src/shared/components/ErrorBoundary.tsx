@@ -23,9 +23,37 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     console.error('[ErrorBoundary]', error, info.componentStack);
+
+    // Auto-reload once on dynamic import failures (stale chunks after deploy)
+    if (this.isChunkError(error)) {
+      const key = 'chunk-reload';
+      if (!sessionStorage.getItem(key)) {
+        sessionStorage.setItem(key, '1');
+        window.location.reload();
+        return;
+      }
+      sessionStorage.removeItem(key);
+    }
+  }
+
+  private isChunkError(error: Error): boolean {
+    const msg = error.message || '';
+    return (
+      msg.includes('Failed to fetch dynamically imported module') ||
+      msg.includes('Importing a module script failed') ||
+      msg.includes('error loading dynamically imported module') ||
+      msg.includes('Loading chunk') ||
+      msg.includes('Loading CSS chunk')
+    );
   }
 
   handleRetry = () => {
+    const error = this.state.error;
+    // For chunk errors, do a full reload to get fresh assets
+    if (error && this.isChunkError(error)) {
+      window.location.reload();
+      return;
+    }
     this.setState({ hasError: false, error: null });
   };
 

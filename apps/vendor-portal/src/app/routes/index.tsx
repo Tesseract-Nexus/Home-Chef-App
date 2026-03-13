@@ -4,26 +4,52 @@ import { useAuth } from '../providers/AuthProvider';
 import { LoadingScreen } from '@/shared/components/LoadingScreen';
 import { VendorLayout } from '@/shared/components/layout/VendorLayout';
 
+/**
+ * Wraps a dynamic import with retry + full-page reload on failure.
+ * After a new deployment, browsers may cache stale HTML that references
+ * old JS chunk filenames that no longer exist on the server. This helper
+ * catches the resulting TypeError and reloads the page once so the browser
+ * fetches the fresh index.html with updated chunk references.
+ */
+function lazyWithRetry(factory: () => Promise<{ default: React.ComponentType }>) {
+  return lazy(() =>
+    factory().catch((err: unknown) => {
+      // Only auto-reload once per session to avoid infinite reload loops
+      const key = 'chunk-reload';
+      const hasReloaded = sessionStorage.getItem(key);
+      if (!hasReloaded) {
+        sessionStorage.setItem(key, '1');
+        window.location.reload();
+        // Return a never-resolving promise so React doesn't render stale state
+        return new Promise(() => {});
+      }
+      // Already reloaded once this session — surface the real error
+      sessionStorage.removeItem(key);
+      throw err;
+    })
+  );
+}
+
 // Auth pages
-const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage'));
-const RegisterPage = lazy(() => import('@/features/auth/pages/RegisterPage'));
+const LoginPage = lazyWithRetry(() => import('@/features/auth/pages/LoginPage'));
+const RegisterPage = lazyWithRetry(() => import('@/features/auth/pages/RegisterPage'));
 
 // Onboarding
-const OnboardingPage = lazy(() => import('@/features/onboarding/pages/OnboardingPage'));
+const OnboardingPage = lazyWithRetry(() => import('@/features/onboarding/pages/OnboardingPage'));
 
 // Feature pages
-const DashboardPage = lazy(() => import('@/features/dashboard/pages/DashboardPage'));
-const MenuPage = lazy(() => import('@/features/menu/pages/MenuPage'));
-const MenuItemFormPage = lazy(() => import('@/features/menu/pages/MenuItemFormPage'));
-const LiveOrdersPage = lazy(() => import('@/features/orders/pages/LiveOrdersPage'));
-const OrderHistoryPage = lazy(() => import('@/features/orders/pages/OrderHistoryPage'));
-const EarningsPage = lazy(() => import('@/features/earnings/pages/EarningsPage'));
-const PayoutsPage = lazy(() => import('@/features/earnings/pages/PayoutsPage'));
-const ProfilePage = lazy(() => import('@/features/profile/pages/ProfilePage'));
-const KitchenSetupPage = lazy(() => import('@/features/profile/pages/KitchenSetupPage'));
-const ReviewsPage = lazy(() => import('@/features/reviews/pages/ReviewsPage'));
-const AnalyticsPage = lazy(() => import('@/features/analytics/pages/AnalyticsPage'));
-const SettingsPage = lazy(() => import('@/features/settings/pages/SettingsPage'));
+const DashboardPage = lazyWithRetry(() => import('@/features/dashboard/pages/DashboardPage'));
+const MenuPage = lazyWithRetry(() => import('@/features/menu/pages/MenuPage'));
+const MenuItemFormPage = lazyWithRetry(() => import('@/features/menu/pages/MenuItemFormPage'));
+const LiveOrdersPage = lazyWithRetry(() => import('@/features/orders/pages/LiveOrdersPage'));
+const OrderHistoryPage = lazyWithRetry(() => import('@/features/orders/pages/OrderHistoryPage'));
+const EarningsPage = lazyWithRetry(() => import('@/features/earnings/pages/EarningsPage'));
+const PayoutsPage = lazyWithRetry(() => import('@/features/earnings/pages/PayoutsPage'));
+const ProfilePage = lazyWithRetry(() => import('@/features/profile/pages/ProfilePage'));
+const KitchenSetupPage = lazyWithRetry(() => import('@/features/profile/pages/KitchenSetupPage'));
+const ReviewsPage = lazyWithRetry(() => import('@/features/reviews/pages/ReviewsPage'));
+const AnalyticsPage = lazyWithRetry(() => import('@/features/analytics/pages/AnalyticsPage'));
+const SettingsPage = lazyWithRetry(() => import('@/features/settings/pages/SettingsPage'));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isLoading, isAuthenticated } = useAuth();

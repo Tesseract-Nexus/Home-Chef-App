@@ -600,6 +600,15 @@ const emptyAddressForm: AddressFormData = {
   isDefault: false,
 };
 
+interface LocationOption {
+  code?: string;
+  name: string;
+}
+
+const ADDRESS_LABELS = ['Home', 'Work', 'Other'];
+
+const selectClass = 'w-full h-10 px-4 text-sm rounded-lg border-2 border-input bg-background shadow-sm hover:border-brand-300 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-brand-500/20 focus-visible:border-brand-500 disabled:opacity-50';
+
 function AddressesTab() {
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [loading, setLoading] = useState(true);
@@ -608,6 +617,12 @@ function AddressesTab() {
   const [formData, setFormData] = useState<AddressFormData>(emptyAddressForm);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Cascading location state
+  const [countries, setCountries] = useState<LocationOption[]>([]);
+  const [states, setStates] = useState<LocationOption[]>([]);
+  const [cities, setCities] = useState<LocationOption[]>([]);
+  const [postcodes, setPostcodes] = useState<{ code: string; areaName: string }[]>([]);
 
   const fetchAddresses = useCallback(() => {
     setLoading(true);
@@ -618,9 +633,43 @@ function AddressesTab() {
 
   useEffect(() => { fetchAddresses(); }, [fetchAddresses]);
 
+  // Load countries on mount
+  useEffect(() => {
+    apiClient.get<LocationOption[]>('/locations/countries')
+      .then(setCountries)
+      .catch(() => {});
+  }, []);
+
+  // Load states when country changes
+  useEffect(() => {
+    if (!formData.country) { setStates([]); return; }
+    apiClient.get<LocationOption[]>(`/locations/countries/${formData.country}/states`)
+      .then(setStates)
+      .catch(() => setStates([]));
+  }, [formData.country]);
+
+  // Load cities when state changes
+  useEffect(() => {
+    if (!formData.state) { setCities([]); return; }
+    apiClient.get<LocationOption[]>(`/locations/states/${formData.state}/cities`)
+      .then(setCities)
+      .catch(() => setCities([]));
+  }, [formData.state]);
+
+  // Load postcodes when city changes
+  useEffect(() => {
+    if (!formData.city) { setPostcodes([]); return; }
+    apiClient.get<{ code: string; areaName: string }[]>(`/locations/cities/${formData.city}/postcodes`)
+      .then(setPostcodes)
+      .catch(() => setPostcodes([]));
+  }, [formData.city]);
+
   const openAdd = () => {
     setFormData(emptyAddressForm);
     setEditingId(null);
+    setStates([]);
+    setCities([]);
+    setPostcodes([]);
     setFormMode('add');
   };
 
@@ -681,7 +730,21 @@ function AddressesTab() {
   };
 
   const updateField = (field: keyof AddressFormData, value: string | boolean) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+    setFormData((prev) => {
+      const next = { ...prev, [field]: value };
+      // Cascade clear dependent fields
+      if (field === 'country') {
+        next.state = '';
+        next.city = '';
+        next.postalCode = '';
+      } else if (field === 'state') {
+        next.city = '';
+        next.postalCode = '';
+      } else if (field === 'city') {
+        next.postalCode = '';
+      }
+      return next;
+    });
   };
 
   return (
@@ -702,64 +765,117 @@ function AddressesTab() {
           <h3 className="mb-4 font-medium text-gray-900">
             {formMode === 'add' ? 'Add New Address' : 'Edit Address'}
           </h3>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-sm font-medium text-gray-700">Label *</label>
-              <Input
-                placeholder="e.g. Home, Work, Parents"
-                value={formData.label}
-                onChange={(e) => updateField('label', e.target.value)}
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-sm font-medium text-gray-700">Address Line 1 *</label>
-              <Input
-                placeholder="Street address, flat/house number"
-                value={formData.line1}
-                onChange={(e) => updateField('line1', e.target.value)}
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-sm font-medium text-gray-700">Address Line 2</label>
-              <Input
-                placeholder="Apartment, building, floor (optional)"
-                value={formData.line2}
-                onChange={(e) => updateField('line2', e.target.value)}
-              />
-            </div>
+          <div className="space-y-4">
+            {/* Address Label toggle buttons */}
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">City *</label>
-              <Input
-                placeholder="City"
-                value={formData.city}
-                onChange={(e) => updateField('city', e.target.value)}
-              />
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">Address type *</label>
+              <div className="flex gap-2">
+                {ADDRESS_LABELS.map((label) => (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => updateField('label', label)}
+                    className={cn(
+                      'rounded-lg border-2 px-4 py-2 text-sm font-medium transition-all',
+                      formData.label === label
+                        ? 'border-brand-500 bg-brand-50 text-brand-700'
+                        : 'border-gray-200 hover:border-brand-300 text-gray-600'
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
+
+            {/* Country dropdown */}
             <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">State *</label>
-              <Input
-                placeholder="State"
-                value={formData.state}
-                onChange={(e) => updateField('state', e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">Postal Code *</label>
-              <Input
-                placeholder="Postal code"
-                value={formData.postalCode}
-                onChange={(e) => updateField('postalCode', e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-gray-700">Country</label>
-              <Input
-                placeholder="Country code"
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">Country *</label>
+              <select
                 value={formData.country}
                 onChange={(e) => updateField('country', e.target.value)}
-              />
+                className={selectClass}
+              >
+                <option value="">Select country</option>
+                {countries.map((c) => (
+                  <option key={c.code} value={c.code}>{c.name}</option>
+                ))}
+              </select>
             </div>
-            <div className="sm:col-span-2">
+
+            {/* State dropdown */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">State *</label>
+              <select
+                value={formData.state}
+                onChange={(e) => updateField('state', e.target.value)}
+                disabled={states.length === 0}
+                className={selectClass}
+              >
+                <option value="">Select state</option>
+                {states.map((s) => (
+                  <option key={s.code} value={s.code}>{s.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* City dropdown */}
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">City *</label>
+              <select
+                value={formData.city}
+                onChange={(e) => updateField('city', e.target.value)}
+                disabled={cities.length === 0}
+                className={selectClass}
+              >
+                <option value="">Select city</option>
+                {cities.map((city) => (
+                  <option key={city.name} value={city.name}>{city.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* PIN code - dropdown if postcodes available, text input fallback */}
+            {postcodes.length > 0 ? (
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">PIN code *</label>
+                <select
+                  value={formData.postalCode}
+                  onChange={(e) => updateField('postalCode', e.target.value)}
+                  className={selectClass}
+                >
+                  <option value="">Select PIN code</option>
+                  {postcodes.map((p) => (
+                    <option key={p.code} value={p.code}>{p.code} — {p.areaName}</option>
+                  ))}
+                </select>
+              </div>
+            ) : (
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-gray-700">PIN code *</label>
+                <Input
+                  placeholder="Enter PIN code"
+                  value={formData.postalCode}
+                  onChange={(e) => updateField('postalCode', e.target.value)}
+                />
+              </div>
+            )}
+
+            <Input
+              label="Address line 1 *"
+              placeholder="House / flat / building number, street"
+              value={formData.line1}
+              onChange={(e) => updateField('line1', e.target.value)}
+            />
+
+            <Input
+              label="Address line 2"
+              placeholder="Landmark, area (optional)"
+              value={formData.line2}
+              onChange={(e) => updateField('line2', e.target.value)}
+            />
+
+            <div>
               <label className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"

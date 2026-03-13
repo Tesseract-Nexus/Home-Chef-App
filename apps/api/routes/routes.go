@@ -35,7 +35,7 @@ func SetupRouter() *gin.Engine {
 		"https://delivery.fe3dr.com",
 	}
 	corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
-	corsConfig.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Request-ID", "x-jwt-claim-sub", "x-jwt-claim-tenant-id", "x-jwt-claim-tenant-slug"}
+	corsConfig.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Request-ID", "x-jwt-claim-sub", "x-jwt-claim-tenant-id", "x-jwt-claim-tenant-slug", "x-jwt-claim-email", "x-jwt-claim-name", "x-jwt-claim-given-name", "x-jwt-claim-family-name"}
 	corsConfig.AllowCredentials = true
 	r.Use(cors.New(corsConfig))
 

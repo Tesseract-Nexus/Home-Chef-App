@@ -75,9 +75,53 @@ func AuthMiddleware() gin.HandlerFunc {
 
 			var user models.User
 			if err := database.DB.First(&user, "id = ?", userID).Error; err != nil {
-				c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
-				c.Abort()
-				return
+				// User not found by Keycloak ID — auto-provision from BFF claims
+				email := c.GetHeader("x-jwt-claim-email")
+				if email == "" {
+					c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found and no email provided for provisioning"})
+					c.Abort()
+					return
+				}
+
+				// Check if a user with this email already exists (registered via direct API)
+				var existingUser models.User
+				if err := database.DB.First(&existingUser, "email = ?", email).Error; err == nil {
+					// Email exists — use existing user
+					user = existingUser
+				} else {
+					// Create new user from Keycloak claims
+					firstName := c.GetHeader("x-jwt-claim-given-name")
+					lastName := c.GetHeader("x-jwt-claim-family-name")
+					if firstName == "" && lastName == "" {
+						name := c.GetHeader("x-jwt-claim-name")
+						parts := strings.SplitN(name, " ", 2)
+						if len(parts) > 0 {
+							firstName = parts[0]
+						}
+						if len(parts) > 1 {
+							lastName = parts[1]
+						}
+					}
+
+					now := time.Now()
+					user = models.User{
+						ID:            userID,
+						Email:         email,
+						FirstName:     firstName,
+						LastName:      lastName,
+						Role:          models.RoleCustomer,
+						AuthProvider:  models.ProviderGoogle,
+						ProviderID:    sub,
+						IsActive:      true,
+						EmailVerified: true,
+						LastLoginAt:   &now,
+					}
+					if err := database.DB.Create(&user).Error; err != nil {
+						c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to provision user"})
+						c.Abort()
+						return
+					}
+				}
 			}
 			if !user.IsActive {
 				c.JSON(http.StatusForbidden, gin.H{"error": "Account is suspended"})

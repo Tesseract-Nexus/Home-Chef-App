@@ -77,7 +77,7 @@ export default function AnalyticsPage() {
               <div
                 className="w-full rounded-t-md bg-brand-500 transition-all"
                 style={{
-                  height: `${(((orderData[i] ?? 0) ?? 0) / maxOrders) * 160}px`,
+                  height: `${((orderData[i] ?? 0) / maxOrders) * 160}px`,
                   minHeight: 4,
                 }}
               />
@@ -102,7 +102,7 @@ export default function AnalyticsPage() {
               <div
                 className="w-full rounded-t-md bg-green-500 transition-all"
                 style={{
-                  height: `${(((revenueData[i] ?? 0) ?? 0) / maxRevenue) * 160}px`,
+                  height: `${((revenueData[i] ?? 0) / maxRevenue) * 160}px`,
                   minHeight: 4,
                 }}
               />

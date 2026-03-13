@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -35,6 +35,7 @@ import {
   DialogFooter,
 } from '@/shared/components/ui/Dialog';
 import type { MenuItem, MenuCategory } from '@/shared/types';
+import { useDraftForm } from '@/shared/hooks/useDraftForm';
 
 // --- Zod validation schema ---
 
@@ -87,6 +88,9 @@ export default function MenuItemFormPage() {
   const [newCategoryName, setNewCategoryName] = useState('');
 
   const isEditMode = Boolean(id);
+  const draftKey = isEditMode ? `menu-item-edit-${id}` : 'menu-item-new';
+  const { loadDraft, saveDraft, clearDraft } = useDraftForm<MenuItemFormValues>(draftKey);
+  const draftLoadedRef = useRef(false);
 
   // Fetch existing item for edit mode
   const {
@@ -146,10 +150,14 @@ export default function MenuItemFormPage() {
     },
   });
 
-  // Populate form when existing item loads
+  // Restore draft on mount (new items) or populate from existing item (edit mode)
   useEffect(() => {
+    if (draftLoadedRef.current) return;
+    draftLoadedRef.current = true;
+
     if (existingItem) {
-      reset({
+      // Edit mode: load from server, then overlay any draft edits
+      const serverValues: MenuItemFormValues = {
         name: existingItem.name,
         description: existingItem.description || '',
         price: existingItem.price,
@@ -160,9 +168,27 @@ export default function MenuItemFormPage() {
         portionSize: existingItem.portionSize || '',
         serves: existingItem.serves,
         imageUrl: existingItem.imageUrl || '',
-      });
+      };
+      const draft = loadDraft();
+      reset(draft ?? serverValues);
+    } else {
+      // New mode: restore draft if available
+      const draft = loadDraft();
+      if (draft) {
+        reset(draft);
+        toast.info('Restored your unsaved draft');
+      }
     }
-  }, [existingItem, reset]);
+  }, [existingItem, reset, loadDraft]);
+
+  // Auto-save draft on form changes
+  const formValues = watch();
+  useEffect(() => {
+    // Only save if user has started filling something
+    if (formValues.name || formValues.description || formValues.price) {
+      saveDraft(formValues);
+    }
+  }, [formValues, saveDraft]);
 
   // Create mutation
   const createItem = useMutation({
@@ -176,6 +202,7 @@ export default function MenuItemFormPage() {
       return apiClient.post<MenuItem>('/chef/menu/items', payload);
     },
     onSuccess: () => {
+      clearDraft();
       queryClient.invalidateQueries({ queryKey: ['chef-menu'] });
       toast.success('Menu item created successfully');
       navigate('/menu');
@@ -197,6 +224,7 @@ export default function MenuItemFormPage() {
       return apiClient.put<MenuItem>(`/chef/menu/items/${id}`, payload);
     },
     onSuccess: () => {
+      clearDraft();
       queryClient.invalidateQueries({ queryKey: ['chef-menu'] });
       queryClient.invalidateQueries({ queryKey: ['chef-menu-item', id] });
       toast.success('Menu item updated successfully');

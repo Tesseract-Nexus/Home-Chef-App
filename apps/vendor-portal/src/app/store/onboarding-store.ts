@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { OnboardingData, KitchenAddress, OperatingHours, DocumentUpload } from '@/shared/types';
+import { createTTLStorage } from '@/shared/hooks/useDraftForm';
 
 const TOTAL_STEPS = 5;
 
@@ -95,10 +96,14 @@ export const useOnboardingStore = create<OnboardingState>()(
           },
         })),
 
-      reset: () => set({ currentStep: 0, data: { ...initialData } }),
+      reset: () => {
+        localStorage.removeItem('vendor-onboarding');
+        set({ currentStep: 0, data: { ...initialData } });
+      },
     }),
     {
       name: 'vendor-onboarding',
+      storage: createTTLStorage(),
       partialize: (state) => ({ currentStep: state.currentStep, data: state.data }),
     }
   )

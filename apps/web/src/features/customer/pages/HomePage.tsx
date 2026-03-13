@@ -15,7 +15,10 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { apiClient } from '@/shared/services/api-client';
+import { useFavoritesStore } from '@/app/store/favorites-store';
+import { useAuth } from '@/app/providers/AuthProvider';
 import type { Chef, PaginatedResponse } from '@/shared/types';
 import { Button, Card, Input, Badge, Avatar, RatingBadge } from '@/shared/components/ui';
 
@@ -306,73 +309,7 @@ export default function HomePage() {
             >
               {(featuredChefs?.data ?? []).map((chef) => (
                 <motion.div key={chef.id} variants={scaleIn}>
-                  <Link to={`/chefs/${chef.id}`}>
-                    <Card
-                      variant="default"
-                      padding="none"
-                      hover="lift"
-                      className="overflow-hidden group"
-                    >
-                      {/* Banner */}
-                      <div className="relative h-32 overflow-hidden">
-                        <img
-                          src={chef.bannerImage || chef.profileImage}
-                          alt={chef.businessName}
-                          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-
-                        {chef.verified && (
-                          <Badge variant="success" size="sm" className="absolute top-3 right-3">
-                            Verified
-                          </Badge>
-                        )}
-
-                        <div className="absolute -bottom-8 left-4">
-                          <Avatar
-                            src={chef.profileImage}
-                            alt={chef.businessName}
-                            size="xl"
-                            className="border-4 border-white shadow-elevated"
-                          />
-                        </div>
-                      </div>
-
-                      {/* Content */}
-                      <div className="p-4 pt-12">
-                        <div className="flex items-start justify-between">
-                          <div className="min-w-0 flex-1">
-                            <h3 className="font-semibold text-gray-900 truncate group-hover:text-brand-600 transition-colors">
-                              {chef.businessName}
-                            </h3>
-                            <p className="mt-1 text-sm text-gray-500 truncate">
-                              {chef.cuisines.slice(0, 2).join(' • ')}
-                            </p>
-                          </div>
-                          <RatingBadge value={chef.rating} />
-                        </div>
-
-                        <p className="mt-3 line-clamp-2 text-sm text-gray-600">{chef.description}</p>
-
-                        <div className="mt-4 flex items-center gap-4 text-sm text-gray-500">
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-4 w-4" />
-                            {chef.prepTime}
-                          </div>
-                          <div>{chef.priceRange}</div>
-                          {chef.acceptingOrders ? (
-                            <Badge variant="success" size="sm" dot>
-                              Open
-                            </Badge>
-                          ) : (
-                            <Badge variant="default" size="sm">
-                              Closed
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    </Card>
-                  </Link>
+                  <FeaturedChefCard chef={chef} />
                 </motion.div>
               ))}
             </motion.div>
@@ -528,5 +465,109 @@ export default function HomePage() {
         </div>
       </section>
     </div>
+  );
+}
+
+function FeaturedChefCard({ chef }: { chef: Chef }) {
+  const { isAuthenticated, login } = useAuth();
+  const { isFavorite, toggle } = useFavoritesStore();
+  const favorited = isFavorite(chef.id);
+
+  const handleFavorite = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!isAuthenticated) {
+      toast.error('Please log in to save favorites');
+      login();
+      return;
+    }
+
+    const ok = await toggle(chef.id);
+    if (!ok && !favorited) {
+      toast.error('You can save up to 7 favorite chefs. Remove one first.');
+    }
+  };
+
+  return (
+    <Link to={`/chefs/${chef.id}`}>
+      <Card
+        variant="default"
+        padding="none"
+        hover="lift"
+        className="overflow-hidden group"
+      >
+        {/* Banner */}
+        <div className="relative h-32 overflow-hidden">
+          <img
+            src={chef.bannerImage || chef.profileImage}
+            alt={chef.businessName}
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+
+          {chef.verified && (
+            <Badge variant="success" size="sm" className="absolute top-3 left-3">
+              Verified
+            </Badge>
+          )}
+
+          {/* Favorite button */}
+          <button
+            onClick={handleFavorite}
+            className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-sm backdrop-blur-sm transition-all hover:bg-white hover:shadow-md"
+          >
+            <Heart
+              className={`h-4 w-4 transition-colors ${
+                favorited ? 'fill-red-500 text-red-500' : 'text-gray-600'
+              }`}
+            />
+          </button>
+
+          <div className="absolute -bottom-8 left-4">
+            <Avatar
+              src={chef.profileImage}
+              alt={chef.businessName}
+              size="xl"
+              className="border-4 border-white shadow-elevated"
+            />
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-4 pt-12">
+          <div className="flex items-start justify-between">
+            <div className="min-w-0 flex-1">
+              <h3 className="font-semibold text-gray-900 truncate group-hover:text-brand-600 transition-colors">
+                {chef.businessName}
+              </h3>
+              <p className="mt-1 text-sm text-gray-500 truncate">
+                {chef.cuisines.slice(0, 2).join(' • ')}
+              </p>
+            </div>
+            <RatingBadge value={chef.rating} />
+          </div>
+
+          <p className="mt-3 line-clamp-2 text-sm text-gray-600">{chef.description}</p>
+
+          <div className="mt-4 flex items-center gap-4 text-sm text-gray-500">
+            <div className="flex items-center gap-1">
+              <Clock className="h-4 w-4" />
+              {chef.prepTime}
+            </div>
+            <div>{chef.priceRange}</div>
+            {chef.acceptingOrders ? (
+              <Badge variant="success" size="sm" dot>
+                Open
+              </Badge>
+            ) : (
+              <Badge variant="default" size="sm">
+                Closed
+              </Badge>
+            )}
+          </div>
+        </div>
+      </Card>
+    </Link>
   );
 }

@@ -140,9 +140,11 @@ export default function MenuPage() {
             menu
           </p>
         </div>
-        <Button asChild leftIcon={<Plus className="h-4 w-4" />}>
-          <Link to="/menu/new">Add Item</Link>
-        </Button>
+        <Link to="/menu/new">
+          <Button leftIcon={<Plus className="h-4 w-4" />}>
+            Add Item
+          </Button>
+        </Link>
       </motion.div>
 
       {/* Search and filter bar */}
@@ -251,9 +253,11 @@ export default function MenuPage() {
                 : 'Try adjusting your search or filter criteria.'}
             </p>
             {menuItems.length === 0 && (
-              <Button asChild className="mt-4" leftIcon={<Plus className="h-4 w-4" />}>
-                <Link to="/menu/new">Add Your First Item</Link>
-              </Button>
+              <Link to="/menu/new" className="mt-4 inline-block">
+                <Button leftIcon={<Plus className="h-4 w-4" />}>
+                  Add Your First Item
+                </Button>
+              </Link>
             )}
           </Card>
         </motion.div>

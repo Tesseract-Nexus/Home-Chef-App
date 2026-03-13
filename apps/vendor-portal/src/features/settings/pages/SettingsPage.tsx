@@ -18,6 +18,7 @@ interface SettingsData {
   autoAcceptOrders: boolean;
   autoAcceptThreshold: number;
   acceptingOrders: boolean;
+  authProvider?: string;
 }
 
 export default function SettingsPage() {
@@ -168,60 +169,74 @@ export default function SettingsPage() {
         </div>
       </motion.div>
 
-      {/* Change Password */}
-      <motion.div variants={fadeInUp} className="rounded-xl border border-gray-200 bg-white p-6">
-        <div className="flex items-center gap-3">
-          <Lock className="h-5 w-5 text-brand-500" />
-          <h2 className="text-lg font-semibold text-gray-900">Change Password</h2>
-        </div>
-        <div className="mt-4 max-w-md space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Current Password</label>
-            <input
-              type="password"
-              value={passwordForm.currentPassword}
-              onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-            />
+      {/* Change Password — only for email/password accounts, not social logins */}
+      {(!localSettings.authProvider || localSettings.authProvider === 'email') ? (
+        <motion.div variants={fadeInUp} className="rounded-xl border border-gray-200 bg-white p-6">
+          <div className="flex items-center gap-3">
+            <Lock className="h-5 w-5 text-brand-500" />
+            <h2 className="text-lg font-semibold text-gray-900">Change Password</h2>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">New Password</label>
-            <input
-              type="password"
-              value={passwordForm.newPassword}
-              onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-            />
+          <div className="mt-4 max-w-md space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Current Password</label>
+              <input
+                type="password"
+                value={passwordForm.currentPassword}
+                onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">New Password</label>
+              <input
+                type="password"
+                value={passwordForm.newPassword}
+                onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Confirm New Password</label>
+              <input
+                type="password"
+                value={passwordForm.confirmPassword}
+                onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+              />
+            </div>
+            <Button
+              size="sm"
+              disabled={!passwordForm.currentPassword || !passwordForm.newPassword || passwordForm.newPassword !== passwordForm.confirmPassword}
+              onClick={async () => {
+                try {
+                  await apiClient.put('/profile/password', {
+                    currentPassword: passwordForm.currentPassword,
+                    newPassword: passwordForm.newPassword,
+                  });
+                  toast.success('Password updated successfully');
+                  setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                } catch {
+                  toast.error('Failed to update password. Check your current password.');
+                }
+              }}
+            >
+              Update Password
+            </Button>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Confirm New Password</label>
-            <input
-              type="password"
-              value={passwordForm.confirmPassword}
-              onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
-            />
+        </motion.div>
+      ) : (
+        <motion.div variants={fadeInUp} className="rounded-xl border border-gray-200 bg-white p-6">
+          <div className="flex items-center gap-3">
+            <Lock className="h-5 w-5 text-gray-400" />
+            <h2 className="text-lg font-semibold text-gray-900">Change Password</h2>
           </div>
-          <Button
-            size="sm"
-            disabled={!passwordForm.currentPassword || !passwordForm.newPassword || passwordForm.newPassword !== passwordForm.confirmPassword}
-            onClick={async () => {
-              try {
-                await apiClient.put('/profile/password', {
-                  currentPassword: passwordForm.currentPassword,
-                  newPassword: passwordForm.newPassword,
-                });
-                toast.success('Password updated successfully');
-                setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-              } catch {
-                toast.error('Failed to update password. Check your current password.');
-              }
-            }}
-          >
-            Update Password
-          </Button>
-        </div>
-      </motion.div>
+          <p className="mt-3 text-sm text-gray-500">
+            Your account is linked to{' '}
+            <span className="font-medium capitalize">{localSettings.authProvider}</span> login.
+            Password management is handled by your social login provider.
+          </p>
+        </motion.div>
+      )}
 
       {/* Danger Zone */}
       <motion.div variants={fadeInUp} className="rounded-xl border border-red-200 bg-white p-6">

@@ -613,6 +613,10 @@ func (h *ChefHandler) GetChefSettings(c *gin.Context) {
 		database.DB.Create(&settings)
 	}
 
+	// Load user to get auth provider
+	var user models.User
+	database.DB.First(&user, "id = ?", userID)
+
 	// Return in the shape the frontend expects
 	c.JSON(http.StatusOK, gin.H{
 		"notifications": gin.H{
@@ -625,6 +629,7 @@ func (h *ChefHandler) GetChefSettings(c *gin.Context) {
 		"autoAcceptOrders":    settings.AutoAcceptOrders,
 		"autoAcceptThreshold": settings.AutoAcceptThreshold,
 		"acceptingOrders":     chef.AcceptingOrders,
+		"authProvider":        string(user.AuthProvider),
 	})
 }
 

@@ -46,6 +46,7 @@ func SetupRouter() *gin.Engine {
 	healthHandler := handlers.NewHealthHandler()
 	uploadHandler := handlers.NewUploadHandler()
 	menuHandler := handlers.NewMenuHandler()
+	locationHandler := handlers.NewLocationHandler()
 
 	// Health check endpoints
 	r.GET("/health", healthHandler.Health)
@@ -59,6 +60,16 @@ func SetupRouter() *gin.Engine {
 	// API v1 routes
 	v1 := r.Group("/api/v1")
 	{
+		// Location reference routes (public)
+		locations := v1.Group("/locations")
+		{
+			locations.GET("/countries", locationHandler.GetCountries)
+			locations.GET("/countries/:countryCode/states", locationHandler.GetStates)
+			locations.GET("/states/:stateCode/cities", locationHandler.GetCities)
+			locations.GET("/cities/:cityName/postcodes", locationHandler.GetPostcodes)
+			locations.GET("/postcodes/search", locationHandler.SearchPostcodes)
+		}
+
 		// Auth routes (public)
 		auth := v1.Group("/auth")
 		{

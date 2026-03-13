@@ -111,6 +111,12 @@ func Migrate() error {
 		&models.PaymentMethod{},
 		&models.Transaction{},
 
+		// Location reference tables
+		&models.Country{},
+		&models.State{},
+		&models.City{},
+		&models.Postcode{},
+
 		// Chef Settings
 		&models.ChefSettings{},
 

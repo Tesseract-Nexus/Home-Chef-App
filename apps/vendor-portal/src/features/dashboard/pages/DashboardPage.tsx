@@ -31,9 +31,12 @@ interface DashboardStats {
   todayRevenue: number;
   todayOrders: number;
   pendingOrders: number;
-  averageRating: number;
-  weeklyRevenue: number[];
-  weeklyLabels: string[];
+  weekOrders: number;
+  weekRevenue: number;
+  rating: number;
+  totalReviews: number;
+  totalOrders: number;
+  acceptingOrders: boolean;
 }
 
 interface OrderItem {
@@ -485,7 +488,7 @@ export default function DashboardPage() {
     isLoading: statsLoading,
   } = useQuery<DashboardStats>({
     queryKey: ['chef', 'dashboard', 'stats'],
-    queryFn: () => apiClient.get('/chef/dashboard/stats'),
+    queryFn: () => apiClient.get('/chef/dashboard'),
   });
 
   // Fetch active orders (pending + accepted + preparing)
@@ -622,7 +625,7 @@ export default function DashboardPage() {
         />
         <StatsCard
           title="Average Rating"
-          value={`${(stats?.averageRating ?? 0).toFixed(1)} / 5`}
+          value={`${(stats?.rating ?? 0).toFixed(1)} / 5`}
           icon={Star}
           trend={2}
           iconBg="bg-brand-50"
@@ -634,8 +637,8 @@ export default function DashboardPage() {
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <WeeklyRevenueChart
-            data={stats?.weeklyRevenue ?? []}
-            labels={stats?.weeklyLabels ?? []}
+            data={[0, 0, 0, 0, 0, 0, stats?.weekRevenue ?? 0]}
+            labels={['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']}
           />
         </div>
 

@@ -81,9 +81,13 @@ class ApiClient {
       throw error;
     }
 
-    // The Go API returns raw JSON (not wrapped in { data: T }),
-    // so return the parsed response directly.
-    return await response.json();
+    // The Go API is mixed: some endpoints return raw JSON, others wrap
+    // in { data: T, pagination: {...} }. Auto-detect and unwrap when needed.
+    const json = await response.json();
+    if (json && typeof json === 'object' && 'data' in json && 'pagination' in json) {
+      return json.data;
+    }
+    return json;
   }
 
   async get<T>(endpoint: string, params?: RequestOptions['params']): Promise<T> {

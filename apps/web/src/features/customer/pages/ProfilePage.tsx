@@ -640,37 +640,38 @@ function AddressesTab() {
       .catch(() => {});
   }, []);
 
-  // Load states when country changes
+  // Counter to force location effects to re-fire when form opens
+  const [formKey, setFormKey] = useState(0);
+
+  // Load states when country changes or form opens
   useEffect(() => {
-    if (!formData.country) { setStates([]); return; }
+    if (formMode === 'hidden' || !formData.country) { setStates([]); setCities([]); setPostcodes([]); return; }
     apiClient.get<LocationOption[]>(`/locations/countries/${formData.country}/states`)
       .then(setStates)
       .catch(() => setStates([]));
-  }, [formData.country]);
+  }, [formData.country, formKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load cities when state changes
   useEffect(() => {
-    if (!formData.state) { setCities([]); return; }
+    if (formMode === 'hidden' || !formData.state) { setCities([]); setPostcodes([]); return; }
     apiClient.get<LocationOption[]>(`/locations/states/${formData.state}/cities`)
       .then(setCities)
       .catch(() => setCities([]));
-  }, [formData.state]);
+  }, [formData.state, formKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Load postcodes when city changes
   useEffect(() => {
-    if (!formData.city) { setPostcodes([]); return; }
+    if (formMode === 'hidden' || !formData.city) { setPostcodes([]); return; }
     apiClient.get<{ code: string; areaName: string }[]>(`/locations/cities/${formData.city}/postcodes`)
       .then(setPostcodes)
       .catch(() => setPostcodes([]));
-  }, [formData.city]);
+  }, [formData.city, formKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const openAdd = () => {
     setFormData(emptyAddressForm);
     setEditingId(null);
-    setStates([]);
-    setCities([]);
-    setPostcodes([]);
     setFormMode('add');
+    setFormKey((k) => k + 1);
   };
 
   const openEdit = (address: Address) => {
@@ -686,6 +687,7 @@ function AddressesTab() {
     });
     setEditingId(address.id);
     setFormMode('edit');
+    setFormKey((k) => k + 1);
   };
 
   const cancelForm = () => {

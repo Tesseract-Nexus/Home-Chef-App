@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -9,6 +9,7 @@ import {
   CreditCard,
   Bell,
   Shield,
+  ShieldCheck,
   LogOut,
   Plus,
   Edit2,
@@ -20,16 +21,21 @@ import {
   Eye,
   EyeOff,
   Info,
+  Copy,
+  Download,
+  AlertTriangle,
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { toast } from 'sonner';
 import { useAuth } from '@/app/providers/AuthProvider';
+import { useAuthStore } from '@/app/store/auth-store';
 import { apiClient } from '@/shared/services/api-client';
 import { usePreferences } from '@/shared/hooks/usePreferences';
 import { Badge } from '@/shared/components/ui/Badge';
 import { Button } from '@/shared/components/ui/Button';
 import { Input } from '@/shared/components/ui/Input';
 import { cn } from '@/shared/utils/cn';
-import type { Address, CustomerProfile } from '@/shared/types';
+import type { Address, CustomerProfile, TotpStatusResponse, TotpSetupResponse } from '@/shared/types';
 
 const profileSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
@@ -784,6 +790,416 @@ function NotificationsTab() {
   );
 }
 
+const BFF_URL = import.meta.env.VITE_BFF_URL || 'https://identity.fe3dr.com';
+
+type TwoFactorState =
+  | 'loading'
+  | 'disabled'
+  | 'setup'
+  | 'show-recovery-codes'
+  | 'enabled'
+  | 'disabling'
+  | 'regenerating';
+
+function bffHeaders(method: 'GET' | 'POST' = 'GET'): HeadersInit {
+  const headers: HeadersInit = { 'Content-Type': 'application/json' };
+  if (method === 'POST') {
+    const csrfToken = useAuthStore.getState().csrfToken;
+    if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
+  }
+  return headers;
+}
+
+function TwoFactorSection() {
+  const [state, setState] = useState<TwoFactorState>('loading');
+  const [backupCodesRemaining, setBackupCodesRemaining] = useState(0);
+  const [setupSession, setSetupSession] = useState('');
+  const [totpUri, setTotpUri] = useState('');
+  const [manualKey, setManualKey] = useState('');
+  const [backupCodes, setBackupCodes] = useState<string[]>([]);
+  const [code, setCode] = useState('');
+  const [verifying, setVerifying] = useState(false);
+  const [codesSaved, setCodesSaved] = useState(false);
+  const [returnToState, setReturnToState] = useState<'enabled' | 'disabled'>('enabled');
+
+  const fetchStatus = useCallback(async () => {
+    try {
+      const res = await fetch(`${BFF_URL}/auth/totp/status`, {
+        credentials: 'include',
+        headers: bffHeaders(),
+      });
+      if (!res.ok) throw new Error();
+      const data: TotpStatusResponse = await res.json();
+      setBackupCodesRemaining(data.backup_codes_remaining);
+      setState(data.totp_enabled ? 'enabled' : 'disabled');
+    } catch {
+      setState('disabled');
+    }
+  }, []);
+
+  useEffect(() => { fetchStatus(); }, [fetchStatus]);
+
+  const handleInitiateSetup = async () => {
+    try {
+      const res = await fetch(`${BFF_URL}/auth/totp/setup/initiate`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: bffHeaders('POST'),
+      });
+      if (!res.ok) throw new Error();
+      const data: TotpSetupResponse = await res.json();
+      setSetupSession(data.setup_session);
+      setTotpUri(data.totp_uri);
+      setManualKey(data.manual_entry_key);
+      setBackupCodes(data.backup_codes);
+      setCode('');
+      setState('setup');
+    } catch {
+      toast.error('Failed to initiate 2FA setup');
+    }
+  };
+
+  const handleConfirmSetup = async () => {
+    if (code.length !== 6) return;
+    setVerifying(true);
+    try {
+      const res = await fetch(`${BFF_URL}/auth/totp/setup/confirm`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: bffHeaders('POST'),
+        body: JSON.stringify({ setup_session: setupSession, code }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.error || 'Invalid code');
+      }
+      toast.success('Two-factor authentication enabled');
+      setReturnToState('enabled');
+      setCodesSaved(false);
+      setState('show-recovery-codes');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to verify code');
+    } finally {
+      setVerifying(false);
+      setCode('');
+    }
+  };
+
+  const handleDisable = async () => {
+    if (code.length !== 6) return;
+    setVerifying(true);
+    try {
+      const res = await fetch(`${BFF_URL}/auth/totp/disable`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: bffHeaders('POST'),
+        body: JSON.stringify({ code }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.error || 'Invalid code');
+      }
+      toast.success('Two-factor authentication disabled');
+      setState('disabled');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to disable 2FA');
+    } finally {
+      setVerifying(false);
+      setCode('');
+    }
+  };
+
+  const handleRegenerateBackupCodes = async () => {
+    if (code.length !== 6) return;
+    setVerifying(true);
+    try {
+      const res = await fetch(`${BFF_URL}/auth/totp/backup-codes/regenerate`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: bffHeaders('POST'),
+        body: JSON.stringify({ code }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.error || 'Invalid code');
+      }
+      const data = await res.json();
+      setBackupCodes(data.backup_codes);
+      setReturnToState('enabled');
+      setCodesSaved(false);
+      setState('show-recovery-codes');
+      toast.success('Backup codes regenerated');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to regenerate codes');
+    } finally {
+      setVerifying(false);
+      setCode('');
+    }
+  };
+
+  const copyAllCodes = () => {
+    navigator.clipboard.writeText(backupCodes.join('\n'));
+    toast.success('Backup codes copied to clipboard');
+  };
+
+  const downloadCodes = () => {
+    const text = `HomeChef 2FA Backup Codes\n${'='.repeat(30)}\n\n${backupCodes.map((c, i) => `${i + 1}. ${c}`).join('\n')}\n\nKeep these codes safe. Each code can only be used once.`;
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'homechef-backup-codes.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  if (state === 'loading') {
+    return (
+      <div className="rounded-xl bg-white p-6 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-brand-600" />
+          <span className="text-sm text-gray-500">Loading 2FA status...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (state === 'disabled') {
+    return (
+      <div className="rounded-xl bg-white p-6 shadow-sm">
+        <h2 className="text-lg font-semibold text-gray-900">Two-Factor Authentication</h2>
+        <div className="mt-4 flex items-start gap-3">
+          <Shield className="mt-0.5 h-5 w-5 shrink-0 text-gray-400" />
+          <div>
+            <p className="text-sm text-gray-700">
+              Add an extra layer of security to your account by requiring a verification code from your authenticator app when signing in.
+            </p>
+          </div>
+        </div>
+        <Button variant="primary" className="mt-4" onClick={handleInitiateSetup}>
+          Enable 2FA
+        </Button>
+      </div>
+    );
+  }
+
+  if (state === 'setup') {
+    return (
+      <div className="rounded-xl bg-white p-6 shadow-sm">
+        <h2 className="text-lg font-semibold text-gray-900">Set Up Two-Factor Authentication</h2>
+        <p className="mt-1 text-sm text-gray-500">
+          Scan the QR code with your authenticator app (Google Authenticator, Authy, etc.)
+        </p>
+
+        <div className="mt-6 flex flex-col items-center gap-4">
+          <div className="rounded-lg border bg-white p-4">
+            <QRCodeSVG value={totpUri} size={200} level="M" />
+          </div>
+
+          <div className="w-full max-w-sm">
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Manual entry key</p>
+            <div className="mt-1 flex items-center gap-2 rounded-lg border bg-gray-50 px-3 py-2">
+              <code className="flex-1 text-sm font-mono text-gray-800 break-all select-all">
+                {manualKey}
+              </code>
+              <button
+                type="button"
+                onClick={() => {
+                  navigator.clipboard.writeText(manualKey);
+                  toast.success('Key copied');
+                }}
+                className="shrink-0 text-gray-400 hover:text-gray-600"
+              >
+                <Copy className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 max-w-sm">
+          <Input
+            label="Enter 6-digit code from your app"
+            value={code}
+            onChange={(e) => {
+              const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+              setCode(val);
+            }}
+            placeholder="000000"
+            leftIcon={<Lock className="h-4 w-4" />}
+            className="font-mono text-center tracking-widest"
+            autoComplete="one-time-code"
+            inputMode="numeric"
+          />
+          <div className="mt-4 flex gap-3">
+            <Button
+              variant="primary"
+              onClick={handleConfirmSetup}
+              isLoading={verifying}
+              disabled={code.length !== 6}
+            >
+              Verify & Enable
+            </Button>
+            <Button variant="outline" onClick={() => setState('disabled')}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (state === 'show-recovery-codes') {
+    return (
+      <div className="rounded-xl bg-white p-6 shadow-sm">
+        <h2 className="text-lg font-semibold text-gray-900">Save Your Backup Codes</h2>
+
+        <div className="mt-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+          <p className="text-sm text-amber-800">
+            Save these codes in a safe place. They won't be shown again. Each code can only be used once to sign in if you lose access to your authenticator app.
+          </p>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-5">
+          {backupCodes.map((bc, i) => (
+            <div
+              key={i}
+              className="rounded-lg border bg-gray-50 px-3 py-2 text-center font-mono text-sm text-gray-800 select-all"
+            >
+              {bc}
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-3">
+          <Button variant="outline" size="sm" onClick={copyAllCodes}>
+            <Copy className="mr-1.5 h-4 w-4" />
+            Copy All
+          </Button>
+          <Button variant="outline" size="sm" onClick={downloadCodes}>
+            <Download className="mr-1.5 h-4 w-4" />
+            Download
+          </Button>
+        </div>
+
+        <label className="mt-6 flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={codesSaved}
+            onChange={(e) => setCodesSaved(e.target.checked)}
+            className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+          />
+          <span className="text-sm text-gray-700">I have saved these backup codes</span>
+        </label>
+
+        <Button
+          variant="primary"
+          className="mt-4"
+          disabled={!codesSaved}
+          onClick={() => {
+            fetchStatus();
+            setState(returnToState);
+          }}
+        >
+          Done
+        </Button>
+      </div>
+    );
+  }
+
+  if (state === 'enabled') {
+    return (
+      <div className="rounded-xl bg-white p-6 shadow-sm">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-900">Two-Factor Authentication</h2>
+          <Badge variant="success">
+            <ShieldCheck className="mr-1 h-3.5 w-3.5" />
+            Enabled
+          </Badge>
+        </div>
+        <p className="mt-2 text-sm text-gray-500">
+          Your account is protected with two-factor authentication.
+        </p>
+
+        {backupCodesRemaining > 0 && (
+          <p className="mt-2 text-sm text-gray-600">
+            <span className="font-medium">{backupCodesRemaining}</span> backup code{backupCodesRemaining !== 1 ? 's' : ''} remaining
+          </p>
+        )}
+        {backupCodesRemaining === 0 && (
+          <div className="mt-2 flex items-start gap-2 text-sm text-amber-700">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>No backup codes remaining. Regenerate them now.</span>
+          </div>
+        )}
+
+        <div className="mt-4 flex flex-wrap gap-3">
+          <Button
+            variant="outline"
+            onClick={() => {
+              setCode('');
+              setState('regenerating');
+            }}
+          >
+            Regenerate Backup Codes
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => {
+              setCode('');
+              setState('disabling');
+            }}
+          >
+            Disable 2FA
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  // disabling or regenerating — both need TOTP code confirmation
+  const isDisabling = state === 'disabling';
+  return (
+    <div className="rounded-xl bg-white p-6 shadow-sm">
+      <h2 className="text-lg font-semibold text-gray-900">
+        {isDisabling ? 'Disable Two-Factor Authentication' : 'Regenerate Backup Codes'}
+      </h2>
+      <p className="mt-1 text-sm text-gray-500">
+        Enter a code from your authenticator app to confirm.
+      </p>
+
+      <div className="mt-4 max-w-sm">
+        <Input
+          label="6-digit verification code"
+          value={code}
+          onChange={(e) => {
+            const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+            setCode(val);
+          }}
+          placeholder="000000"
+          leftIcon={<Lock className="h-4 w-4" />}
+          className="font-mono text-center tracking-widest"
+          autoComplete="one-time-code"
+          inputMode="numeric"
+        />
+        <div className="mt-4 flex gap-3">
+          <Button
+            variant={isDisabling ? 'destructive' : 'primary'}
+            onClick={isDisabling ? handleDisable : handleRegenerateBackupCodes}
+            isLoading={verifying}
+            disabled={code.length !== 6}
+          >
+            {isDisabling ? 'Disable 2FA' : 'Regenerate'}
+          </Button>
+          <Button variant="outline" onClick={() => setState('enabled')}>
+            Cancel
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SecurityTab() {
   const [showPasswordForm, setShowPasswordForm] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
@@ -922,15 +1338,7 @@ function SecurityTab() {
       </div>
 
       {/* 2FA Section */}
-      <div className="rounded-xl bg-white p-6 shadow-sm">
-        <h2 className="text-lg font-semibold text-gray-900">Two-Factor Authentication</h2>
-        <p className="mt-1 text-sm text-gray-500">
-          Add an extra layer of security to your account
-        </p>
-        <Button variant="outline" className="mt-4">
-          Enable 2FA
-        </Button>
-      </div>
+      <TwoFactorSection />
 
       {/* Connected Accounts Section */}
       <div className="rounded-xl bg-white p-6 shadow-sm">

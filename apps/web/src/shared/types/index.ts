@@ -381,6 +381,21 @@ export interface OnboardingStatus {
 export type SpiceTolerance = 'mild' | 'medium' | 'hot' | 'extra_hot';
 export type HouseholdSize = '1' | '2' | '3-4' | '5-6' | '7+';
 
+// TOTP 2FA types
+export interface TotpStatusResponse {
+  success: boolean;
+  totp_enabled: boolean;
+  backup_codes_remaining: number;
+}
+
+export interface TotpSetupResponse {
+  success: boolean;
+  setup_session: string;
+  totp_uri: string;
+  manual_entry_key: string;
+  backup_codes: string[];
+}
+
 // Favorites
 export interface FavoriteChef {
   id: string;

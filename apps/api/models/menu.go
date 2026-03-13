@@ -68,21 +68,33 @@ type MenuItemImage struct {
 
 // DTOs
 
+type MenuItemImageResponse struct {
+	ID         uuid.UUID `json:"id"`
+	MenuItemID uuid.UUID `json:"menuItemId"`
+	URL        string    `json:"url"`
+	IsPrimary  bool      `json:"isPrimary"`
+	SortOrder  int       `json:"sortOrder"`
+}
+
 type MenuItemResponse struct {
-	ID          uuid.UUID `json:"id"`
-	ChefID      uuid.UUID `json:"chefId"`
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	Price       float64   `json:"price"`
-	ImageURL    string    `json:"imageUrl,omitempty"`
-	PrepTime    int       `json:"prepTime"`
-	PortionSize string    `json:"portionSize,omitempty"`
-	Serves      int       `json:"serves"`
-	DietaryTags []string  `json:"dietaryTags"`
-	SpiceLevel  int       `json:"spiceLevel"`
-	IsAvailable bool      `json:"isAvailable"`
-	IsFeatured  bool      `json:"isFeatured"`
-	Rating      float64   `json:"rating"`
+	ID           uuid.UUID              `json:"id"`
+	ChefID       uuid.UUID              `json:"chefId"`
+	CategoryID   *uuid.UUID             `json:"categoryId,omitempty"`
+	Name         string                 `json:"name"`
+	Description  string                 `json:"description"`
+	Price        float64                `json:"price"`
+	ComparePrice float64                `json:"comparePrice,omitempty"`
+	ImageURL     string                 `json:"imageUrl,omitempty"`
+	Images       []MenuItemImageResponse `json:"images"`
+	PrepTime     int                    `json:"prepTime"`
+	PortionSize  string                 `json:"portionSize,omitempty"`
+	Serves       int                    `json:"serves"`
+	DietaryTags  []string               `json:"dietaryTags"`
+	Allergens    []string               `json:"allergens"`
+	SpiceLevel   int                    `json:"spiceLevel"`
+	IsAvailable  bool                   `json:"isAvailable"`
+	IsFeatured   bool                   `json:"isFeatured"`
+	Rating       float64                `json:"rating"`
 }
 
 func (m *MenuItem) ToResponse() MenuItemResponse {
@@ -91,20 +103,40 @@ func (m *MenuItem) ToResponse() MenuItemResponse {
 		dietaryTags = m.DietaryTags
 	}
 
+	allergens := []string{}
+	if m.Allergens != nil {
+		allergens = m.Allergens
+	}
+
+	images := make([]MenuItemImageResponse, len(m.Images))
+	for i, img := range m.Images {
+		images[i] = MenuItemImageResponse{
+			ID:         img.ID,
+			MenuItemID: img.MenuItemID,
+			URL:        img.URL,
+			IsPrimary:  img.IsPrimary,
+			SortOrder:  img.SortOrder,
+		}
+	}
+
 	return MenuItemResponse{
-		ID:          m.ID,
-		ChefID:      m.ChefID,
-		Name:        m.Name,
-		Description: m.Description,
-		Price:       m.Price,
-		ImageURL:    m.ImageURL,
-		PrepTime:    m.PrepTime,
-		PortionSize: m.PortionSize,
-		Serves:      m.Serves,
-		DietaryTags: dietaryTags,
-		SpiceLevel:  m.SpiceLevel,
-		IsAvailable: m.IsAvailable,
-		IsFeatured:  m.IsFeatured,
-		Rating:      m.Rating,
+		ID:           m.ID,
+		ChefID:       m.ChefID,
+		CategoryID:   m.CategoryID,
+		Name:         m.Name,
+		Description:  m.Description,
+		Price:        m.Price,
+		ComparePrice: m.ComparePrice,
+		ImageURL:     m.ImageURL,
+		Images:       images,
+		PrepTime:     m.PrepTime,
+		PortionSize:  m.PortionSize,
+		Serves:       m.Serves,
+		DietaryTags:  dietaryTags,
+		Allergens:    allergens,
+		SpiceLevel:   m.SpiceLevel,
+		IsAvailable:  m.IsAvailable,
+		IsFeatured:   m.IsFeatured,
+		Rating:       m.Rating,
 	}
 }

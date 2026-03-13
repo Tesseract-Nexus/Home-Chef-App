@@ -1,4 +1,4 @@
-import type { ApiResponse, ApiError } from '@/shared/types';
+import type { ApiError } from '@/shared/types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
 const MOCK_MODE = import.meta.env.VITE_MOCK_MODE === 'true';
@@ -83,8 +83,16 @@ class ApiClient {
       throw error;
     }
 
-    const data: ApiResponse<T> = await response.json();
-    return data.data;
+    const json = await response.json();
+    // Paginated endpoints return { data: [], pagination: {} } — unwrap to data array.
+    // Non-paginated endpoints return the object directly.
+    if (json && typeof json === 'object' && 'data' in json && 'pagination' in json) {
+      return json as T;
+    }
+    if (json && typeof json === 'object' && 'data' in json) {
+      return json.data as T;
+    }
+    return json as T;
   }
 
   async get<T>(endpoint: string, params?: RequestOptions['params']): Promise<T> {

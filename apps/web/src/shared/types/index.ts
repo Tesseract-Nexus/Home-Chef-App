@@ -191,19 +191,18 @@ export interface Address {
 export interface Review {
   id: string;
   orderId: string;
-  customerId: string;
-  chefId: string;
-  foodRating: number;
-  packagingRating?: number;
-  valueRating?: number;
-  deliveryRating?: number;
   overallRating: number;
+  foodRating: number;
+  deliveryRating?: number;
+  valueRating?: number;
   title?: string;
   comment?: string;
   images?: string[];
   chefResponse?: string;
-  respondedAt?: string;
-  isPublic: boolean;
+  chefRespondedAt?: string;
+  helpfulCount: number;
+  customerName: string;
+  customerAvatar?: string;
   createdAt: string;
 }
 

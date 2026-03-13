@@ -92,9 +92,15 @@ export async function deleteMenuItemImage(
   itemId: string,
   imageId: string
 ): Promise<void> {
+  const { useAuthStore } = await import('@/app/store/auth-store');
+  const csrfToken = useAuthStore.getState().csrfToken;
+
   const res = await fetch(`${BFF_URL}/api/v1/chef/menu/items/${itemId}/images/${imageId}`, {
     method: 'DELETE',
     credentials: 'include',
+    headers: {
+      ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),
+    },
   });
 
   if (!res.ok) {

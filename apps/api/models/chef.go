@@ -85,25 +85,46 @@ type ChefSettings struct {
 
 // DTOs
 type ChefProfileResponse struct {
-	ID              uuid.UUID `json:"id"`
-	UserID          uuid.UUID `json:"userId"`
-	BusinessName    string    `json:"businessName"`
-	Description     string    `json:"description"`
-	ProfileImage    string    `json:"profileImage"`
-	BannerImage     string    `json:"bannerImage"`
-	Cuisines        []string  `json:"cuisines"`
-	Specialties     []string  `json:"specialties"`
-	PrepTime        string    `json:"prepTime"`
-	MinimumOrder    float64   `json:"minimumOrder"`
-	ServiceRadius   float64   `json:"serviceRadius"`
-	Rating          float64   `json:"rating"`
-	TotalReviews    int       `json:"totalReviews"`
-	TotalOrders     int       `json:"totalOrders"`
-	IsVerified      bool      `json:"verified"`
-	AcceptingOrders bool      `json:"acceptingOrders"`
-	KitchenPhotos   []string  `json:"kitchenPhotos"`
-	City            string    `json:"city"`
-	State           string    `json:"state"`
+	ID              uuid.UUID              `json:"id"`
+	UserID          uuid.UUID              `json:"userId"`
+	BusinessName    string                 `json:"businessName"`
+	Description     string                 `json:"description"`
+	ProfileImage    string                 `json:"profileImage"`
+	BannerImage     string                 `json:"bannerImage"`
+	Cuisines        []string               `json:"cuisines"`
+	Specialties     []string               `json:"specialties"`
+	PrepTime        string                 `json:"prepTime"`
+	MinimumOrder    float64                `json:"minimumOrder"`
+	DeliveryFee     float64                `json:"deliveryFee"`
+	PriceRange      string                 `json:"priceRange"`
+	ServiceRadius   float64                `json:"serviceRadius"`
+	Rating          float64                `json:"rating"`
+	TotalReviews    int                    `json:"totalReviews"`
+	TotalOrders     int                    `json:"totalOrders"`
+	IsVerified      bool                   `json:"verified"`
+	IsOnline        bool                   `json:"isOnline"`
+	AcceptingOrders bool                   `json:"acceptingOrders"`
+	KitchenPhotos   []string               `json:"kitchenPhotos"`
+	City            string                 `json:"city"`
+	State           string                 `json:"state"`
+	Latitude        float64                `json:"latitude"`
+	Longitude       float64                `json:"longitude"`
+	OperatingHours  map[string]interface{} `json:"operatingHours,omitempty"`
+	CreatedAt       time.Time              `json:"createdAt"`
+}
+
+// priceRangeFromMinOrder derives a display-friendly price range string.
+func priceRangeFromMinOrder(min float64) string {
+	if min >= 500 {
+		return "$$$$"
+	}
+	if min >= 200 {
+		return "$$$"
+	}
+	if min >= 100 {
+		return "$$"
+	}
+	return "$"
 }
 
 func (c *ChefProfile) ToResponse() ChefProfileResponse {
@@ -132,14 +153,44 @@ func (c *ChefProfile) ToResponse() ChefProfileResponse {
 		Specialties:     specialties,
 		PrepTime:        c.PrepTime,
 		MinimumOrder:    c.MinimumOrder,
+		DeliveryFee:     0, // TODO: populate when delivery fee model is added
+		PriceRange:      priceRangeFromMinOrder(c.MinimumOrder),
 		ServiceRadius:   c.ServiceRadius,
 		Rating:          c.Rating,
 		TotalReviews:    c.TotalReviews,
 		TotalOrders:     c.TotalOrders,
 		IsVerified:      c.IsVerified,
+		IsOnline:        c.AcceptingOrders,
 		AcceptingOrders: c.AcceptingOrders,
 		KitchenPhotos:   kitchenPhotos,
 		City:            c.City,
 		State:           c.State,
+		Latitude:        c.Latitude,
+		Longitude:       c.Longitude,
+		CreatedAt:       c.CreatedAt,
 	}
+}
+
+// ToPublicResponse builds a response that includes operating hours from schedules.
+func (c *ChefProfile) ToPublicResponse(schedules []ChefSchedule) ChefProfileResponse {
+	resp := c.ToResponse()
+
+	dayNames := map[int]string{
+		0: "sunday", 1: "monday", 2: "tuesday", 3: "wednesday",
+		4: "thursday", 5: "friday", 6: "saturday",
+	}
+
+	operatingHours := make(map[string]interface{})
+	for _, s := range schedules {
+		name, ok := dayNames[s.DayOfWeek]
+		if !ok || s.IsClosed {
+			continue
+		}
+		operatingHours[name] = map[string]string{
+			"open":  s.OpenTime,
+			"close": s.CloseTime,
+		}
+	}
+	resp.OperatingHours = operatingHours
+	return resp
 }

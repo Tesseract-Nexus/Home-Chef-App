@@ -28,7 +28,16 @@ func (h *ChefHandler) ListChefs(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
 	search := c.Query("search")
 	cuisine := c.Query("cuisine")
-	sortBy := c.DefaultQuery("sortBy", "rating")
+	dietary := c.Query("dietary")
+	isOpen := c.Query("isOpen")
+	ratingMin := c.Query("rating")
+	sortOrder := c.DefaultQuery("order", "desc")
+
+	// Accept both "sortBy" and "sort" (frontend sends "sort")
+	sortBy := c.Query("sortBy")
+	if sortBy == "" {
+		sortBy = c.DefaultQuery("sort", "rating")
+	}
 
 	if page < 1 {
 		page = 1
@@ -52,20 +61,43 @@ func (h *ChefHandler) ListChefs(c *gin.Context) {
 		query = query.Where("? = ANY(cuisines)", cuisine)
 	}
 
+	// isOpen filter
+	if isOpen == "true" {
+		query = query.Where("accepting_orders = ?", true)
+	}
+
+	// Minimum rating filter
+	if ratingMin != "" {
+		if r, err := strconv.ParseFloat(ratingMin, 64); err == nil {
+			query = query.Where("rating >= ?", r)
+		}
+	}
+
+	// Dietary filter — find chefs that have at least one menu item with this dietary tag
+	if dietary != "" {
+		query = query.Where("id IN (SELECT chef_id FROM menu_items WHERE ? = ANY(dietary_tags) AND deleted_at IS NULL)", dietary)
+	}
+
 	// Get total count
 	var total int64
 	query.Count(&total)
 
 	// Apply sorting
+	dir := "DESC"
+	if sortOrder == "asc" {
+		dir = "ASC"
+	}
 	switch sortBy {
 	case "rating":
-		query = query.Order("rating DESC")
+		query = query.Order("rating " + dir)
 	case "orders":
-		query = query.Order("total_orders DESC")
+		query = query.Order("total_orders " + dir)
 	case "newest":
-		query = query.Order("created_at DESC")
+		query = query.Order("created_at " + dir)
+	case "price":
+		query = query.Order("minimum_order " + dir)
 	default:
-		query = query.Order("rating DESC")
+		query = query.Order("rating " + dir)
 	}
 
 	// Get chefs
@@ -109,10 +141,13 @@ func (h *ChefHandler) GetChef(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, chef.ToResponse())
+	var schedules []models.ChefSchedule
+	database.DB.Where("chef_id = ?", chef.ID).Find(&schedules)
+
+	c.JSON(http.StatusOK, chef.ToPublicResponse(schedules))
 }
 
-// GetChefMenu returns the menu items for a chef
+// GetChefMenu returns the menu items and categories for a chef
 func (h *ChefHandler) GetChefMenu(c *gin.Context) {
 	id := c.Param("id")
 	chefID, err := uuid.Parse(id)
@@ -123,10 +158,10 @@ func (h *ChefHandler) GetChefMenu(c *gin.Context) {
 
 	category := c.Query("category")
 
-	query := database.DB.Where("chef_id = ? AND is_available = ?", chefID, true)
+	query := database.DB.Where("chef_id = ? AND is_available = ?", chefID, true).Preload("Images")
 
 	if category != "" {
-		query = query.Where("category = ?", category)
+		query = query.Where("category_id = ?", category)
 	}
 
 	var items []models.MenuItem
@@ -135,12 +170,20 @@ func (h *ChefHandler) GetChefMenu(c *gin.Context) {
 		return
 	}
 
+	// Fetch categories for this chef
+	var categories []models.MenuCategory
+	database.DB.Where("chef_id = ? AND is_active = ?", chefID, true).
+		Order("sort_order, name").Find(&categories)
+
 	responses := make([]models.MenuItemResponse, len(items))
 	for i, item := range items {
 		responses[i] = item.ToResponse()
 	}
 
-	c.JSON(http.StatusOK, responses)
+	c.JSON(http.StatusOK, gin.H{
+		"categories": categories,
+		"items":      responses,
+	})
 }
 
 // GetChefReviews returns reviews for a chef
@@ -182,6 +225,8 @@ func (h *ChefHandler) GetChefReviews(c *gin.Context) {
 			"limit":      limit,
 			"total":      total,
 			"totalPages": (total + int64(limit) - 1) / int64(limit),
+			"hasNext":    int64(offset+limit) < total,
+			"hasPrev":    page > 1,
 		},
 	})
 }

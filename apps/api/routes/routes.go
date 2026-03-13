@@ -47,6 +47,7 @@ func SetupRouter() *gin.Engine {
 	uploadHandler := handlers.NewUploadHandler()
 	menuHandler := handlers.NewMenuHandler()
 	locationHandler := handlers.NewLocationHandler()
+	reviewHandler := handlers.NewReviewHandler()
 
 	// Health check endpoints
 	r.GET("/health", healthHandler.Health)
@@ -278,13 +279,11 @@ func SetupRouter() *gin.Engine {
 			// payments.PUT("/:id/default", paymentHandler.SetDefaultPaymentMethod)
 		}
 
-		// Reviews
+		// Reviews (authenticated customers)
 		reviews := v1.Group("/reviews")
 		reviews.Use(middleware.AuthMiddleware())
 		{
-			// reviews.POST("", reviewHandler.CreateReview)
-			// reviews.PUT("/:id", reviewHandler.UpdateReview)
-			// reviews.DELETE("/:id", reviewHandler.DeleteReview)
+			reviews.POST("", reviewHandler.CreateReview)
 		}
 
 		// Notifications

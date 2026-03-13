@@ -7,44 +7,67 @@ import { ChefLayout } from '@/shared/components/layout/ChefLayout';
 import { AdminLayout } from '@/shared/components/layout/AdminLayout';
 import { DeliveryLayout } from '@/shared/components/layout/DeliveryLayout';
 
+/**
+ * Wraps a dynamic import with retry + full-page reload on failure.
+ * After a new deployment, browsers may cache stale HTML that references
+ * old JS chunk filenames that no longer exist on the server. This helper
+ * catches the resulting TypeError and reloads the page once so the browser
+ * fetches the fresh index.html with updated chunk references.
+ */
+function lazyWithRetry(factory: () => Promise<{ default: React.ComponentType }>) {
+  return lazy(() =>
+    factory().catch((err: unknown) => {
+      const key = 'chunk-reload';
+      const hasReloaded = sessionStorage.getItem(key);
+      if (!hasReloaded) {
+        sessionStorage.setItem(key, '1');
+        window.location.reload();
+        return new Promise(() => {});
+      }
+      sessionStorage.removeItem(key);
+      throw err;
+    })
+  );
+}
+
 // Lazy load pages for code splitting
-const HomePage = lazy(() => import('@/features/customer/pages/HomePage'));
-const BrowseChefsPage = lazy(() => import('@/features/customer/pages/BrowseChefsPage'));
-const ChefDetailPage = lazy(() => import('@/features/customer/pages/ChefDetailPage'));
-const CartPage = lazy(() => import('@/features/customer/pages/CartPage'));
-const CheckoutPage = lazy(() => import('@/features/customer/pages/CheckoutPage'));
-const OrdersPage = lazy(() => import('@/features/customer/pages/OrdersPage'));
-const OrderDetailPage = lazy(() => import('@/features/customer/pages/OrderDetailPage'));
-const ProfilePage = lazy(() => import('@/features/customer/pages/ProfilePage'));
-const SocialFeedPage = lazy(() => import('@/features/social/pages/SocialFeedPage'));
-const CateringRequestPage = lazy(() => import('@/features/catering/pages/CateringRequestPage'));
-const CateringQuotesPage = lazy(() => import('@/features/catering/pages/CateringQuotesPage'));
+const HomePage = lazyWithRetry(() => import('@/features/customer/pages/HomePage'));
+const BrowseChefsPage = lazyWithRetry(() => import('@/features/customer/pages/BrowseChefsPage'));
+const ChefDetailPage = lazyWithRetry(() => import('@/features/customer/pages/ChefDetailPage'));
+const CartPage = lazyWithRetry(() => import('@/features/customer/pages/CartPage'));
+const CheckoutPage = lazyWithRetry(() => import('@/features/customer/pages/CheckoutPage'));
+const OrdersPage = lazyWithRetry(() => import('@/features/customer/pages/OrdersPage'));
+const OrderDetailPage = lazyWithRetry(() => import('@/features/customer/pages/OrderDetailPage'));
+const ProfilePage = lazyWithRetry(() => import('@/features/customer/pages/ProfilePage'));
+const SocialFeedPage = lazyWithRetry(() => import('@/features/social/pages/SocialFeedPage'));
+const CateringRequestPage = lazyWithRetry(() => import('@/features/catering/pages/CateringRequestPage'));
+const CateringQuotesPage = lazyWithRetry(() => import('@/features/catering/pages/CateringQuotesPage'));
 
 // Auth pages
-const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage'));
-const RegisterPage = lazy(() => import('@/features/auth/pages/RegisterPage'));
+const LoginPage = lazyWithRetry(() => import('@/features/auth/pages/LoginPage'));
+const RegisterPage = lazyWithRetry(() => import('@/features/auth/pages/RegisterPage'));
 
 // Chef pages
-const ChefDashboardPage = lazy(() => import('@/features/chef/pages/DashboardPage'));
-const ChefMenuPage = lazy(() => import('@/features/chef/pages/MenuPage'));
-const ChefOrdersPage = lazy(() => import('@/features/chef/pages/OrdersPage'));
-const ChefEarningsPage = lazy(() => import('@/features/chef/pages/EarningsPage'));
-const ChefProfilePage = lazy(() => import('@/features/chef/pages/ProfilePage'));
-const ChefSocialPage = lazy(() => import('@/features/chef/pages/SocialPage'));
-const ChefCateringPage = lazy(() => import('@/features/chef/pages/CateringPage'));
+const ChefDashboardPage = lazyWithRetry(() => import('@/features/chef/pages/DashboardPage'));
+const ChefMenuPage = lazyWithRetry(() => import('@/features/chef/pages/MenuPage'));
+const ChefOrdersPage = lazyWithRetry(() => import('@/features/chef/pages/OrdersPage'));
+const ChefEarningsPage = lazyWithRetry(() => import('@/features/chef/pages/EarningsPage'));
+const ChefProfilePage = lazyWithRetry(() => import('@/features/chef/pages/ProfilePage'));
+const ChefSocialPage = lazyWithRetry(() => import('@/features/chef/pages/SocialPage'));
+const ChefCateringPage = lazyWithRetry(() => import('@/features/chef/pages/CateringPage'));
 
 // Admin pages
-const AdminDashboardPage = lazy(() => import('@/features/admin/pages/DashboardPage'));
-const AdminUsersPage = lazy(() => import('@/features/admin/pages/UsersPage'));
-const AdminChefsPage = lazy(() => import('@/features/admin/pages/ChefsPage'));
-const AdminOrdersPage = lazy(() => import('@/features/admin/pages/OrdersPage'));
-const AdminAnalyticsPage = lazy(() => import('@/features/admin/pages/AnalyticsPage'));
-const AdminSettingsPage = lazy(() => import('@/features/admin/pages/SettingsPage'));
+const AdminDashboardPage = lazyWithRetry(() => import('@/features/admin/pages/DashboardPage'));
+const AdminUsersPage = lazyWithRetry(() => import('@/features/admin/pages/UsersPage'));
+const AdminChefsPage = lazyWithRetry(() => import('@/features/admin/pages/ChefsPage'));
+const AdminOrdersPage = lazyWithRetry(() => import('@/features/admin/pages/OrdersPage'));
+const AdminAnalyticsPage = lazyWithRetry(() => import('@/features/admin/pages/AnalyticsPage'));
+const AdminSettingsPage = lazyWithRetry(() => import('@/features/admin/pages/SettingsPage'));
 
 // Delivery pages
-const DeliveryDashboardPage = lazy(() => import('@/features/delivery/pages/DashboardPage'));
-const DeliveryOrdersPage = lazy(() => import('@/features/delivery/pages/OrdersPage'));
-const DeliveryEarningsPage = lazy(() => import('@/features/delivery/pages/EarningsPage'));
+const DeliveryDashboardPage = lazyWithRetry(() => import('@/features/delivery/pages/DashboardPage'));
+const DeliveryOrdersPage = lazyWithRetry(() => import('@/features/delivery/pages/OrdersPage'));
+const DeliveryEarningsPage = lazyWithRetry(() => import('@/features/delivery/pages/EarningsPage'));
 
 // Protected route wrapper
 function ProtectedRoute({

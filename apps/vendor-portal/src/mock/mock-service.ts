@@ -5,7 +5,6 @@ import {
   mockCategories,
   mockMenuItems,
   mockOrders,
-  mockReviews,
   mockDashboardStats,
   mockEarnings,
   mockAnalytics,
@@ -145,15 +144,6 @@ class MockService {
 
     if (endpoint === '/chef/profile' && method === 'PUT') {
       return { ...mockChefs[0], ...body } as unknown as T;
-    }
-
-    // ── Reviews ─────────────────────────────────────────────
-    if (endpoint === '/chef/reviews' && method === 'GET') {
-      return mockReviews as unknown as T;
-    }
-
-    if (endpoint.match(/\/chef\/reviews\/(.+)\/reply/) && method === 'POST') {
-      return { chefResponse: body?.response, respondedAt: new Date().toISOString() } as unknown as T;
     }
 
     // ── Analytics ───────────────────────────────────────────

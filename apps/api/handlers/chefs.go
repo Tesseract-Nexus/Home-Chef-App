@@ -4,6 +4,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -500,4 +501,88 @@ func (h *ChefHandler) UpdateOrderStatus(c *gin.Context) {
 	}()
 
 	c.JSON(http.StatusOK, order.ToResponse())
+}
+
+// GetChefReviewsForDashboard returns all reviews for the authenticated chef
+func (h *ChefHandler) GetChefReviewsForDashboard(c *gin.Context) {
+	userID, _ := middleware.GetUserID(c)
+
+	var chef models.ChefProfile
+	if err := database.DB.Where("user_id = ?", userID).First(&chef).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Chef profile not found"})
+		return
+	}
+
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	offset := (page - 1) * limit
+
+	var reviews []models.Review
+	var total int64
+
+	database.DB.Model(&models.Review{}).Where("chef_id = ?", chef.ID).Count(&total)
+
+	if err := database.DB.Preload("Customer").
+		Where("chef_id = ?", chef.ID).
+		Order("created_at DESC").
+		Offset(offset).Limit(limit).
+		Find(&reviews).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch reviews"})
+		return
+	}
+
+	responses := make([]models.ReviewResponse, len(reviews))
+	for i, review := range reviews {
+		responses[i] = review.ToResponse()
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": responses,
+		"pagination": gin.H{
+			"page":       page,
+			"limit":      limit,
+			"total":      total,
+			"totalPages": (total + int64(limit) - 1) / int64(limit),
+		},
+	})
+}
+
+// ReplyToReview allows a chef to respond to a review
+func (h *ChefHandler) ReplyToReview(c *gin.Context) {
+	userID, _ := middleware.GetUserID(c)
+	reviewID := c.Param("reviewId")
+
+	var chef models.ChefProfile
+	if err := database.DB.Where("user_id = ?", userID).First(&chef).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Chef profile not found"})
+		return
+	}
+
+	var review models.Review
+	if err := database.DB.Where("id = ? AND chef_id = ?", reviewID, chef.ID).First(&review).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Review not found"})
+		return
+	}
+
+	var req struct {
+		Response string `json:"response" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Response text is required"})
+		return
+	}
+
+	now := time.Now()
+	review.ChefResponse = req.Response
+	review.ChefRespondedAt = &now
+
+	if err := database.DB.Save(&review).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save reply"})
+		return
+	}
+
+	// Reload with customer for response DTO
+	database.DB.Preload("Customer").First(&review, review.ID)
+
+	c.JSON(http.StatusOK, review.ToResponse())
 }

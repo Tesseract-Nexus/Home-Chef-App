@@ -153,6 +153,7 @@ export default function ReviewsPage() {
                     )}
                   </div>
                   <p className="mt-1 text-xs text-gray-500">
+                    {review.customerName && <>{review.customerName} &middot; </>}
                     Order #{review.orderId.slice(-4)} &middot;{' '}
                     {format(new Date(review.createdAt), 'MMM d, yyyy')}
                   </p>
@@ -168,16 +169,13 @@ export default function ReviewsPage() {
 
               {/* Sub-ratings */}
               <div className="mt-3 flex flex-wrap gap-3">
-                {review.foodRating && (
+                {review.foodRating > 0 && (
                   <span className="text-xs text-gray-500">Food: {review.foodRating}/5</span>
                 )}
-                {review.packagingRating && (
-                  <span className="text-xs text-gray-500">Packaging: {review.packagingRating}/5</span>
-                )}
-                {review.valueRating && (
+                {review.valueRating && review.valueRating > 0 && (
                   <span className="text-xs text-gray-500">Value: {review.valueRating}/5</span>
                 )}
-                {review.deliveryRating && (
+                {review.deliveryRating && review.deliveryRating > 0 && (
                   <span className="text-xs text-gray-500">Delivery: {review.deliveryRating}/5</span>
                 )}
               </div>
@@ -187,9 +185,9 @@ export default function ReviewsPage() {
                 <div className="mt-4 rounded-lg bg-gray-50 p-4">
                   <p className="text-xs font-medium text-gray-500">Your reply</p>
                   <p className="mt-1 text-sm text-gray-700">{review.chefResponse}</p>
-                  {review.respondedAt && (
+                  {review.chefRespondedAt && (
                     <p className="mt-1 text-xs text-gray-400">
-                      {format(new Date(review.respondedAt), 'MMM d, yyyy')}
+                      {format(new Date(review.chefRespondedAt), 'MMM d, yyyy')}
                     </p>
                   )}
                 </div>

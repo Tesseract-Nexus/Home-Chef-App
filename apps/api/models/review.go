@@ -75,7 +75,11 @@ func (r *Review) ToResponse() ReviewResponse {
 	customerName := ""
 	customerAvatar := ""
 	if r.Customer.ID != uuid.Nil {
-		customerName = r.Customer.FirstName + " " + string(r.Customer.LastName[0]) + "."
+		if len(r.Customer.LastName) > 0 {
+			customerName = r.Customer.FirstName + " " + string(r.Customer.LastName[0]) + "."
+		} else {
+			customerName = r.Customer.FirstName
+		}
 		customerAvatar = r.Customer.Avatar
 	}
 

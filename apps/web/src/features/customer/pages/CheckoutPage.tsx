@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { useCartStore } from '@/app/store/cart-store';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { apiClient } from '@/shared/services/api-client';
+import { useFormatPrice } from '@/shared/utils/format-price';
 import type { Order, Address } from '@/shared/types';
 
 const addressSchema = z.object({
@@ -67,6 +68,7 @@ export default function CheckoutPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const cart = useCartStore();
+  const fp = useFormatPrice();
   const [selectedAddress, setSelectedAddress] = useState<string>(SAVED_ADDRESSES[0]?.id || '');
   const [showNewAddress, setShowNewAddress] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<string>(PAYMENT_METHODS[0]?.id || '');
@@ -407,7 +409,7 @@ export default function CheckoutPage() {
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
-                    {amount === 0 ? 'No tip' : `$${amount}`}
+                    {amount === 0 ? 'No tip' : fp(amount)}
                   </button>
                 ))}
                 <input
@@ -460,7 +462,7 @@ export default function CheckoutPage() {
                     <span className="text-gray-600">
                       {item.quantity}x {item.name}
                     </span>
-                    <span className="text-gray-900">${(item.price * item.quantity).toFixed(2)}</span>
+                    <span className="text-gray-900">{fp(item.price * item.quantity)}</span>
                   </div>
                 ))}
               </div>
@@ -469,31 +471,31 @@ export default function CheckoutPage() {
               <div className="mt-4 space-y-2 text-sm">
                 <div className="flex justify-between text-gray-600">
                   <span>Subtotal</span>
-                  <span>${subtotal.toFixed(2)}</span>
+                  <span>{fp(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-gray-600">
                   <span>Delivery fee</span>
-                  <span>${deliveryFee.toFixed(2)}</span>
+                  <span>{fp(deliveryFee)}</span>
                 </div>
                 <div className="flex justify-between text-gray-600">
                   <span>Service fee</span>
-                  <span>${serviceFee.toFixed(2)}</span>
+                  <span>{fp(serviceFee)}</span>
                 </div>
                 <div className="flex justify-between text-gray-600">
                   <span>Tax</span>
-                  <span>${tax.toFixed(2)}</span>
+                  <span>{fp(tax)}</span>
                 </div>
                 {tip > 0 && (
                   <div className="flex justify-between text-gray-600">
                     <span>Tip</span>
-                    <span>${tip.toFixed(2)}</span>
+                    <span>{fp(tip)}</span>
                   </div>
                 )}
               </div>
 
               <div className="mt-4 flex justify-between border-t pt-4 text-lg font-semibold">
                 <span>Total</span>
-                <span>${total.toFixed(2)}</span>
+                <span>{fp(total)}</span>
               </div>
 
               <button
@@ -508,7 +510,7 @@ export default function CheckoutPage() {
                   </>
                 ) : (
                   <>
-                    Place Order - ${total.toFixed(2)}
+                    Place Order - {fp(total)}
                     <ChevronRight className="ml-2 h-5 w-5" />
                   </>
                 )}

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useFormatPrice } from '@/shared/utils/format-price';
 import {
   TrendingUp,
   TrendingDown,
@@ -36,6 +37,8 @@ const TIME_PERIODS = [
 ];
 
 export default function AdminAnalyticsPage() {
+  const fp = useFormatPrice();
+
   const [period, setPeriod] = useState('30d');
 
   const { data, isLoading } = useQuery({
@@ -82,7 +85,7 @@ export default function AdminAnalyticsPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           title="Total Revenue"
-          value={`$${data?.overview.totalRevenue?.toLocaleString() || 0}`}
+          value={fp(data?.overview.totalRevenue || 0)}
           change={data?.overview.revenueChange}
           icon={DollarSign}
         />
@@ -94,7 +97,7 @@ export default function AdminAnalyticsPage() {
         />
         <MetricCard
           title="Avg. Order Value"
-          value={`$${data?.overview.avgOrderValue?.toFixed(2) || '0'}`}
+          value={fp(data?.overview.avgOrderValue || 0)}
           change={data?.overview.aovChange}
           icon={TrendingUp}
         />
@@ -119,7 +122,7 @@ export default function AdminAnalyticsPage() {
                   <div
                     className="w-full bg-brand-500 rounded-t hover:bg-brand-400 transition-colors"
                     style={{ height: `${height}%` }}
-                    title={`$${day.revenue.toLocaleString()}`}
+                    title={fp(day.revenue)}
                   />
                   <span className="mt-2 text-xs text-gray-500 rotate-45">
                     {new Date(day.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
@@ -170,7 +173,7 @@ export default function AdminAnalyticsPage() {
                   <p className="font-medium text-white truncate">{chef.name}</p>
                   <p className="text-sm text-gray-400">{chef.orders} orders</p>
                 </div>
-                <p className="font-semibold text-white">${chef.revenue.toLocaleString()}</p>
+                <p className="font-semibold text-white">{fp(chef.revenue)}</p>
               </div>
             ))}
             {(!data?.topChefs || data.topChefs.length === 0) && (

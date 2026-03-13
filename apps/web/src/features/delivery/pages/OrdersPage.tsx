@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useFormatPrice } from '@/shared/utils/format-price';
 import {
   Package,
   CheckCircle,
@@ -44,6 +45,7 @@ const STATUS_TABS = [
 ];
 
 export default function DeliveryOrdersPage() {
+  const fp = useFormatPrice();
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [dateRange, setDateRange] = useState('30d');
@@ -92,7 +94,7 @@ export default function DeliveryOrdersPage() {
               <DollarSign className="h-5 w-5 text-green-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900">${totalEarnings.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-gray-900">{fp(totalEarnings)}</p>
               <p className="text-sm text-gray-500">Total Earnings</p>
             </div>
           </div>
@@ -211,10 +213,10 @@ export default function DeliveryOrdersPage() {
 
                 <div className="text-right">
                   <p className="text-lg font-semibold text-gray-900">
-                    ${(order.deliveryFee + order.tip).toFixed(2)}
+                    {fp(order.deliveryFee + order.tip)}
                   </p>
                   {order.tip > 0 && (
-                    <p className="text-sm text-green-600">+${order.tip.toFixed(2)} tip</p>
+                    <p className="text-sm text-green-600">+{fp(order.tip)} tip</p>
                   )}
                   <ChevronRight className="ml-auto mt-2 h-5 w-5 text-gray-400" />
                 </div>
@@ -249,6 +251,7 @@ function OrderDetailModal({
   order: DeliveryOrder;
   onClose: () => void;
 }) {
+  const fp = useFormatPrice();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-md rounded-xl bg-white shadow-xl">
@@ -318,15 +321,15 @@ function OrderDetailModal({
           <div className="mt-4 space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Delivery Fee</span>
-              <span className="text-gray-900">${order.deliveryFee.toFixed(2)}</span>
+              <span className="text-gray-900">{fp(order.deliveryFee)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-gray-500">Tip</span>
-              <span className="text-green-600">+${order.tip.toFixed(2)}</span>
+              <span className="text-green-600">+{fp(order.tip)}</span>
             </div>
             <div className="flex justify-between border-t border-gray-200 pt-2 text-base font-semibold">
               <span className="text-gray-900">Total Earned</span>
-              <span className="text-gray-900">${(order.deliveryFee + order.tip).toFixed(2)}</span>
+              <span className="text-gray-900">{fp(order.deliveryFee + order.tip)}</span>
             </div>
           </div>
 

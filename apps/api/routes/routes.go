@@ -52,6 +52,7 @@ func SetupRouter() *gin.Engine {
 	customerHandler := handlers.NewCustomerHandler()
 	addressHandler := handlers.NewAddressHandler()
 	preferenceHandler := handlers.NewPreferenceHandler()
+	currencyHandler := handlers.NewCurrencyHandler()
 
 	// Health check endpoints
 	r.GET("/health", healthHandler.Health)
@@ -77,6 +78,14 @@ func SetupRouter() *gin.Engine {
 
 		// Preference options (public)
 		v1.GET("/preferences", preferenceHandler.GetPreferenceOptions)
+
+		// Currency routes (public)
+		currencies := v1.Group("/currencies")
+		{
+			currencies.GET("", currencyHandler.ListCurrencies)
+			currencies.GET("/rates", currencyHandler.GetRates)
+			currencies.GET("/detect", currencyHandler.DetectCurrency)
+		}
 
 		// Auth routes (public)
 		auth := v1.Group("/auth")
@@ -292,6 +301,7 @@ func SetupRouter() *gin.Engine {
 			customer.GET("/profile", customerHandler.GetCustomerProfile)
 			customer.PUT("/profile", customerHandler.UpdateCustomerProfile)
 			customer.POST("/avatar", customerHandler.UploadAvatar)
+			customer.PUT("/currency", currencyHandler.SetPreferredCurrency)
 			customer.GET("/onboarding/status", customerHandler.GetOnboardingStatus)
 			customer.POST("/onboarding/complete", customerHandler.CompleteOnboarding)
 			customer.POST("/onboarding/skip", customerHandler.SkipOnboarding)

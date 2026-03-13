@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { apiClient } from '@/shared/services/api-client';
 import { useAuth } from '@/app/providers/AuthProvider';
+import { useFormatPrice } from '@/shared/utils/format-price';
 import { Card, Badge, Button } from '@/shared/components/ui';
 import { fadeInUp, staggerContainer } from '@/shared/utils/animations';
 import type { Order, PaginatedResponse } from '@/shared/types';
@@ -31,6 +32,7 @@ interface DashboardStats {
 
 export default function ChefDashboardPage() {
   const { user } = useAuth();
+  const fp = useFormatPrice();
 
   const { data: stats } = useQuery({
     queryKey: ['chef-dashboard-stats'],
@@ -77,7 +79,7 @@ export default function ChefDashboardPage() {
       <motion.div variants={fadeInUp} className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Today's Revenue"
-          value={`$${stats?.todayRevenue?.toFixed(2) || '0.00'}`}
+          value={fp(stats?.todayRevenue || 0)}
           change={stats?.revenueChange}
           icon={DollarSign}
           color="green"
@@ -223,7 +225,7 @@ export default function ChefDashboardPage() {
                       {order.items.length} item(s)
                     </td>
                     <td className="py-3 font-medium text-gray-900">
-                      ${order.total.toFixed(2)}
+                      {fp(order.total)}
                     </td>
                     <td className="py-3">
                       <OrderStatusBadge status={order.status} />
@@ -329,6 +331,7 @@ function QuickActionLink({
 }
 
 function PendingOrderCard({ order }: { order: Order }) {
+  const fp = useFormatPrice();
   const isNew = order.status === 'pending';
 
   return (
@@ -345,7 +348,7 @@ function PendingOrderCard({ order }: { order: Order }) {
         <div>
           <p className="font-medium text-gray-900">#{order.orderNumber}</p>
           <p className="text-sm text-gray-500">
-            {order.items.length} items - ${order.total.toFixed(2)}
+            {order.items.length} items - {fp(order.total)}
           </p>
         </div>
       </div>

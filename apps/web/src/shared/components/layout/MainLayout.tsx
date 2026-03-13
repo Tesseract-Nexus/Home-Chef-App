@@ -18,6 +18,7 @@ import { useAuth } from '@/app/providers/AuthProvider';
 import { useCartStore } from '@/app/store/cart-store';
 import { MobileBottomNav, MobileBottomNavSpacer } from '@/shared/components/navigation';
 import { Logo } from '@/shared/components/brand';
+import { CurrencySelector } from '@/shared/components/CurrencySelector';
 import { useIsMobile, useOnlineStatus } from '@/shared/hooks/useMobile';
 
 export function MainLayout() {
@@ -81,6 +82,9 @@ export function MainLayout() {
 
             {/* Right side */}
             <div className="flex items-center gap-2">
+              {/* Currency selector */}
+              <CurrencySelector />
+
               {/* Search button */}
               <button
                 onClick={() => navigate('/chefs')}

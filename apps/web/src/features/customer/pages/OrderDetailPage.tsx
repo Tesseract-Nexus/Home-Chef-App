@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiClient } from '@/shared/services/api-client';
+import { useFormatPrice } from '@/shared/utils/format-price';
 import type { Order, OrderStatus } from '@/shared/types';
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; bgColor: string; icon: typeof Clock }> = {
@@ -36,6 +37,7 @@ const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; bgColor
 
 export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const fp = useFormatPrice();
   const queryClient = useQueryClient();
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
@@ -200,7 +202,7 @@ export default function OrderDetailPage() {
                       )}
                     </div>
                     <span className="font-medium text-gray-900">
-                      ${item.subtotal.toFixed(2)}
+                      {fp(item.subtotal)}
                     </span>
                   </div>
                 </div>
@@ -240,37 +242,37 @@ export default function OrderDetailPage() {
           <div className="mt-4 space-y-3">
             <div className="flex justify-between text-gray-600">
               <span>Subtotal</span>
-              <span>${order.subtotal.toFixed(2)}</span>
+              <span>{fp(order.subtotal)}</span>
             </div>
             <div className="flex justify-between text-gray-600">
               <span>Delivery fee</span>
-              <span>${order.deliveryFee.toFixed(2)}</span>
+              <span>{fp(order.deliveryFee)}</span>
             </div>
             <div className="flex justify-between text-gray-600">
               <span>Service fee</span>
-              <span>${order.serviceFee.toFixed(2)}</span>
+              <span>{fp(order.serviceFee)}</span>
             </div>
             <div className="flex justify-between text-gray-600">
               <span>Tax</span>
-              <span>${order.tax.toFixed(2)}</span>
+              <span>{fp(order.tax)}</span>
             </div>
             {order.discount > 0 && (
               <div className="flex justify-between text-green-600">
                 <span>Discount</span>
-                <span>-${order.discount.toFixed(2)}</span>
+                <span>-{fp(order.discount)}</span>
               </div>
             )}
             {order.tip > 0 && (
               <div className="flex justify-between text-gray-600">
                 <span>Tip</span>
-                <span>${order.tip.toFixed(2)}</span>
+                <span>{fp(order.tip)}</span>
               </div>
             )}
           </div>
 
           <div className="mt-4 flex justify-between border-t pt-4 text-lg font-semibold">
             <span>Total</span>
-            <span>${order.total.toFixed(2)}</span>
+            <span>{fp(order.total)}</span>
           </div>
 
           <div className="mt-4 flex items-center gap-2 text-sm text-gray-500">

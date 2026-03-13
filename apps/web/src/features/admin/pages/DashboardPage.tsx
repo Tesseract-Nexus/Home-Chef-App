@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { useFormatPrice } from '@/shared/utils/format-price';
 import {
   Users,
   ChefHat,
@@ -35,6 +36,8 @@ interface RecentActivity {
 }
 
 export default function AdminDashboardPage() {
+  const fp = useFormatPrice();
+
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['admin-stats'],
     queryFn: () => apiClient.get<AdminStats>('/admin/stats'),
@@ -88,8 +91,8 @@ export default function AdminDashboardPage() {
         />
         <StatCard
           title="Revenue"
-          value={`$${stats?.revenue?.toLocaleString() || '0'}`}
-          subtext={`$${stats?.revenueToday?.toLocaleString() || '0'} today`}
+          value={fp(stats?.revenue || 0)}
+          subtext={`${fp(stats?.revenueToday || 0)} today`}
           change={stats?.revenueChange}
           icon={DollarSign}
           color="orange"

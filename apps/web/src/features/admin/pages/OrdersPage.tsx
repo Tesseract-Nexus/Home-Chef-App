@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useFormatPrice } from '@/shared/utils/format-price';
 import {
   Search,
   ShoppingBag,
@@ -25,6 +26,8 @@ const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string }> = {
 };
 
 export default function AdminOrdersPage() {
+  const fp = useFormatPrice();
+
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [page, setPage] = useState(1);
@@ -140,7 +143,7 @@ export default function AdminOrdersPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 font-medium text-white">
-                        ${order.total.toFixed(2)}
+                        {fp(order.total)}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-400">
                         {new Date(order.createdAt).toLocaleDateString()}
@@ -196,6 +199,7 @@ export default function AdminOrdersPage() {
 }
 
 function OrderDetailModal({ order, onClose }: { order: Order; onClose: () => void }) {
+  const fp = useFormatPrice();
   const status = STATUS_CONFIG[order.status];
 
   return (
@@ -225,7 +229,7 @@ function OrderDetailModal({ order, onClose }: { order: Order; onClose: () => voi
                   <span>
                     {item.quantity}x {item.name}
                   </span>
-                  <span>${item.subtotal.toFixed(2)}</span>
+                  <span>{fp(item.subtotal)}</span>
                 </div>
               ))}
             </div>
@@ -235,29 +239,29 @@ function OrderDetailModal({ order, onClose }: { order: Order; onClose: () => voi
           <div className="rounded-lg bg-gray-700/50 p-4 space-y-2">
             <div className="flex justify-between text-gray-400">
               <span>Subtotal</span>
-              <span>${order.subtotal.toFixed(2)}</span>
+              <span>{fp(order.subtotal)}</span>
             </div>
             <div className="flex justify-between text-gray-400">
               <span>Delivery Fee</span>
-              <span>${order.deliveryFee.toFixed(2)}</span>
+              <span>{fp(order.deliveryFee)}</span>
             </div>
             <div className="flex justify-between text-gray-400">
               <span>Service Fee</span>
-              <span>${order.serviceFee.toFixed(2)}</span>
+              <span>{fp(order.serviceFee)}</span>
             </div>
             <div className="flex justify-between text-gray-400">
               <span>Tax</span>
-              <span>${order.tax.toFixed(2)}</span>
+              <span>{fp(order.tax)}</span>
             </div>
             {order.discount > 0 && (
               <div className="flex justify-between text-green-400">
                 <span>Discount</span>
-                <span>-${order.discount.toFixed(2)}</span>
+                <span>-{fp(order.discount)}</span>
               </div>
             )}
             <div className="flex justify-between border-t border-gray-600 pt-2 text-lg font-semibold text-white">
               <span>Total</span>
-              <span>${order.total.toFixed(2)}</span>
+              <span>{fp(order.total)}</span>
             </div>
           </div>
 

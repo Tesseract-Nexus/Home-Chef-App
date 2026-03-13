@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { Clock, Plus, Heart, Flame } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/shared/utils/cn';
+import { useFormatPrice } from '@/shared/utils/format-price';
 import { FOOD_PLACEHOLDERS } from '@/shared/constants/images';
 import { Card, Badge, RatingBadge, Button } from '@/shared/components/ui';
 
@@ -47,6 +48,7 @@ export function FoodCard({
   className,
 }: FoodCardProps) {
   const imageUrl = image || FOOD_PLACEHOLDERS[parseInt(id) % FOOD_PLACEHOLDERS.length];
+  const fp = useFormatPrice();
 
   return (
     <Card
@@ -151,11 +153,11 @@ export function FoodCard({
         <div className="mt-4 flex items-center justify-between">
           <div className="flex items-baseline gap-2">
             <span className="text-xl font-bold text-brand-600">
-              ${price.toFixed(2)}
+              {fp(price)}
             </span>
             {originalPrice && originalPrice > price && (
               <span className="text-sm text-gray-400 line-through">
-                ${originalPrice.toFixed(2)}
+                {fp(originalPrice)}
               </span>
             )}
           </div>
@@ -186,6 +188,7 @@ export function FoodCardCompact({
   onAddToCart,
 }: Pick<FoodCardProps, 'id' | 'name' | 'price' | 'image' | 'chefName' | 'onAddToCart'>) {
   const imageUrl = image || FOOD_PLACEHOLDERS[parseInt(id) % FOOD_PLACEHOLDERS.length];
+  const fp = useFormatPrice();
 
   return (
     <Card variant="outlined" padding="sm" hover="lift" className="flex items-center gap-4">
@@ -200,7 +203,7 @@ export function FoodCardCompact({
         {chefName && (
           <p className="text-sm text-gray-500">by {chefName}</p>
         )}
-        <p className="mt-1 font-bold text-brand-600">${price.toFixed(2)}</p>
+        <p className="mt-1 font-bold text-brand-600">{fp(price)}</p>
       </div>
       {onAddToCart && (
         <Button

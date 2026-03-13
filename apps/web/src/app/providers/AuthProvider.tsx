@@ -8,9 +8,10 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/auth-store';
 import { useFavoritesStore } from '../store/favorites-store';
+import { useCurrencyStore } from '../store/currency-store';
 import { apiClient } from '@/shared/services/api-client';
 import type { SessionUser, SocialProvider } from '@/shared/types/auth';
-import type { OnboardingStatus } from '@/shared/types';
+import type { OnboardingStatus, CustomerProfile } from '@/shared/types';
 
 const BFF_URL = import.meta.env.VITE_BFF_URL || 'https://identity.fe3dr.com';
 // Same-origin proxy for fetch calls — browser redirects still use full BFF_URL
@@ -55,6 +56,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       useFavoritesStore.getState().clear();
     }
   }, [isAuthenticated]);
+
+  // Initialize currency: fetch rates/currencies, detect or restore preference
+  useEffect(() => {
+    const cs = useCurrencyStore.getState();
+    cs.fetchCurrencies().then(() => {
+      cs.fetchRates();
+      if (isAuthenticated && !isLoading) {
+        // Load preferred currency from profile
+        apiClient
+          .get<CustomerProfile>('/customer/profile')
+          .then((profile) => {
+            if (profile.preferredCurrency) {
+              cs.initFromProfile(profile.preferredCurrency);
+            }
+          })
+          .catch(() => {});
+      } else if (!isLoading && !cs.detected) {
+        // Guest: auto-detect from IP
+        cs.detectCurrency();
+      }
+    });
+  }, [isAuthenticated, isLoading]);
 
   // Check onboarding status after auth resolves
   useEffect(() => {

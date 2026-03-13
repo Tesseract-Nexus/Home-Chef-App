@@ -16,6 +16,7 @@ import {
   FileText,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useFormatPrice } from '@/shared/utils/format-price';
 import { apiClient } from '@/shared/services/api-client';
 import type { CateringRequest, CateringQuote, PaginatedResponse } from '@/shared/types';
 
@@ -316,6 +317,7 @@ function QuoteCard({
   isAccepting: boolean;
 }) {
   const [showDetails, setShowDetails] = useState(false);
+  const fp = useFormatPrice();
 
   return (
     <div className="rounded-xl bg-white shadow-sm overflow-hidden">
@@ -339,10 +341,10 @@ function QuoteCard({
               </div>
               <div className="text-right">
                 <p className="text-2xl font-bold text-gray-900">
-                  ${quote.totalPrice.toFixed(2)}
+                  {fp(quote.totalPrice)}
                 </p>
                 <p className="text-sm text-gray-500">
-                  ${quote.pricePerPerson.toFixed(2)} per person
+                  {fp(quote.pricePerPerson)} per person
                 </p>
               </div>
             </div>
@@ -371,7 +373,7 @@ function QuoteCard({
                       )}
                     </div>
                     <span className="text-gray-600">
-                      {item.quantity}x ${item.pricePerUnit.toFixed(2)}
+                      {item.quantity}x {fp(item.pricePerUnit)}
                     </span>
                   </li>
                 ))}
@@ -379,7 +381,7 @@ function QuoteCard({
               {quote.serviceCharge && quote.serviceCharge > 0 && (
                 <div className="mt-3 pt-3 border-t flex justify-between text-sm">
                   <span className="text-gray-600">Service Charge</span>
-                  <span className="text-gray-900">${quote.serviceCharge.toFixed(2)}</span>
+                  <span className="text-gray-900">{fp(quote.serviceCharge)}</span>
                 </div>
               )}
             </div>

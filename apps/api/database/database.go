@@ -131,6 +131,10 @@ func Migrate() error {
 		// Admin
 		&models.PlatformSettings{},
 		&models.AuditLog{},
+
+		// Currency
+		&models.Currency{},
+		&models.ExchangeRate{},
 	)
 
 	if err != nil {

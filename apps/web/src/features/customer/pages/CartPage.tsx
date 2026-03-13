@@ -13,11 +13,13 @@ import {
 } from 'lucide-react';
 import { useCartStore } from '@/app/store/cart-store';
 import { useAuth } from '@/app/providers/AuthProvider';
+import { useFormatPrice } from '@/shared/utils/format-price';
 
 export default function CartPage() {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
   const cart = useCartStore();
+  const fp = useFormatPrice();
   const [promoCode, setPromoCode] = useState('');
   const [promoApplied, setPromoApplied] = useState(false);
 
@@ -148,7 +150,7 @@ export default function CartPage() {
                         </button>
                       </div>
                       <span className="font-semibold text-gray-900">
-                        ${(item.price * item.quantity).toFixed(2)}
+                        {fp(item.price * item.quantity)}
                       </span>
                     </div>
                   </div>
@@ -204,27 +206,27 @@ export default function CartPage() {
               <div className="mt-6 space-y-3 border-t pt-6">
                 <div className="flex justify-between text-gray-600">
                   <span>Subtotal</span>
-                  <span>${subtotal.toFixed(2)}</span>
+                  <span>{fp(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-gray-600">
                   <span>Delivery fee</span>
-                  <span>${deliveryFee.toFixed(2)}</span>
+                  <span>{fp(deliveryFee)}</span>
                 </div>
                 <div className="flex justify-between text-gray-600">
                   <span>Service fee</span>
-                  <span>${serviceFee.toFixed(2)}</span>
+                  <span>{fp(serviceFee)}</span>
                 </div>
                 {discount > 0 && (
                   <div className="flex justify-between text-green-600">
                     <span>Discount</span>
-                    <span>-${discount.toFixed(2)}</span>
+                    <span>-{fp(discount)}</span>
                   </div>
                 )}
               </div>
 
               <div className="mt-4 flex justify-between border-t pt-4 text-lg font-semibold">
                 <span>Total</span>
-                <span>${total.toFixed(2)}</span>
+                <span>{fp(total)}</span>
               </div>
 
               {/* Minimum Order Warning */}
@@ -233,7 +235,7 @@ export default function CartPage() {
                   <AlertCircle className="h-5 w-5 flex-shrink-0" />
                   <div>
                     <p className="font-medium">Minimum order not met</p>
-                    <p>Add ${(minimumOrder - subtotal).toFixed(2)} more to proceed</p>
+                    <p>Add {fp(minimumOrder - subtotal)} more to proceed</p>
                   </div>
                 </div>
               )}

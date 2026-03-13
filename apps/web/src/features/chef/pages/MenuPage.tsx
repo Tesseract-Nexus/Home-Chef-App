@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import { apiClient } from '@/shared/services/api-client';
 import { Button, Card, Input, Badge, SimpleDialog } from '@/shared/components/ui';
 import { fadeInUp, staggerContainer } from '@/shared/utils/animations';
+import { useFormatPrice } from '@/shared/utils/format-price';
 import type { MenuItem, MenuCategory } from '@/shared/types';
 
 const menuItemSchema = z.object({
@@ -259,6 +260,8 @@ function MenuItemCard({
   onDelete: () => void;
   onToggleAvailability: () => void;
 }) {
+  const fp = useFormatPrice();
+
   return (
     <Card
       variant="default"
@@ -314,10 +317,10 @@ function MenuItemCard({
         {/* Price & Prep Time */}
         <div className="mt-4 flex items-center justify-between">
           <div className="flex items-baseline gap-2">
-            <span className="text-lg font-bold text-gray-900">${item.price.toFixed(2)}</span>
+            <span className="text-lg font-bold text-gray-900">{fp(item.price)}</span>
             {item.comparePrice && (
               <span className="text-sm text-gray-400 line-through">
-                ${item.comparePrice.toFixed(2)}
+                {fp(item.comparePrice)}
               </span>
             )}
           </div>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useFormatPrice } from '@/shared/utils/format-price';
 import {
   Package,
   Navigation,
@@ -47,6 +48,7 @@ interface AvailableDelivery {
 }
 
 export default function DeliveryDashboardPage() {
+  const fp = useFormatPrice();
   const [isOnline, setIsOnline] = useState(true);
   const queryClient = useQueryClient();
 
@@ -127,7 +129,7 @@ export default function DeliveryDashboardPage() {
         />
         <StatCard
           title="Today's Earnings"
-          value={`$${(stats?.todayEarnings || 0).toFixed(2)}`}
+          value={fp(stats?.todayEarnings || 0)}
           icon={DollarSign}
           color="bg-green-500"
         />
@@ -200,7 +202,7 @@ export default function DeliveryDashboardPage() {
               <p className="text-sm text-gray-500">{currentDelivery.items.length} items</p>
             </div>
             <div className="text-right">
-              <p className="font-semibold text-gray-900">${currentDelivery.deliveryFee.toFixed(2)}</p>
+              <p className="font-semibold text-gray-900">{fp(currentDelivery.deliveryFee)}</p>
               <p className="text-sm text-gray-500">+ tip</p>
             </div>
           </div>
@@ -313,7 +315,7 @@ export default function DeliveryDashboardPage() {
 
                     <div className="text-right">
                       <p className="text-xl font-bold text-green-600">
-                        ${delivery.estimatedPayout.toFixed(2)}
+                        {fp(delivery.estimatedPayout)}
                       </p>
                       <button
                         onClick={() => acceptMutation.mutate(delivery.id)}
@@ -377,7 +379,7 @@ export default function DeliveryDashboardPage() {
             </div>
             <div>
               <p className="text-2xl font-bold text-gray-900">
-                ${(stats?.weekEarnings || 0).toFixed(2)}
+                {fp(stats?.weekEarnings || 0)}
               </p>
               <p className="text-sm text-gray-500">Total earnings</p>
             </div>

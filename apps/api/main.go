@@ -39,6 +39,15 @@ func main() {
 		defer services.CloseStorage()
 	}
 
+	// Connect to Redis
+	redisClient := services.GetRedisClient()
+	if err := redisClient.Connect(); err != nil {
+		log.Printf("Warning: Failed to connect to Redis: %v", err)
+		log.Println("Redis caching will be unavailable")
+	} else {
+		defer redisClient.Close()
+	}
+
 	// Connect to NATS
 	natsClient := services.GetNATSClient()
 	if err := natsClient.Connect(); err != nil {

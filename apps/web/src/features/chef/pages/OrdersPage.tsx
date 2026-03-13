@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { apiClient } from '@/shared/services/api-client';
 import { Button, Card, Input, Badge, SimpleDialog } from '@/shared/components/ui';
 import { fadeInUp, staggerContainer } from '@/shared/utils/animations';
+import { useFormatPrice } from '@/shared/utils/format-price';
 import type { Order, OrderStatus, PaginatedResponse } from '@/shared/types';
 
 const STATUS_TABS = [
@@ -201,6 +202,7 @@ function OrderCard({
   onUpdateStatus: (status: OrderStatus) => void;
   isUpdating: boolean;
 }) {
+  const fp = useFormatPrice();
   const status = STATUS_CONFIG[order.status] ?? { label: order.status, variant: 'default' as const };
   const isNew = order.status === 'pending';
 
@@ -241,7 +243,7 @@ function OrderCard({
 
         {/* Total */}
         <div className="text-right">
-          <p className="text-xl font-bold text-gray-900">${order.total.toFixed(2)}</p>
+          <p className="text-xl font-bold text-gray-900">{fp(order.total)}</p>
           <p className="text-sm text-gray-500">{order.items.length} item(s)</p>
         </div>
       </div>
@@ -254,7 +256,7 @@ function OrderCard({
               <span>
                 {item.quantity}x {item.name}
               </span>
-              <span>${item.subtotal.toFixed(2)}</span>
+              <span>{fp(item.subtotal)}</span>
             </li>
           ))}
           {order.items.length > 3 && (
@@ -311,6 +313,7 @@ function OrderDetailContent({
   onUpdateStatus: (status: OrderStatus) => void;
   isUpdating: boolean;
 }) {
+  const fp = useFormatPrice();
   const status = STATUS_CONFIG[order.status] ?? { label: order.status, variant: 'default' as const };
 
   return (
@@ -365,7 +368,7 @@ function OrderDetailContent({
               </div>
               <div className="text-right">
                 <p className="font-medium text-gray-900">x{item.quantity}</p>
-                <p className="text-sm text-gray-500">${item.subtotal.toFixed(2)}</p>
+                <p className="text-sm text-gray-500">{fp(item.subtotal)}</p>
               </div>
             </div>
           ))}
@@ -386,23 +389,23 @@ function OrderDetailContent({
         <div className="mt-3 space-y-2 text-sm">
           <div className="flex justify-between text-gray-600">
             <span>Subtotal</span>
-            <span>${order.subtotal.toFixed(2)}</span>
+            <span>{fp(order.subtotal)}</span>
           </div>
           {order.discount > 0 && (
             <div className="flex justify-between text-fresh-600">
               <span>Discount</span>
-              <span>-${order.discount.toFixed(2)}</span>
+              <span>-{fp(order.discount)}</span>
             </div>
           )}
           {order.tip > 0 && (
             <div className="flex justify-between text-gray-600">
               <span>Tip</span>
-              <span>${order.tip.toFixed(2)}</span>
+              <span>{fp(order.tip)}</span>
             </div>
           )}
           <div className="flex justify-between border-t pt-2 font-semibold text-gray-900">
             <span>Your Earnings</span>
-            <span>${(order.subtotal - order.discount + order.tip).toFixed(2)}</span>
+            <span>{fp(order.subtotal - order.discount + order.tip)}</span>
           </div>
         </div>
       </Card>

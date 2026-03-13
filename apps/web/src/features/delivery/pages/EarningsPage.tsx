@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useFormatPrice } from '@/shared/utils/format-price';
 import {
   DollarSign,
   TrendingUp,
@@ -57,6 +58,7 @@ const TIME_PERIODS = [
 ];
 
 export default function DeliveryEarningsPage() {
+  const fp = useFormatPrice();
   const [period, setPeriod] = useState('30d');
 
   const { data, isLoading } = useQuery({
@@ -110,7 +112,7 @@ export default function DeliveryEarningsPage() {
             </div>
             <ArrowUpRight className="h-5 w-5 opacity-70" />
           </div>
-          <p className="mt-4 text-3xl font-bold">${(data?.currentBalance || 0).toFixed(2)}</p>
+          <p className="mt-4 text-3xl font-bold">{fp(data?.currentBalance || 0)}</p>
           <p className="mt-1 text-green-100">Available Balance</p>
           <button className="mt-4 w-full rounded-lg bg-white/20 py-2 text-sm font-medium hover:bg-white/30 transition-colors">
             Cash Out
@@ -124,7 +126,7 @@ export default function DeliveryEarningsPage() {
             </div>
           </div>
           <p className="mt-4 text-2xl font-bold text-gray-900">
-            ${(data?.pendingPayout || 0).toFixed(2)}
+            {fp(data?.pendingPayout || 0)}
           </p>
           <p className="mt-1 text-gray-500">Pending Payout</p>
         </div>
@@ -136,7 +138,7 @@ export default function DeliveryEarningsPage() {
             </div>
           </div>
           <p className="mt-4 text-2xl font-bold text-gray-900">
-            ${(data?.lastPayout?.amount || 0).toFixed(2)}
+            {fp(data?.lastPayout?.amount || 0)}
           </p>
           <p className="mt-1 text-gray-500">
             Last Payout
@@ -157,7 +159,7 @@ export default function DeliveryEarningsPage() {
           <div>
             <p className="text-sm text-gray-500">Total Earnings</p>
             <p className="mt-1 text-2xl font-bold text-gray-900">
-              ${(data?.periodStats.totalEarnings || 0).toFixed(2)}
+              {fp(data?.periodStats.totalEarnings || 0)}
             </p>
           </div>
           <div>
@@ -169,13 +171,13 @@ export default function DeliveryEarningsPage() {
           <div>
             <p className="text-sm text-gray-500">Avg per Delivery</p>
             <p className="mt-1 text-2xl font-bold text-gray-900">
-              ${(data?.periodStats.averagePerDelivery || 0).toFixed(2)}
+              {fp(data?.periodStats.averagePerDelivery || 0)}
             </p>
           </div>
           <div>
             <p className="text-sm text-gray-500">Earnings per Hour</p>
             <p className="mt-1 text-2xl font-bold text-gray-900">
-              ${(data?.periodStats.earningsPerHour || 0).toFixed(2)}
+              {fp(data?.periodStats.earningsPerHour || 0)}
             </p>
           </div>
         </div>
@@ -188,7 +190,7 @@ export default function DeliveryEarningsPage() {
               <span className="text-sm text-gray-500">Delivery Fees</span>
             </div>
             <p className="mt-2 text-lg font-semibold text-gray-900">
-              ${(data?.periodStats.deliveryFees || 0).toFixed(2)}
+              {fp(data?.periodStats.deliveryFees || 0)}
             </p>
           </div>
           <div className="rounded-lg bg-green-50 p-4">
@@ -197,7 +199,7 @@ export default function DeliveryEarningsPage() {
               <span className="text-sm text-green-600">Tips</span>
             </div>
             <p className="mt-2 text-lg font-semibold text-green-700">
-              +${(data?.periodStats.tips || 0).toFixed(2)}
+              +{fp(data?.periodStats.tips || 0)}
             </p>
           </div>
           <div className="rounded-lg bg-purple-50 p-4">
@@ -206,7 +208,7 @@ export default function DeliveryEarningsPage() {
               <span className="text-sm text-purple-600">Bonuses</span>
             </div>
             <p className="mt-2 text-lg font-semibold text-purple-700">
-              +${(data?.periodStats.bonuses || 0).toFixed(2)}
+              +{fp(data?.periodStats.bonuses || 0)}
             </p>
           </div>
           <div className="rounded-lg bg-red-50 p-4">
@@ -215,7 +217,7 @@ export default function DeliveryEarningsPage() {
               <span className="text-sm text-red-600">Deductions</span>
             </div>
             <p className="mt-2 text-lg font-semibold text-red-700">
-              -${(data?.periodStats.deductions || 0).toFixed(2)}
+              -{fp(data?.periodStats.deductions || 0)}
             </p>
           </div>
         </div>
@@ -244,9 +246,9 @@ export default function DeliveryEarningsPage() {
                     {/* Tooltip */}
                     <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-10">
                       <div className="rounded-lg bg-gray-900 px-3 py-2 text-xs text-white whitespace-nowrap">
-                        <p className="font-semibold">${day.earnings.toFixed(2)}</p>
+                        <p className="font-semibold">{fp(day.earnings)}</p>
                         <p className="text-gray-400">
-                          {day.deliveries} deliveries • ${day.tips.toFixed(2)} tips
+                          {day.deliveries} deliveries • {fp(day.tips)} tips
                         </p>
                       </div>
                     </div>
@@ -312,7 +314,7 @@ export default function DeliveryEarningsPage() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold text-gray-900">${payout.amount.toFixed(2)}</p>
+                  <p className="font-semibold text-gray-900">{fp(payout.amount)}</p>
                   <span
                     className={`text-xs font-medium ${
                       payout.status === 'completed'
@@ -347,7 +349,7 @@ export default function DeliveryEarningsPage() {
           <div>
             <p className="text-brand-100">Earnings per Hour</p>
             <p className="mt-1 text-3xl font-bold">
-              ${(data?.periodStats.earningsPerHour || 0).toFixed(2)}
+              {fp(data?.periodStats.earningsPerHour || 0)}
             </p>
           </div>
         </div>

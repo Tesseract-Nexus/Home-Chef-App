@@ -14,6 +14,7 @@ import {
   RotateCcw,
 } from 'lucide-react';
 import { apiClient } from '@/shared/services/api-client';
+import { useFormatPrice } from '@/shared/utils/format-price';
 import type { Order, PaginatedResponse, OrderStatus } from '@/shared/types';
 
 const STATUS_CONFIG: Record<OrderStatus, { label: string; color: string; icon: typeof Clock }> = {
@@ -135,6 +136,7 @@ export default function OrdersPage() {
 }
 
 function OrderCard({ order }: { order: Order }) {
+  const fp = useFormatPrice();
   const status = STATUS_CONFIG[order.status];
   const StatusIcon = status.icon;
   const isActive = !['delivered', 'cancelled', 'refunded'].includes(order.status);
@@ -167,7 +169,7 @@ function OrderCard({ order }: { order: Order }) {
           </div>
 
           <div className="text-right">
-            <p className="font-semibold text-gray-900">${order.total.toFixed(2)}</p>
+            <p className="font-semibold text-gray-900">{fp(order.total)}</p>
             <p className="text-sm text-gray-500">{order.items.length} item(s)</p>
           </div>
         </div>

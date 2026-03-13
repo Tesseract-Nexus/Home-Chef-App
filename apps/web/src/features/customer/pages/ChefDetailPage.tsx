@@ -21,6 +21,7 @@ import { apiClient } from '@/shared/services/api-client';
 import { useCartStore } from '@/app/store/cart-store';
 import { useFavoritesStore } from '@/app/store/favorites-store';
 import { useAuth } from '@/app/providers/AuthProvider';
+import { useFormatPrice } from '@/shared/utils/format-price';
 import type { Chef, MenuItem, MenuCategory, Review, PaginatedResponse } from '@/shared/types';
 
 export default function ChefDetailPage() {
@@ -46,6 +47,7 @@ export default function ChefDetailPage() {
     enabled: !!id && showReviews,
   });
 
+  const fp = useFormatPrice();
   const cart = useCartStore();
   const cartItemCount = cart.getItemCount();
   const { isAuthenticated, login } = useAuth();
@@ -194,10 +196,10 @@ export default function ChefDetailPage() {
                   )}
                 </div>
                 <div className="text-sm text-gray-600">
-                  Min. order: <span className="font-medium">${chef.minimumOrder}</span>
+                  Min. order: <span className="font-medium">{fp(chef.minimumOrder)}</span>
                 </div>
                 <div className="text-sm text-gray-600">
-                  Delivery: <span className="font-medium">${chef.deliveryFee}</span>
+                  Delivery: <span className="font-medium">{fp(chef.deliveryFee)}</span>
                 </div>
                 <div className="text-sm text-gray-600">
                   Price range: <span className="font-medium">{chef.priceRange}</span>
@@ -308,7 +310,7 @@ export default function ChefDetailPage() {
               <span className="rounded-full bg-white/20 px-2 py-0.5 text-sm">
                 {cartItemCount} items
               </span>
-              <span className="font-semibold">${cart.getSubtotal().toFixed(2)}</span>
+              <span className="font-semibold">{fp(cart.getSubtotal())}</span>
             </div>
           </Link>
         </div>
@@ -332,6 +334,7 @@ function MenuItemCard({
   };
 }) {
   const [quantity, setQuantity] = useState(1);
+  const fp = useFormatPrice();
   const cart = useCartStore();
 
   const cartItem = cart.items.find((i) => i.menuItemId === item.id);
@@ -400,11 +403,11 @@ function MenuItemCard({
           <div className="mt-4 flex items-center justify-between">
             <div className="flex items-baseline gap-2">
               <span className="text-lg font-semibold text-gray-900">
-                ${item.price.toFixed(2)}
+                {fp(item.price)}
               </span>
               {item.comparePrice && (
                 <span className="text-sm text-gray-400 line-through">
-                  ${item.comparePrice.toFixed(2)}
+                  {fp(item.comparePrice)}
                 </span>
               )}
             </div>

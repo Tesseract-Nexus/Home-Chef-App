@@ -13,6 +13,7 @@ import {
   ChefHat,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useFormatPrice } from '@/shared/utils/format-price';
 import { apiClient } from '@/shared/services/api-client';
 import type { CateringRequest, CateringQuote, PaginatedResponse } from '@/shared/types';
 
@@ -142,6 +143,8 @@ function RequestsList({
   requests: CateringRequest[];
   onSelectRequest: (request: CateringRequest) => void;
 }) {
+  const fp = useFormatPrice();
+
   if (requests.length === 0) {
     return (
       <div className="rounded-xl bg-white p-12 text-center shadow-sm">
@@ -190,7 +193,7 @@ function RequestsList({
             {request.budgetMin && request.budgetMax && (
               <div className="flex items-center gap-2 text-sm text-gray-600">
                 <DollarSign className="h-4 w-4" />
-                ${request.budgetMin} - ${request.budgetMax}
+                {fp(request.budgetMin)} - {fp(request.budgetMax)}
               </div>
             )}
             <div className="flex items-center gap-2 text-sm text-gray-600">
@@ -238,6 +241,8 @@ function RequestsList({
 }
 
 function QuotesList({ quotes }: { quotes: CateringQuote[] }) {
+  const fp = useFormatPrice();
+
   if (quotes.length === 0) {
     return (
       <div className="rounded-xl bg-white p-12 text-center shadow-sm">
@@ -265,10 +270,10 @@ function QuotesList({ quotes }: { quotes: CateringQuote[] }) {
             </div>
             <div className="text-right">
               <p className="text-xl font-bold text-gray-900">
-                ${quote.totalPrice.toFixed(2)}
+                {fp(quote.totalPrice)}
               </p>
               <p className="text-sm text-gray-500">
-                ${quote.pricePerPerson.toFixed(2)}/person
+                {fp(quote.pricePerPerson)}/person
               </p>
             </div>
           </div>
@@ -278,7 +283,7 @@ function QuotesList({ quotes }: { quotes: CateringQuote[] }) {
             <ul className="mt-2 space-y-1 text-sm text-gray-600">
               {quote.menuItems.map((item, i) => (
                 <li key={i}>
-                  {item.quantity}x {item.name} - ${item.pricePerUnit.toFixed(2)} each
+                  {item.quantity}x {item.name} - {fp(item.pricePerUnit)} each
                 </li>
               ))}
             </ul>
@@ -299,6 +304,8 @@ function QuotesList({ quotes }: { quotes: CateringQuote[] }) {
 }
 
 function BookedEventsList({ events }: { events: CateringQuote[] }) {
+  const fp = useFormatPrice();
+
   if (events.length === 0) {
     return (
       <div className="rounded-xl bg-white p-12 text-center shadow-sm">
@@ -331,7 +338,7 @@ function BookedEventsList({ events }: { events: CateringQuote[] }) {
             </div>
             <div className="text-right">
               <p className="text-xl font-bold text-gray-900">
-                ${event.totalPrice.toFixed(2)}
+                {fp(event.totalPrice)}
               </p>
             </div>
           </div>
@@ -364,6 +371,7 @@ function QuoteFormModal({
   onSubmit: (data: QuoteFormData) => void;
   isSubmitting: boolean;
 }) {
+  const fp = useFormatPrice();
   const [menuItems, setMenuItems] = useState([
     { name: '', description: '', quantity: request.guestCount, pricePerUnit: 0 },
   ]);
@@ -483,11 +491,11 @@ function QuoteFormModal({
           <div className="rounded-lg bg-gray-50 p-4">
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Total Price</span>
-              <span className="font-semibold text-gray-900">${totalPrice.toFixed(2)}</span>
+              <span className="font-semibold text-gray-900">{fp(totalPrice)}</span>
             </div>
             <div className="flex justify-between text-sm mt-1">
               <span className="text-gray-600">Price per person</span>
-              <span className="font-medium text-gray-900">${pricePerPerson.toFixed(2)}</span>
+              <span className="font-medium text-gray-900">{fp(pricePerPerson)}</span>
             </div>
           </div>
 

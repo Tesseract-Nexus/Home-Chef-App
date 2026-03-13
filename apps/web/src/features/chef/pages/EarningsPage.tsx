@@ -12,6 +12,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { apiClient } from '@/shared/services/api-client';
+import { useFormatPrice } from '@/shared/utils/format-price';
 
 interface EarningsData {
   balance: number;
@@ -36,6 +37,7 @@ const TIME_PERIODS = [
 
 export default function ChefEarningsPage() {
   const [timePeriod, setTimePeriod] = useState('30d');
+  const fp = useFormatPrice();
 
   const { data: earnings, isLoading } = useQuery({
     queryKey: ['chef-earnings', timePeriod],
@@ -84,7 +86,7 @@ export default function ChefEarningsPage() {
             <span className="text-brand-100">Available Balance</span>
             <DollarSign className="h-5 w-5 text-brand-200" />
           </div>
-          <p className="mt-4 text-3xl font-bold">${earnings?.balance?.toFixed(2) || '0.00'}</p>
+          <p className="mt-4 text-3xl font-bold">{fp(earnings?.balance || 0)}</p>
           <button className="mt-4 rounded-lg bg-white/20 px-4 py-2 text-sm font-medium hover:bg-white/30 transition-colors">
             Withdraw Funds
           </button>
@@ -96,7 +98,7 @@ export default function ChefEarningsPage() {
             <Calendar className="h-5 w-5 text-gray-400" />
           </div>
           <p className="mt-4 text-3xl font-bold text-gray-900">
-            ${earnings?.pendingBalance?.toFixed(2) || '0.00'}
+            {fp(earnings?.pendingBalance || 0)}
           </p>
           <p className="mt-1 text-sm text-gray-500">From recent orders</p>
         </div>
@@ -111,7 +113,7 @@ export default function ChefEarningsPage() {
             )}
           </div>
           <p className="mt-4 text-3xl font-bold text-gray-900">
-            ${earnings?.thisMonth?.toFixed(2) || '0.00'}
+            {fp(earnings?.thisMonth || 0)}
           </p>
           <p className={`mt-1 flex items-center gap-1 text-sm ${
             (earnings?.monthlyChange || 0) >= 0 ? 'text-green-600' : 'text-red-600'
@@ -131,7 +133,7 @@ export default function ChefEarningsPage() {
             <DollarSign className="h-5 w-5 text-gray-400" />
           </div>
           <p className="mt-4 text-3xl font-bold text-gray-900">
-            ${earnings?.totalEarnings?.toFixed(2) || '0.00'}
+            {fp(earnings?.totalEarnings || 0)}
           </p>
           <p className="mt-1 text-sm text-gray-500">All time</p>
         </div>
@@ -183,7 +185,7 @@ export default function ChefEarningsPage() {
                   <p className="font-medium text-gray-900 truncate">{item.name}</p>
                   <p className="text-sm text-gray-500">{item.count} orders</p>
                 </div>
-                <p className="font-semibold text-gray-900">${item.revenue.toFixed(2)}</p>
+                <p className="font-semibold text-gray-900">{fp(item.revenue)}</p>
               </div>
             ))}
             {(!earnings?.topItems || earnings.topItems.length === 0) && (
@@ -202,13 +204,13 @@ export default function ChefEarningsPage() {
         <div className="rounded-xl bg-white p-6 shadow-sm">
           <p className="text-sm text-gray-500">Average Order Value</p>
           <p className="mt-2 text-2xl font-bold text-gray-900">
-            ${earnings?.avgOrderValue?.toFixed(2) || '0.00'}
+            {fp(earnings?.avgOrderValue || 0)}
           </p>
         </div>
         <div className="rounded-xl bg-white p-6 shadow-sm">
           <p className="text-sm text-gray-500">Last Month</p>
           <p className="mt-2 text-2xl font-bold text-gray-900">
-            ${earnings?.lastMonth?.toFixed(2) || '0.00'}
+            {fp(earnings?.lastMonth || 0)}
           </p>
         </div>
         <div className="rounded-xl bg-white p-6 shadow-sm">
@@ -245,7 +247,7 @@ export default function ChefEarningsPage() {
                     })}
                   </td>
                   <td className="py-4 font-semibold text-gray-900">
-                    ${payout.amount.toFixed(2)}
+                    {fp(payout.amount)}
                   </td>
                   <td className="py-4 text-gray-600">
                     <span className="flex items-center gap-2">

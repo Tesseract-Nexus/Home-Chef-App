@@ -62,6 +62,10 @@ type Config struct {
 	// NATS
 	NATSURL string
 
+	// Exchange Rates APIs
+	OpenExchangeRatesAppID string
+	ExchangeRatesAPIKey    string
+
 	// Feature Flags
 	EnableMockMode bool
 }
@@ -131,6 +135,10 @@ func Load() {
 
 		// NATS
 		NATSURL: getEnv("NATS_URL", "nats://localhost:4222"),
+
+		// Exchange Rates APIs
+		OpenExchangeRatesAppID: getEnv("OPENEXCHANGERATES_APP_ID", ""),
+		ExchangeRatesAPIKey:    getEnv("EXCHANGERATES_API_KEY", ""),
 
 		// Feature Flags
 		EnableMockMode: enableMock,

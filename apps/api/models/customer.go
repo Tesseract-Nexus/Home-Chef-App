@@ -18,6 +18,7 @@ type CustomerProfile struct {
 	HouseholdSize       string         `gorm:"type:varchar(10)" json:"householdSize"`
 	OnboardingCompleted bool           `gorm:"default:false" json:"onboardingCompleted"`
 	OnboardingStep      int            `gorm:"default:0" json:"onboardingStep"`
+	PreferredCurrency   string         `gorm:"type:varchar(3);default:'INR'" json:"preferredCurrency"`
 	CreatedAt           time.Time      `gorm:"autoCreateTime" json:"createdAt"`
 	UpdatedAt           time.Time      `gorm:"autoUpdateTime" json:"updatedAt"`
 
@@ -40,6 +41,7 @@ type CustomerProfileResponse struct {
 	HouseholdSize       string     `json:"householdSize"`
 	OnboardingCompleted bool         `json:"onboardingCompleted"`
 	OnboardingStep      int          `json:"onboardingStep"`
+	PreferredCurrency   string       `json:"preferredCurrency"`
 	AuthProvider        AuthProvider `json:"authProvider"`
 }
 
@@ -73,6 +75,7 @@ func (cp *CustomerProfile) ToResponse(user *User) CustomerProfileResponse {
 		HouseholdSize:       cp.HouseholdSize,
 		OnboardingCompleted: cp.OnboardingCompleted,
 		OnboardingStep:      cp.OnboardingStep,
+		PreferredCurrency:   cp.PreferredCurrency,
 		AuthProvider:        user.AuthProvider,
 	}
 }

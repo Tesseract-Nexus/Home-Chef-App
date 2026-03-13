@@ -370,6 +370,7 @@ export interface CustomerProfile {
   householdSize: string;
   onboardingCompleted: boolean;
   onboardingStep: number;
+  preferredCurrency: string;
   authProvider: 'email' | 'google' | 'facebook' | 'apple';
 }
 

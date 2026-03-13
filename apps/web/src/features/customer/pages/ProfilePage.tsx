@@ -1072,6 +1072,9 @@ function NotificationsTab() {
 }
 
 const BFF_URL = import.meta.env.VITE_BFF_URL || 'https://identity.fe3dr.com';
+// Same-origin BFF proxy to avoid CORS — Istio rewrites /bff/* → / on BFF
+const _isLocalDev = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+const BFF_BASE = _isLocalDev ? BFF_URL : '/bff';
 
 type TwoFactorState =
   | 'loading'
@@ -1105,7 +1108,7 @@ function TwoFactorSection() {
 
   const fetchStatus = useCallback(async () => {
     try {
-      const res = await fetch(`${BFF_URL}/auth/totp/status`, {
+      const res = await fetch(`${BFF_BASE}/auth/totp/status`, {
         credentials: 'include',
         headers: bffHeaders(),
       });
@@ -1122,7 +1125,7 @@ function TwoFactorSection() {
 
   const handleInitiateSetup = async () => {
     try {
-      const res = await fetch(`${BFF_URL}/auth/totp/setup/initiate`, {
+      const res = await fetch(`${BFF_BASE}/auth/totp/setup/initiate`, {
         method: 'POST',
         credentials: 'include',
         headers: bffHeaders('POST'),
@@ -1145,7 +1148,7 @@ function TwoFactorSection() {
     if (code.length !== 6) return;
     setVerifying(true);
     try {
-      const res = await fetch(`${BFF_URL}/auth/totp/setup/confirm`, {
+      const res = await fetch(`${BFF_BASE}/auth/totp/setup/confirm`, {
         method: 'POST',
         credentials: 'include',
         headers: bffHeaders('POST'),
@@ -1171,7 +1174,7 @@ function TwoFactorSection() {
     if (code.length !== 6) return;
     setVerifying(true);
     try {
-      const res = await fetch(`${BFF_URL}/auth/totp/disable`, {
+      const res = await fetch(`${BFF_BASE}/auth/totp/disable`, {
         method: 'POST',
         credentials: 'include',
         headers: bffHeaders('POST'),
@@ -1195,7 +1198,7 @@ function TwoFactorSection() {
     if (code.length !== 6) return;
     setVerifying(true);
     try {
-      const res = await fetch(`${BFF_URL}/auth/totp/backup-codes/regenerate`, {
+      const res = await fetch(`${BFF_BASE}/auth/totp/backup-codes/regenerate`, {
         method: 'POST',
         credentials: 'include',
         headers: bffHeaders('POST'),

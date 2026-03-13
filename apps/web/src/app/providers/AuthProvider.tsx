@@ -13,6 +13,9 @@ import type { SessionUser, SocialProvider } from '@/shared/types/auth';
 import type { OnboardingStatus } from '@/shared/types';
 
 const BFF_URL = import.meta.env.VITE_BFF_URL || 'https://identity.fe3dr.com';
+// Same-origin proxy for fetch calls — browser redirects still use full BFF_URL
+const _isLocal = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+const BFF_FETCH = _isLocal ? BFF_URL : '/bff';
 
 interface AuthContextValue {
   user: SessionUser | null;
@@ -89,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     try {
-      await fetch(`${BFF_URL}/auth/logout`, {
+      await fetch(`${BFF_FETCH}/auth/logout`, {
         method: 'POST',
         credentials: 'include',
       });

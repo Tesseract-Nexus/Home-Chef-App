@@ -4,17 +4,23 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api/v1';
 const BFF_URL = import.meta.env.VITE_BFF_URL || 'https://identity.fe3dr.com';
 const MOCK_MODE = import.meta.env.VITE_MOCK_MODE === 'true';
 
+// In production, use same-origin /bff/ prefix to avoid cross-origin CORS issues.
+// The VirtualService rewrites /bff/* → / on the BFF, so /bff/api/v1/... → /api/v1/...
+// In development (localhost), use BFF_URL directly since there's no Istio proxy.
+const isLocalDev = typeof window !== 'undefined' && window.location.hostname === 'localhost';
+const BFF_PROXY_BASE = isLocalDev ? BFF_URL : '/bff';
+
 interface RequestOptions extends RequestInit {
   params?: Record<string, string | number | boolean | undefined>;
 }
 
 class ApiClient {
   private baseUrl: string;
-  private bffUrl: string;
+  private bffProxyBase: string;
 
-  constructor(baseUrl: string, bffUrl: string) {
+  constructor(baseUrl: string, bffProxyBase: string) {
     this.baseUrl = baseUrl;
-    this.bffUrl = bffUrl;
+    this.bffProxyBase = bffProxyBase;
   }
 
   private async getAuthState(): Promise<{ isAuthenticated: boolean; csrfToken: string | null }> {
@@ -26,8 +32,8 @@ class ApiClient {
   private buildUrl(base: string, endpoint: string, params?: RequestOptions['params']): string {
     // BFF proxies /api/* to the API, so prefix endpoint with /api/v1
     // Direct API URL already includes /api/v1
-    const fullPath = base === this.bffUrl ? `/api/v1${endpoint}` : endpoint;
-    const url = new URL(`${base}${fullPath}`);
+    const fullPath = base === this.bffProxyBase ? `/api/v1${endpoint}` : endpoint;
+    const url = new URL(`${base}${fullPath}`, window.location.origin);
 
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
@@ -60,7 +66,7 @@ class ApiClient {
 
     // Route through BFF when authenticated so session cookie is validated
     // and x-jwt-claim-sub header is injected for the API
-    const base = isAuthenticated ? this.bffUrl : this.baseUrl;
+    const base = isAuthenticated ? this.bffProxyBase : this.baseUrl;
     const url = this.buildUrl(base, endpoint, params);
 
     const headers: HeadersInit = {
@@ -136,7 +142,7 @@ class ApiClient {
   /** Upload a file via multipart/form-data. Do NOT set Content-Type — the browser handles it. */
   async upload<T>(endpoint: string, formData: FormData): Promise<T> {
     const { isAuthenticated, csrfToken } = await this.getAuthState();
-    const base = isAuthenticated ? this.bffUrl : this.baseUrl;
+    const base = isAuthenticated ? this.bffProxyBase : this.baseUrl;
     const url = this.buildUrl(base, endpoint);
 
     const headers: Record<string, string> = {};
@@ -167,4 +173,4 @@ class ApiClient {
   }
 }
 
-export const apiClient = new ApiClient(API_URL, BFF_URL);
+export const apiClient = new ApiClient(API_URL, BFF_PROXY_BASE);

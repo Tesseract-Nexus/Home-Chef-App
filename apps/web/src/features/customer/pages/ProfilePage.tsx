@@ -578,83 +578,273 @@ function PreferencesTab() {
   );
 }
 
-function AddressesTab() {
-  const [showForm, setShowForm] = useState(false);
+interface AddressFormData {
+  label: string;
+  line1: string;
+  line2: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  isDefault: boolean;
+}
 
-  // Mock addresses
-  const addresses: Address[] = [
-    {
-      id: '1',
-      userId: '1',
-      label: 'Home',
-      line1: '123 Main Street',
-      line2: 'Apt 4B',
-      city: 'San Francisco',
-      state: 'CA',
-      postalCode: '94102',
-      country: 'USA',
-      isDefault: true,
-    },
-    {
-      id: '2',
-      userId: '1',
-      label: 'Work',
-      line1: '456 Market Street',
-      city: 'San Francisco',
-      state: 'CA',
-      postalCode: '94105',
-      country: 'USA',
-      isDefault: false,
-    },
-  ];
+const emptyAddressForm: AddressFormData = {
+  label: '',
+  line1: '',
+  line2: '',
+  city: '',
+  state: '',
+  postalCode: '',
+  country: 'IN',
+  isDefault: false,
+};
+
+function AddressesTab() {
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [formMode, setFormMode] = useState<'hidden' | 'add' | 'edit'>('hidden');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formData, setFormData] = useState<AddressFormData>(emptyAddressForm);
+  const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const fetchAddresses = useCallback(() => {
+    setLoading(true);
+    apiClient.get<Address[]>('/addresses').then((data) => {
+      setAddresses(data);
+    }).catch(() => {}).finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => { fetchAddresses(); }, [fetchAddresses]);
+
+  const openAdd = () => {
+    setFormData(emptyAddressForm);
+    setEditingId(null);
+    setFormMode('add');
+  };
+
+  const openEdit = (address: Address) => {
+    setFormData({
+      label: address.label,
+      line1: address.line1,
+      line2: address.line2 || '',
+      city: address.city,
+      state: address.state,
+      postalCode: address.postalCode,
+      country: address.country || 'IN',
+      isDefault: address.isDefault,
+    });
+    setEditingId(address.id);
+    setFormMode('edit');
+  };
+
+  const cancelForm = () => {
+    setFormMode('hidden');
+    setEditingId(null);
+  };
+
+  const handleSave = async () => {
+    if (!formData.label || !formData.line1 || !formData.city || !formData.state || !formData.postalCode) {
+      toast.error('Please fill in all required fields');
+      return;
+    }
+    setSaving(true);
+    try {
+      if (formMode === 'add') {
+        await apiClient.post('/addresses', formData);
+        toast.success('Address added');
+      } else if (formMode === 'edit' && editingId) {
+        await apiClient.put(`/addresses/${editingId}`, formData);
+        toast.success('Address updated');
+      }
+      cancelForm();
+      fetchAddresses();
+    } catch {
+      toast.error('Failed to save address');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    setDeletingId(id);
+    try {
+      await apiClient.delete(`/addresses/${id}`);
+      toast.success('Address deleted');
+      fetchAddresses();
+    } catch {
+      toast.error('Failed to delete address');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const updateField = (field: keyof AddressFormData, value: string | boolean) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
 
   return (
     <div className="rounded-xl bg-white p-6 shadow-sm">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-900">Saved Addresses</h2>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="btn-outline"
-        >
-          <Plus className="h-4 w-4" />
-          Add New
-        </button>
+        {formMode === 'hidden' && (
+          <Button variant="outline" size="sm" onClick={openAdd}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            Add New
+          </Button>
+        )}
       </div>
 
-      <div className="mt-6 space-y-4">
-        {addresses.map((address) => (
-          <div
-            key={address.id}
-            className="flex items-start justify-between rounded-lg border p-4"
-          >
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-gray-900">{address.label}</span>
-                {address.isDefault && (
-                  <span className="rounded bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-700">
-                    Default
-                  </span>
-                )}
-              </div>
-              <p className="mt-1 text-sm text-gray-600">
-                {address.line1}
-                {address.line2 && `, ${address.line2}`}
-              </p>
-              <p className="text-sm text-gray-600">
-                {address.city}, {address.state} {address.postalCode}
-              </p>
+      {/* Address Form */}
+      {formMode !== 'hidden' && (
+        <div className="mt-6 rounded-lg border border-brand-200 bg-brand-50/30 p-4">
+          <h3 className="mb-4 font-medium text-gray-900">
+            {formMode === 'add' ? 'Add New Address' : 'Edit Address'}
+          </h3>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-sm font-medium text-gray-700">Label *</label>
+              <Input
+                placeholder="e.g. Home, Work, Parents"
+                value={formData.label}
+                onChange={(e) => updateField('label', e.target.value)}
+              />
             </div>
-            <div className="flex gap-2">
-              <button className="p-2 text-gray-400 hover:text-gray-600">
-                <Edit2 className="h-4 w-4" />
-              </button>
-              <button className="p-2 text-gray-400 hover:text-red-600">
-                <Trash2 className="h-4 w-4" />
-              </button>
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-sm font-medium text-gray-700">Address Line 1 *</label>
+              <Input
+                placeholder="Street address, flat/house number"
+                value={formData.line1}
+                onChange={(e) => updateField('line1', e.target.value)}
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="mb-1 block text-sm font-medium text-gray-700">Address Line 2</label>
+              <Input
+                placeholder="Apartment, building, floor (optional)"
+                value={formData.line2}
+                onChange={(e) => updateField('line2', e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">City *</label>
+              <Input
+                placeholder="City"
+                value={formData.city}
+                onChange={(e) => updateField('city', e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">State *</label>
+              <Input
+                placeholder="State"
+                value={formData.state}
+                onChange={(e) => updateField('state', e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">Postal Code *</label>
+              <Input
+                placeholder="Postal code"
+                value={formData.postalCode}
+                onChange={(e) => updateField('postalCode', e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700">Country</label>
+              <Input
+                placeholder="Country code"
+                value={formData.country}
+                onChange={(e) => updateField('country', e.target.value)}
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={formData.isDefault}
+                  onChange={(e) => updateField('isDefault', e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                />
+                <span className="text-gray-700">Set as default address</span>
+              </label>
             </div>
           </div>
-        ))}
-      </div>
+          <div className="mt-4 flex gap-3">
+            <Button size="sm" onClick={handleSave} disabled={saving}>
+              {saving ? 'Saving...' : formMode === 'add' ? 'Add Address' : 'Save Changes'}
+            </Button>
+            <Button variant="outline" size="sm" onClick={cancelForm} disabled={saving}>
+              Cancel
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="mt-6 flex justify-center py-8">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-brand-600" />
+        </div>
+      ) : addresses.length === 0 && formMode === 'hidden' ? (
+        <div className="mt-6 text-center py-8">
+          <MapPin className="mx-auto h-10 w-10 text-gray-300" />
+          <p className="mt-2 text-sm text-gray-500">No saved addresses yet</p>
+          <Button variant="outline" size="sm" className="mt-3" onClick={openAdd}>
+            <Plus className="mr-1.5 h-4 w-4" />
+            Add your first address
+          </Button>
+        </div>
+      ) : (
+        <div className="mt-6 space-y-4">
+          {addresses.map((address) => (
+            <div
+              key={address.id}
+              className={cn(
+                'flex items-start justify-between rounded-lg border p-4',
+                editingId === address.id && formMode === 'edit' && 'border-brand-300 bg-brand-50/20'
+              )}
+            >
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-gray-900">{address.label}</span>
+                  {address.isDefault && (
+                    <Badge variant="brand" size="sm">Default</Badge>
+                  )}
+                </div>
+                <p className="mt-1 text-sm text-gray-600">
+                  {address.line1}
+                  {address.line2 && `, ${address.line2}`}
+                </p>
+                <p className="text-sm text-gray-600">
+                  {address.city}, {address.state} {address.postalCode}
+                </p>
+              </div>
+              <div className="flex gap-1">
+                <button
+                  className="rounded-md p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+                  onClick={() => openEdit(address)}
+                  title="Edit address"
+                >
+                  <Edit2 className="h-4 w-4" />
+                </button>
+                <button
+                  className="rounded-md p-2 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                  onClick={() => handleDelete(address.id)}
+                  disabled={deletingId === address.id}
+                  title="Delete address"
+                >
+                  {deletingId === address.id ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-red-600" />
+                  ) : (
+                    <Trash2 className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

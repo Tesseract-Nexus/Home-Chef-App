@@ -50,6 +50,7 @@ func SetupRouter() *gin.Engine {
 	reviewHandler := handlers.NewReviewHandler()
 	favoriteHandler := handlers.NewFavoriteHandler()
 	customerHandler := handlers.NewCustomerHandler()
+	addressHandler := handlers.NewAddressHandler()
 	preferenceHandler := handlers.NewPreferenceHandler()
 
 	// Health check endpoints
@@ -268,11 +269,10 @@ func SetupRouter() *gin.Engine {
 		addresses := v1.Group("/addresses")
 		addresses.Use(middleware.AuthMiddleware())
 		{
-			// addresses.GET("", addressHandler.GetAddresses)
-			// addresses.POST("", addressHandler.CreateAddress)
-			// addresses.PUT("/:id", addressHandler.UpdateAddress)
-			// addresses.DELETE("/:id", addressHandler.DeleteAddress)
-			// addresses.PUT("/:id/default", addressHandler.SetDefaultAddress)
+			addresses.GET("", addressHandler.GetAddresses)
+			addresses.POST("", addressHandler.CreateAddress)
+			addresses.PUT("/:id", addressHandler.UpdateAddress)
+			addresses.DELETE("/:id", addressHandler.DeleteAddress)
 		}
 
 		// Payment methods

@@ -82,7 +82,7 @@ const DIETARY_TAG_OPTIONS = [
 const NEW_CATEGORY_VALUE = '__new__';
 
 function AllergenTagInput({
-  value,
+  value: rawValue,
   onChange,
   error,
 }: {
@@ -90,6 +90,8 @@ function AllergenTagInput({
   onChange: (v: string[]) => void;
   error?: string;
 }) {
+  // Defensive: handle old string format from stale drafts
+  const value = Array.isArray(rawValue) ? rawValue : (typeof rawValue === 'string' && rawValue ? (rawValue as string).split(',').map((s) => s.trim().toLowerCase()).filter(Boolean) : []);
   const [input, setInput] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -239,6 +241,15 @@ export default function MenuItemFormPage() {
     },
   });
 
+  // Normalize allergens from old string format or API response to string[]
+  const normalizeAllergens = (val: unknown): string[] => {
+    if (Array.isArray(val)) return val;
+    if (typeof val === 'string' && val.trim()) {
+      return val.split(',').map((a) => a.trim().toLowerCase()).filter(Boolean);
+    }
+    return [];
+  };
+
   // Restore draft on mount (new items) or populate from existing item (edit mode)
   useEffect(() => {
     if (draftLoadedRef.current) return;
@@ -252,17 +263,21 @@ export default function MenuItemFormPage() {
         price: existingItem.price,
         categoryId: existingItem.categoryId || '',
         dietaryTags: existingItem.dietaryTags || [],
-        allergens: existingItem.allergens || [],
+        allergens: normalizeAllergens(existingItem.allergens),
         prepTime: existingItem.prepTime,
         portionSize: existingItem.portionSize || '',
         serves: existingItem.serves,
       };
       const draft = loadDraft();
+      if (draft) {
+        draft.allergens = normalizeAllergens(draft.allergens);
+      }
       reset(draft ?? serverValues);
     } else {
       // New mode: restore draft if available
       const draft = loadDraft();
       if (draft) {
+        draft.allergens = normalizeAllergens(draft.allergens);
         reset(draft);
         toast.info('Restored your unsaved draft');
       }

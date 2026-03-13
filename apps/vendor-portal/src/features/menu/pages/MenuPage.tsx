@@ -418,20 +418,25 @@ function MenuItemCard({
         </div>
 
         {/* Dietary tags & allergens */}
-        {((item.dietaryTags ?? []).length > 0 || (item.allergens ?? []).length > 0) && (
-          <div className="mt-2 flex flex-wrap gap-1">
-            {(item.dietaryTags ?? []).map((tag) => (
-              <Badge key={`diet-${tag}`} variant="outline" size="sm">
-                {tag}
-              </Badge>
-            ))}
-            {(item.allergens ?? []).map((allergen) => (
-              <Badge key={`allergen-${allergen}`} variant="destructive" size="sm">
-                {allergen}
-              </Badge>
-            ))}
-          </div>
-        )}
+        {(() => {
+          const tags = item.dietaryTags ?? [];
+          const allergens = Array.isArray(item.allergens) ? item.allergens : [];
+          if (tags.length === 0 && allergens.length === 0) return null;
+          return (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {tags.map((tag) => (
+                <Badge key={`diet-${tag}`} variant="outline" size="sm">
+                  {tag}
+                </Badge>
+              ))}
+              {allergens.map((allergen) => (
+                <Badge key={`allergen-${allergen}`} variant="destructive" size="sm">
+                  {allergen}
+                </Badge>
+              ))}
+            </div>
+          );
+        })()}
 
         {/* Actions row */}
         <div className="mt-4 flex items-center justify-between border-t border-border pt-3">

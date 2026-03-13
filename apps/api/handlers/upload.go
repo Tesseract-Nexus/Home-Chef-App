@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/homechef/api/config"
 	"github.com/homechef/api/database"
 	"github.com/homechef/api/middleware"
@@ -20,14 +21,33 @@ func NewUploadHandler() *UploadHandler {
 	return &UploadHandler{}
 }
 
+// getOrCreateChefProfile finds the chef profile for the user, creating a placeholder if needed.
+// During onboarding, documents may be uploaded before the full profile is submitted.
+func getOrCreateChefProfile(userID uuid.UUID) (*models.ChefProfile, error) {
+	var chef models.ChefProfile
+	if err := database.DB.Where("user_id = ?", userID).First(&chef).Error; err != nil {
+		// Auto-create a placeholder profile so documents can be uploaded during onboarding
+		chef = models.ChefProfile{
+			UserID:   userID,
+			IsActive: false,
+		}
+		if err := database.DB.Create(&chef).Error; err != nil {
+			return nil, fmt.Errorf("failed to create placeholder chef profile: %w", err)
+		}
+		log.Printf("Auto-created placeholder chef profile %s for user %s", chef.ID, userID)
+	}
+	return &chef, nil
+}
+
 // UploadDocument handles file uploads for chef documents
 // POST /chef/documents — multipart/form-data with fields: file, type
 func (h *UploadHandler) UploadDocument(c *gin.Context) {
 	userID, _ := middleware.GetUserID(c)
 
-	var chef models.ChefProfile
-	if err := database.DB.Where("user_id = ?", userID).First(&chef).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Chef profile not found"})
+	chef, err := getOrCreateChefProfile(userID)
+	if err != nil {
+		log.Printf("Failed to get/create chef profile: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to initialize chef profile"})
 		return
 	}
 
@@ -63,7 +83,8 @@ func (h *UploadHandler) UploadDocument(c *gin.Context) {
 		return
 	}
 
-	// Upload to appropriate bucket
+	// Upload to appropriate bucket with per-chef directory isolation:
+	// chefs/{chefID}/{documentType}/{uuid}.{ext}
 	folder := fmt.Sprintf("chefs/%s/%s", chef.ID.String(), string(docType))
 	var fileURL, filePath, bucket string
 
@@ -110,7 +131,7 @@ func (h *UploadHandler) UploadDocument(c *gin.Context) {
 
 	// If it's a profile image, also update the chef profile
 	if docType == models.DocProfileImage {
-		database.DB.Model(&chef).Update("profile_image", fileURL)
+		database.DB.Model(chef).Update("profile_image", fileURL)
 	}
 
 	c.JSON(http.StatusOK, doc.ToResponse())
@@ -121,9 +142,10 @@ func (h *UploadHandler) UploadDocument(c *gin.Context) {
 func (h *UploadHandler) UploadProfileImage(c *gin.Context) {
 	userID, _ := middleware.GetUserID(c)
 
-	var chef models.ChefProfile
-	if err := database.DB.Where("user_id = ?", userID).First(&chef).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Chef profile not found"})
+	chef, err := getOrCreateChefProfile(userID)
+	if err != nil {
+		log.Printf("Failed to get/create chef profile: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to initialize chef profile"})
 		return
 	}
 
@@ -145,6 +167,7 @@ func (h *UploadHandler) UploadProfileImage(c *gin.Context) {
 		return
 	}
 
+	// Per-chef directory: chefs/{chefID}/avatar/{uuid}.{ext}
 	folder := fmt.Sprintf("chefs/%s/avatar", chef.ID.String())
 	fileURL, err := services.UploadPublicFile(c.Request.Context(), folder, header.Filename, file, contentType)
 	if err != nil {
@@ -153,7 +176,7 @@ func (h *UploadHandler) UploadProfileImage(c *gin.Context) {
 		return
 	}
 
-	database.DB.Model(&chef).Update("profile_image", fileURL)
+	database.DB.Model(chef).Update("profile_image", fileURL)
 
 	c.JSON(http.StatusOK, gin.H{"url": fileURL})
 }
@@ -163,7 +186,7 @@ func (h *UploadHandler) UploadProfileImage(c *gin.Context) {
 func (h *UploadHandler) Onboarding(c *gin.Context) {
 	userID, _ := middleware.GetUserID(c)
 
-	// Check if profile already exists
+	// Check if profile already exists (may have been auto-created by upload handler)
 	var existing models.ChefProfile
 	if err := database.DB.Where("user_id = ?", userID).First(&existing).Error; err == nil {
 		// Profile exists — update it
@@ -239,14 +262,16 @@ func (h *UploadHandler) updateOnboarding(c *gin.Context, chef *models.ChefProfil
 	chef.City = req.KitchenAddress.City
 	chef.State = req.KitchenAddress.State
 	chef.PostalCode = req.KitchenAddress.PostalCode
+	chef.IsActive = true
 
 	if err := database.DB.Save(chef).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update profile"})
 		return
 	}
 
-	// Update user details
+	// Update user details and role
 	database.DB.Model(&models.User{}).Where("id = ?", chef.UserID).Updates(map[string]interface{}{
+		"role":       models.RoleChef,
 		"first_name": req.FullName,
 		"phone":      req.Phone,
 	})
@@ -289,7 +314,8 @@ func (h *UploadHandler) GetDocuments(c *gin.Context) {
 
 	var chef models.ChefProfile
 	if err := database.DB.Where("user_id = ?", userID).First(&chef).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Chef profile not found"})
+		// No profile yet = no documents
+		c.JSON(http.StatusOK, []models.ChefDocumentResponse{})
 		return
 	}
 

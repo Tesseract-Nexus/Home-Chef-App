@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -11,9 +11,10 @@ import {
   Clock,
   Image as ImageIcon,
   CreditCard,
-  Plus,
+  Upload,
   X,
   Landmark,
+  Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiClient } from '@/shared/services/api-client';
@@ -22,6 +23,10 @@ import { Button } from '@/shared/components/ui/Button';
 import { Card } from '@/shared/components/ui/Card';
 import { Input } from '@/shared/components/ui/Input';
 import type { Chef, OperatingHours, DayHours } from '@/shared/types';
+
+const BFF_URL = import.meta.env.VITE_BFF_URL || 'https://identity.fe3dr.com';
+
+const MAX_KITCHEN_PHOTOS = 5;
 
 const dayHoursSchema = z.object({
   open: z.string(),
@@ -38,7 +43,6 @@ const kitchenSchema = z.object({
     saturday: dayHoursSchema,
     sunday: dayHoursSchema,
   }),
-  kitchenPhotos: z.array(z.string()),
   bankName: z.string().optional(),
   accountNumber: z.string().optional(),
   ifscCode: z.string().optional(),
@@ -62,6 +66,7 @@ const DEFAULT_HOURS: DayHours = { open: '09:00', close: '21:00' };
 
 export default function KitchenSetupPage() {
   const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [enabledDays, setEnabledDays] = useState<Record<DayKey, boolean>>({
     monday: true,
     tuesday: true,
@@ -71,18 +76,18 @@ export default function KitchenSetupPage() {
     saturday: true,
     sunday: false,
   });
-  const [newPhotoUrl, setNewPhotoUrl] = useState('');
+  const [isDragging, setIsDragging] = useState(false);
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ['chef-profile'],
     queryFn: () => apiClient.get<Chef>('/chef/profile'),
   });
 
+  const kitchenPhotos = profile?.kitchenPhotos || [];
+
   const {
     register,
     handleSubmit,
-    watch,
-    setValue,
     reset,
   } = useForm<KitchenFormData>({
     resolver: zodResolver(kitchenSchema),
@@ -96,7 +101,6 @@ export default function KitchenSetupPage() {
         saturday: DEFAULT_HOURS,
         sunday: undefined,
       },
-      kitchenPhotos: [],
       bankName: '',
       accountNumber: '',
       ifscCode: '',
@@ -127,15 +131,12 @@ export default function KitchenSetupPage() {
           saturday: hours.saturday || DEFAULT_HOURS,
           sunday: hours.sunday || undefined,
         },
-        kitchenPhotos: [],
         bankName: '',
         accountNumber: '',
         ifscCode: '',
       });
     }
   }, [profile, reset]);
-
-  const kitchenPhotos = watch('kitchenPhotos') || [];
 
   const updateMutation = useMutation({
     mutationFn: (data: KitchenFormData) => {
@@ -159,6 +160,58 @@ export default function KitchenSetupPage() {
     },
   });
 
+  const uploadPhotoMutation = useMutation({
+    mutationFn: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch(`${BFF_URL}/api/v1/chef/kitchen-photos`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Upload failed' }));
+        throw new Error(err.error || 'Upload failed');
+      }
+
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chef-profile'] });
+      toast.success('Kitchen photo uploaded');
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to upload photo');
+    },
+  });
+
+  const deletePhotoMutation = useMutation({
+    mutationFn: async (url: string) => {
+      const res = await fetch(`${BFF_URL}/api/v1/chef/kitchen-photos`, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Delete failed' }));
+        throw new Error(err.error || 'Delete failed');
+      }
+
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chef-profile'] });
+      toast.success('Photo removed');
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to remove photo');
+    },
+  });
+
   const toggleDay = (day: DayKey) => {
     setEnabledDays((prev) => ({
       ...prev,
@@ -166,21 +219,53 @@ export default function KitchenSetupPage() {
     }));
   };
 
-  const addPhoto = () => {
-    const trimmed = newPhotoUrl.trim();
-    if (trimmed && !kitchenPhotos.includes(trimmed)) {
-      setValue('kitchenPhotos', [...kitchenPhotos, trimmed], { shouldDirty: true });
-      setNewPhotoUrl('');
-    }
+  const validateAndUpload = useCallback(
+    (file: File) => {
+      if (kitchenPhotos.length >= MAX_KITCHEN_PHOTOS) {
+        toast.error(`Maximum ${MAX_KITCHEN_PHOTOS} photos allowed. Remove one first.`);
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('File too large. Maximum 5 MB.');
+        return;
+      }
+
+      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+        toast.error('Invalid file type. Allowed: JPEG, PNG, WebP.');
+        return;
+      }
+
+      uploadPhotoMutation.mutate(file);
+    },
+    [kitchenPhotos.length, uploadPhotoMutation],
+  );
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) validateAndUpload(file);
+    e.target.value = '';
   };
 
-  const removePhoto = (url: string) => {
-    setValue(
-      'kitchenPhotos',
-      kitchenPhotos.filter((p) => p !== url),
-      { shouldDirty: true }
-    );
-  };
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      setIsDragging(false);
+      const file = e.dataTransfer.files?.[0];
+      if (file) validateAndUpload(file);
+    },
+    [validateAndUpload],
+  );
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
 
   const onSubmit = (data: KitchenFormData) => {
     updateMutation.mutate(data);
@@ -201,6 +286,15 @@ export default function KitchenSetupPage() {
       animate="visible"
       className="space-y-6 pb-8"
     >
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={handleFileSelect}
+      />
+
       {/* Page Header */}
       <motion.div variants={fadeInUp} className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -299,75 +393,98 @@ export default function KitchenSetupPage() {
       {/* Kitchen Photos */}
       <motion.div variants={fadeInUp}>
         <Card>
-          <div className="flex items-center gap-2">
-            <ImageIcon className="h-5 w-5 text-gray-400" />
-            <h3 className="text-lg font-semibold text-gray-900">Kitchen Photos</h3>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <ImageIcon className="h-5 w-5 text-gray-400" />
+                <h3 className="text-lg font-semibold text-gray-900">Kitchen Photos</h3>
+              </div>
+              <p className="mt-1 text-sm text-gray-500">
+                Add photos of your kitchen to build trust with customers ({kitchenPhotos.length}/{MAX_KITCHEN_PHOTOS})
+              </p>
+            </div>
           </div>
-          <p className="mt-1 text-sm text-gray-500">
-            Add photos of your kitchen to build trust with customers
-          </p>
 
           {/* Photo Grid */}
           {kitchenPhotos.length > 0 && (
             <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               {kitchenPhotos.map((url, index) => (
                 <div
-                  key={index}
+                  key={url}
                   className="group relative aspect-square overflow-hidden rounded-xl border border-gray-200 bg-gray-50"
                 >
                   <img
                     src={url}
                     alt={`Kitchen photo ${index + 1}`}
                     className="h-full w-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).src = '';
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
                   />
                   <button
                     type="button"
-                    onClick={() => removePhoto(url)}
-                    className="absolute right-2 top-2 rounded-full bg-black/50 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                    onClick={() => deletePhotoMutation.mutate(url)}
+                    disabled={deletePhotoMutation.isPending}
+                    className="absolute right-2 top-2 rounded-full bg-black/50 p-1.5 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/70 disabled:opacity-50"
                   >
-                    <X className="h-3.5 w-3.5" />
+                    {deletePhotoMutation.isPending ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <X className="h-3.5 w-3.5" />
+                    )}
                   </button>
                 </div>
               ))}
+
+              {/* Add more slot */}
+              {kitchenPhotos.length < MAX_KITCHEN_PHOTOS && (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadPhotoMutation.isPending}
+                  className="flex aspect-square flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 text-gray-400 transition-colors hover:border-brand-400 hover:bg-brand-50 hover:text-brand-500 disabled:opacity-50"
+                >
+                  {uploadPhotoMutation.isPending ? (
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                  ) : (
+                    <>
+                      <Upload className="h-8 w-8" />
+                      <span className="mt-1 text-xs font-medium">Add Photo</span>
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           )}
 
+          {/* Empty state with drop zone */}
           {kitchenPhotos.length === 0 && (
-            <div className="mt-4 flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 py-10 text-center">
-              <ImageIcon className="h-10 w-10 text-gray-300" />
-              <p className="mt-2 text-sm font-medium text-gray-500">No photos added</p>
-              <p className="text-xs text-gray-400">Add image URLs below</p>
+            <div
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onClick={() => fileInputRef.current?.click()}
+              className={`mt-4 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed py-12 text-center transition-colors ${
+                isDragging
+                  ? 'border-brand-500 bg-brand-50'
+                  : 'border-gray-300 hover:border-brand-400 hover:bg-brand-50/50'
+              }`}
+            >
+              {uploadPhotoMutation.isPending ? (
+                <>
+                  <Loader2 className="h-10 w-10 animate-spin text-brand-500" />
+                  <p className="mt-3 text-sm font-medium text-gray-600">Uploading...</p>
+                </>
+              ) : (
+                <>
+                  <Upload className="h-10 w-10 text-gray-300" />
+                  <p className="mt-3 text-sm font-medium text-gray-600">
+                    {isDragging ? 'Drop your photo here' : 'Click or drag photos here'}
+                  </p>
+                  <p className="mt-1 text-xs text-gray-400">
+                    JPEG, PNG, or WebP. Max 5 MB each. Up to {MAX_KITCHEN_PHOTOS} photos.
+                  </p>
+                </>
+              )}
             </div>
           )}
-
-          {/* Add Photo URL */}
-          <div className="mt-4 flex gap-2">
-            <Input
-              placeholder="Paste image URL..."
-              value={newPhotoUrl}
-              onChange={(e) => setNewPhotoUrl(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  addPhoto();
-                }
-              }}
-              className="flex-1"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              onClick={addPhoto}
-              disabled={!newPhotoUrl.trim()}
-              leftIcon={<Plus className="h-4 w-4" />}
-            >
-              Add
-            </Button>
-          </div>
         </Card>
       </motion.div>
 

@@ -26,7 +26,8 @@ type ChefProfile struct {
 	IsVerified     bool           `gorm:"default:false" json:"verified"`
 	VerifiedAt     *time.Time     `gorm:"" json:"verifiedAt"`
 	IsActive       bool           `gorm:"default:true" json:"isActive"`
-	AcceptingOrders bool          `gorm:"default:true" json:"acceptingOrders"`
+	AcceptingOrders bool           `gorm:"default:true" json:"acceptingOrders"`
+	KitchenPhotos   pq.StringArray `gorm:"type:text[]" json:"kitchenPhotos"`
 
 	// Address
 	AddressLine1 string  `gorm:"" json:"addressLine1"`
@@ -83,6 +84,7 @@ type ChefProfileResponse struct {
 	TotalOrders     int       `json:"totalOrders"`
 	IsVerified      bool      `json:"verified"`
 	AcceptingOrders bool      `json:"acceptingOrders"`
+	KitchenPhotos   []string  `json:"kitchenPhotos"`
 	City            string    `json:"city"`
 	State           string    `json:"state"`
 }
@@ -95,6 +97,11 @@ func (c *ChefProfile) ToResponse() ChefProfileResponse {
 	specialties := []string{}
 	if c.Specialties != nil {
 		specialties = c.Specialties
+	}
+
+	kitchenPhotos := []string{}
+	if c.KitchenPhotos != nil {
+		kitchenPhotos = c.KitchenPhotos
 	}
 
 	return ChefProfileResponse{
@@ -114,6 +121,7 @@ func (c *ChefProfile) ToResponse() ChefProfileResponse {
 		TotalOrders:     c.TotalOrders,
 		IsVerified:      c.IsVerified,
 		AcceptingOrders: c.AcceptingOrders,
+		KitchenPhotos:   kitchenPhotos,
 		City:            c.City,
 		State:           c.State,
 	}

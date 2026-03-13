@@ -182,6 +182,140 @@ func (h *UploadHandler) UploadProfileImage(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"url": fileURL})
 }
 
+// UploadBannerImage handles banner/cover image uploads
+// POST /chef/banner-image — multipart/form-data with field: file
+func (h *UploadHandler) UploadBannerImage(c *gin.Context) {
+	userID, _ := middleware.GetUserID(c)
+
+	chef, err := getOrCreateChefProfile(userID)
+	if err != nil {
+		log.Printf("Failed to get/create chef profile: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to initialize chef profile"})
+		return
+	}
+
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "File is required"})
+		return
+	}
+	defer file.Close()
+
+	if header.Size > 5*1024*1024 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "File too large. Maximum 5 MB."})
+		return
+	}
+
+	contentType := header.Header.Get("Content-Type")
+	if !services.IsImageContentType(contentType) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file type. Allowed: JPEG, PNG, WebP."})
+		return
+	}
+
+	folder := fmt.Sprintf("chefs/%s/banner", chef.ID.String())
+	fileURL, err := services.UploadPublicFile(c.Request.Context(), folder, header.Filename, file, contentType)
+	if err != nil {
+		log.Printf("Failed to upload banner image: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload file"})
+		return
+	}
+
+	database.DB.Model(chef).Update("banner_image", fileURL)
+
+	c.JSON(http.StatusOK, gin.H{"url": fileURL})
+}
+
+// UploadKitchenPhoto uploads a kitchen photo (max 5 photos per chef)
+// POST /chef/kitchen-photos — multipart/form-data with field: file
+func (h *UploadHandler) UploadKitchenPhoto(c *gin.Context) {
+	userID, _ := middleware.GetUserID(c)
+
+	chef, err := getOrCreateChefProfile(userID)
+	if err != nil {
+		log.Printf("Failed to get/create chef profile: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to initialize chef profile"})
+		return
+	}
+
+	// Check current count
+	if len(chef.KitchenPhotos) >= 5 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Maximum 5 kitchen photos allowed. Remove one before adding another."})
+		return
+	}
+
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "File is required"})
+		return
+	}
+	defer file.Close()
+
+	if header.Size > 5*1024*1024 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "File too large. Maximum 5 MB."})
+		return
+	}
+
+	contentType := header.Header.Get("Content-Type")
+	if !services.IsImageContentType(contentType) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file type. Allowed: JPEG, PNG, WebP."})
+		return
+	}
+
+	folder := fmt.Sprintf("chefs/%s/kitchen", chef.ID.String())
+	fileURL, err := services.UploadPublicFile(c.Request.Context(), folder, header.Filename, file, contentType)
+	if err != nil {
+		log.Printf("Failed to upload kitchen photo: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload file"})
+		return
+	}
+
+	// Append to kitchen_photos array
+	updatedPhotos := append(chef.KitchenPhotos, fileURL)
+	database.DB.Model(chef).Update("kitchen_photos", updatedPhotos)
+
+	c.JSON(http.StatusOK, gin.H{"url": fileURL, "kitchenPhotos": updatedPhotos})
+}
+
+// DeleteKitchenPhoto removes a kitchen photo by URL
+// DELETE /chef/kitchen-photos — JSON body: { "url": "..." }
+func (h *UploadHandler) DeleteKitchenPhoto(c *gin.Context) {
+	userID, _ := middleware.GetUserID(c)
+
+	var chef models.ChefProfile
+	if err := database.DB.Where("user_id = ?", userID).First(&chef).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Chef profile not found"})
+		return
+	}
+
+	var req struct {
+		URL string `json:"url" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "URL is required"})
+		return
+	}
+
+	// Filter out the photo
+	updatedPhotos := make([]string, 0, len(chef.KitchenPhotos))
+	found := false
+	for _, photo := range chef.KitchenPhotos {
+		if photo == req.URL {
+			found = true
+			continue
+		}
+		updatedPhotos = append(updatedPhotos, photo)
+	}
+
+	if !found {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Photo not found"})
+		return
+	}
+
+	database.DB.Model(&chef).Update("kitchen_photos", updatedPhotos)
+
+	c.JSON(http.StatusOK, gin.H{"kitchenPhotos": updatedPhotos})
+}
+
 // GetOnboardingStatus checks if the authenticated user has completed chef onboarding.
 // GET /chef/onboarding/status — accessible to any authenticated user (no RequireChef)
 func (h *UploadHandler) GetOnboardingStatus(c *gin.Context) {

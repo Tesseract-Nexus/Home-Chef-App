@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -22,6 +22,7 @@ import {
   Shield,
   Camera,
   ArrowRight,
+  Loader2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiClient } from '@/shared/services/api-client';
@@ -32,6 +33,8 @@ import { Card } from '@/shared/components/ui/Card';
 import { Input, Textarea } from '@/shared/components/ui/Input';
 import { Avatar } from '@/shared/components/ui/Avatar';
 import type { Chef } from '@/shared/types';
+
+const BFF_URL = import.meta.env.VITE_BFF_URL || 'https://identity.fe3dr.com';
 
 const profileSchema = z.object({
   businessName: z.string().min(2, 'Business name must be at least 2 characters'),
@@ -62,9 +65,30 @@ const CUISINES = [
   'Continental',
 ];
 
+async function uploadImage(endpoint: string, file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const res = await fetch(`${BFF_URL}/api/v1${endpoint}`, {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Upload failed' }));
+    throw new Error(err.error || 'Upload failed');
+  }
+
+  const data = await res.json();
+  return data.url;
+}
+
 export default function ProfilePage() {
   const queryClient = useQueryClient();
   const [newSpecialty, setNewSpecialty] = useState('');
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
 
   const { data: profile, isLoading } = useQuery({
     queryKey: ['chef-profile'],
@@ -120,9 +144,52 @@ export default function ProfilePage() {
     },
   });
 
+  const avatarMutation = useMutation({
+    mutationFn: (file: File) => uploadImage('/chef/profile-image', file),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chef-profile'] });
+      toast.success('Profile photo updated');
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to upload profile photo');
+    },
+  });
+
+  const bannerMutation = useMutation({
+    mutationFn: (file: File) => uploadImage('/chef/banner-image', file),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chef-profile'] });
+      toast.success('Cover photo updated');
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || 'Failed to upload cover photo');
+    },
+  });
+
   const cuisines = watch('cuisines') || [];
   const specialties = watch('specialties') || [];
   const acceptingOrders = watch('acceptingOrders');
+
+  const handleFileSelect = (
+    e: React.ChangeEvent<HTMLInputElement>,
+    mutation: typeof avatarMutation,
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('File too large. Maximum 5 MB.');
+      return;
+    }
+
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      toast.error('Invalid file type. Allowed: JPEG, PNG, WebP.');
+      return;
+    }
+
+    mutation.mutate(file);
+    e.target.value = '';
+  };
 
   const toggleCuisine = (cuisine: string) => {
     if (cuisines.includes(cuisine)) {
@@ -171,6 +238,22 @@ export default function ProfilePage() {
       animate="visible"
       className="space-y-6 pb-8"
     >
+      {/* Hidden file inputs */}
+      <input
+        ref={avatarInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={(e) => handleFileSelect(e, avatarMutation)}
+      />
+      <input
+        ref={bannerInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="hidden"
+        onChange={(e) => handleFileSelect(e, bannerMutation)}
+      />
+
       {/* Page Header */}
       <motion.div variants={fadeInUp} className="flex flex-wrap items-center justify-between gap-4">
         <div>
@@ -202,9 +285,15 @@ export default function ProfilePage() {
             )}
             <button
               type="button"
-              className="absolute bottom-3 right-3 rounded-full bg-black/40 p-2 text-white backdrop-blur-sm transition-colors hover:bg-black/60"
+              onClick={() => bannerInputRef.current?.click()}
+              disabled={bannerMutation.isPending}
+              className="absolute bottom-3 right-3 rounded-full bg-black/40 p-2 text-white backdrop-blur-sm transition-colors hover:bg-black/60 disabled:opacity-50"
             >
-              <Camera className="h-4 w-4" />
+              {bannerMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Camera className="h-4 w-4" />
+              )}
             </button>
           </div>
 
@@ -223,9 +312,15 @@ export default function ProfilePage() {
                 />
                 <button
                   type="button"
-                  className="absolute bottom-0 right-0 rounded-full bg-brand-500 p-1.5 text-white shadow-lg transition-colors hover:bg-brand-600"
+                  onClick={() => avatarInputRef.current?.click()}
+                  disabled={avatarMutation.isPending}
+                  className="absolute bottom-0 right-0 rounded-full bg-brand-500 p-1.5 text-white shadow-lg transition-colors hover:bg-brand-600 disabled:opacity-50"
                 >
-                  <Camera className="h-3.5 w-3.5" />
+                  {avatarMutation.isPending ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Camera className="h-3.5 w-3.5" />
+                  )}
                 </button>
               </div>
 

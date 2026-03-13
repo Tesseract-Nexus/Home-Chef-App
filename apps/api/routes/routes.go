@@ -98,6 +98,9 @@ func SetupRouter() *gin.Engine {
 			chefOnboarding.POST("/documents", uploadHandler.UploadDocument)
 			chefOnboarding.GET("/documents", uploadHandler.GetDocuments)
 			chefOnboarding.POST("/profile-image", uploadHandler.UploadProfileImage)
+			chefOnboarding.POST("/banner-image", uploadHandler.UploadBannerImage)
+			chefOnboarding.POST("/kitchen-photos", uploadHandler.UploadKitchenPhoto)
+			chefOnboarding.DELETE("/kitchen-photos", uploadHandler.DeleteKitchenPhoto)
 		}
 
 		// Menu management routes (authenticated — accessible during onboarding and after)

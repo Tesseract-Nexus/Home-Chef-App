@@ -46,6 +46,7 @@ export interface Chef {
   specialties: string[];
   profileImage?: string;
   bannerImage?: string;
+  kitchenPhotos?: string[];
   rating: number;
   totalReviews: number;
   totalOrders: number;

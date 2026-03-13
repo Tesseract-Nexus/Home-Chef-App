@@ -17,12 +17,13 @@ export default function FavoritesPage() {
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['favorites', 'chefs'],
-    queryFn: () => apiClient.get<{ data: FavoriteChef[]; count: number; max: number }>('/favorites/chefs'),
+    queryFn: () => apiClient.get<FavoriteChef[]>('/favorites/chefs'),
     enabled: isAuthenticated,
   });
 
-  const favorites = data?.data ?? [];
-  const count = data?.count ?? 0;
+  // apiClient auto-unwraps { data: [...] } to just the array
+  const favorites = data ?? [];
+  const count = favorites.length;
 
   const handleRemove = async (chefId: string, name: string) => {
     await toggle(chefId);

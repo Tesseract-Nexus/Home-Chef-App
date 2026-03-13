@@ -845,6 +845,7 @@ function TwoFactorSection() {
         method: 'POST',
         credentials: 'include',
         headers: bffHeaders('POST'),
+        body: '{}',
       });
       if (!res.ok) throw new Error();
       const data: TotpSetupResponse = await res.json();

@@ -37,7 +37,6 @@ export function VendorLayout() {
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [isOnlineStatus, setIsOnlineStatus] = useState(true);
   const isMobile = useIsMobile('lg');
   const isOnline = useOnlineStatus();
 
@@ -179,30 +178,11 @@ export function VendorLayout() {
             <Menu className="h-5 w-5" />
           </button>
 
-          <div className="flex items-center gap-4">
-            {/* Online/Offline toggle */}
-            <button
-              onClick={() => setIsOnlineStatus(!isOnlineStatus)}
-              className={`flex items-center gap-2 rounded-full px-3 py-1 text-sm font-medium transition-colors ${
-                isOnlineStatus
-                  ? 'bg-success/10 text-success'
-                  : 'bg-secondary text-muted-foreground'
-              }`}
-            >
-              <span
-                className={`h-2 w-2 rounded-full ${
-                  isOnlineStatus ? 'bg-success' : 'bg-muted-foreground'
-                }`}
-              />
-              {isOnlineStatus ? 'Online' : 'Offline'}
-            </button>
-
-            {/* Notifications */}
-            <button className="relative rounded-lg p-2 hover:bg-secondary">
-              <Bell className="h-5 w-5 text-muted-foreground" />
-              <span className="notification-dot" />
-            </button>
-          </div>
+          {/* Notifications */}
+          <button className="relative ml-auto rounded-lg p-2 hover:bg-secondary">
+            <Bell className="h-5 w-5 text-muted-foreground" />
+            <span className="notification-dot" />
+          </button>
         </header>
 
         {/* Page content */}

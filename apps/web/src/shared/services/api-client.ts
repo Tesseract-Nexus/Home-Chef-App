@@ -132,6 +132,39 @@ class ApiClient {
   async delete<T>(endpoint: string, options?: RequestOptions): Promise<T> {
     return this.request<T>('DELETE', endpoint, options);
   }
+
+  /** Upload a file via multipart/form-data. Do NOT set Content-Type — the browser handles it. */
+  async upload<T>(endpoint: string, formData: FormData): Promise<T> {
+    const { isAuthenticated, csrfToken } = await this.getAuthState();
+    const base = isAuthenticated ? this.bffUrl : this.baseUrl;
+    const url = this.buildUrl(base, endpoint);
+
+    const headers: Record<string, string> = {};
+    if (csrfToken) {
+      headers['X-CSRF-Token'] = csrfToken;
+    }
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers,
+      credentials: 'include',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const body: ApiError = await response.json().catch(() => ({
+        success: false,
+        error: { code: 'UNKNOWN_ERROR', message: response.statusText || 'An error occurred' },
+      }));
+      throw Object.assign(body, { status: response.status });
+    }
+
+    const json = await response.json();
+    if (json && typeof json === 'object' && 'data' in json) {
+      return json.data as T;
+    }
+    return json as T;
+  }
 }
 
 export const apiClient = new ApiClient(API_URL, BFF_URL);

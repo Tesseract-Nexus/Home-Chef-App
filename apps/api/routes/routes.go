@@ -291,6 +291,7 @@ func SetupRouter() *gin.Engine {
 		{
 			customer.GET("/profile", customerHandler.GetCustomerProfile)
 			customer.PUT("/profile", customerHandler.UpdateCustomerProfile)
+			customer.POST("/avatar", customerHandler.UploadAvatar)
 			customer.GET("/onboarding/status", customerHandler.GetOnboardingStatus)
 			customer.POST("/onboarding/complete", customerHandler.CompleteOnboarding)
 			customer.POST("/onboarding/skip", customerHandler.SkipOnboarding)

@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -8,6 +10,7 @@ import (
 	"github.com/homechef/api/database"
 	"github.com/homechef/api/middleware"
 	"github.com/homechef/api/models"
+	"github.com/homechef/api/services"
 	"github.com/lib/pq"
 )
 
@@ -325,4 +328,40 @@ func (h *CustomerHandler) SkipOnboarding(c *gin.Context) {
 		"message":             "Onboarding skipped",
 		"onboardingCompleted": true,
 	})
+}
+
+// UploadAvatar handles customer profile picture uploads.
+// POST /customer/avatar — multipart/form-data with field: file
+func (h *CustomerHandler) UploadAvatar(c *gin.Context) {
+	userID, _ := middleware.GetUserID(c)
+
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "File is required"})
+		return
+	}
+	defer file.Close()
+
+	if header.Size > 5*1024*1024 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "File too large. Maximum 5 MB."})
+		return
+	}
+
+	contentType := header.Header.Get("Content-Type")
+	if !services.IsImageContentType(contentType) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file type. Allowed: JPEG, PNG, WebP."})
+		return
+	}
+
+	folder := fmt.Sprintf("customers/%s/avatar", userID.String())
+	fileURL, err := services.UploadPublicFile(c.Request.Context(), folder, header.Filename, file, contentType)
+	if err != nil {
+		log.Printf("Failed to upload customer avatar: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload file"})
+		return
+	}
+
+	database.DB.Model(&models.User{}).Where("id = ?", userID).Update("avatar", fileURL)
+
+	c.JSON(http.StatusOK, gin.H{"url": fileURL})
 }

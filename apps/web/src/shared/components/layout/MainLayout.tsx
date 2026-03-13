@@ -114,6 +114,8 @@ export function MainLayout() {
                         src={user.avatar}
                         alt={user.firstName}
                         className="h-8 w-8 rounded-full object-cover"
+                        draggable={false}
+                        onContextMenu={(e) => e.preventDefault()}
                       />
                     ) : (
                       <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-brand-600">

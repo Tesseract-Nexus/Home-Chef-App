@@ -136,6 +136,8 @@ function ProfileTab() {
   const { user } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState(user?.avatar || '');
+  const [isUploading, setIsUploading] = useState(false);
 
   const {
     register,
@@ -157,6 +159,7 @@ function ProfileTab() {
   useEffect(() => {
     apiClient.get<CustomerProfile>('/customer/profile').then((p) => {
       setProfile(p);
+      if (p.avatar) setAvatarUrl(p.avatar);
       setValue('firstName', p.firstName);
       setValue('lastName', p.lastName);
       setValue('email', p.email);
@@ -173,6 +176,41 @@ function ProfileTab() {
       setIsEditing(false);
     } catch {
       toast.error('Failed to update profile');
+    }
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('File too large. Maximum 5 MB.');
+      return;
+    }
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      toast.error('Invalid file type. Use JPEG, PNG or WebP.');
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const result = await apiClient.upload<{ url: string }>('/customer/avatar', formData);
+      setAvatarUrl(result.url);
+      // Update the session user so header avatar refreshes
+      const { useAuthStore } = await import('@/app/store/auth-store');
+      const state = useAuthStore.getState();
+      if (state.user) {
+        useAuthStore.getState().setSession({ ...state.user, avatar: result.url });
+      }
+      toast.success('Profile photo updated');
+    } catch {
+      toast.error('Failed to upload photo');
+    } finally {
+      setIsUploading(false);
+      // Reset the input so re-selecting the same file triggers onChange
+      e.target.value = '';
     }
   };
 
@@ -193,12 +231,14 @@ function ProfileTab() {
       {/* Avatar */}
       <div className="mt-6 flex items-center gap-4">
         <div className="relative">
-          <div className="h-20 w-20 rounded-full bg-brand-100 flex items-center justify-center">
-            {user?.avatar ? (
+          <div className="h-20 w-20 rounded-full bg-brand-100 flex items-center justify-center overflow-hidden">
+            {avatarUrl ? (
               <img
-                src={user.avatar}
-                alt={user.firstName}
+                src={avatarUrl}
+                alt={user?.firstName}
                 className="h-full w-full rounded-full object-cover"
+                draggable={false}
+                onContextMenu={(e) => e.preventDefault()}
               />
             ) : (
               <span className="text-2xl font-semibold text-brand-600">
@@ -207,13 +247,24 @@ function ProfileTab() {
               </span>
             )}
           </div>
-          <button className="absolute bottom-0 right-0 rounded-full bg-white p-1.5 shadow-md hover:bg-gray-50">
-            <Camera className="h-4 w-4 text-gray-600" />
-          </button>
+          <label className="absolute bottom-0 right-0 cursor-pointer rounded-full bg-white p-1.5 shadow-md hover:bg-gray-50">
+            {isUploading ? (
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-400 border-t-transparent" />
+            ) : (
+              <Camera className="h-4 w-4 text-gray-600" />
+            )}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="hidden"
+              onChange={handleAvatarUpload}
+              disabled={isUploading}
+            />
+          </label>
         </div>
         <div>
           <p className="font-medium text-gray-900">Profile Photo</p>
-          <p className="text-sm text-gray-500">JPG, GIF or PNG. Max size 5MB.</p>
+          <p className="text-sm text-gray-500">JPG, PNG or WebP. Max size 5MB.</p>
         </div>
       </div>
 

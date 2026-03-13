@@ -162,7 +162,7 @@ export function MainLayout() {
                             My Orders
                           </Link>
                           <Link
-                            to="/profile/settings"
+                            to="/profile?tab=security"
                             onClick={() => setUserMenuOpen(false)}
                             className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                           >

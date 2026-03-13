@@ -57,13 +57,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isAuthenticated || isLoading || onboardingCompleted !== null) return;
 
-    // Only check for customer role users
-    const isCustomer = !user?.roles || user.roles.includes('customer');
-    if (!isCustomer) {
-      setOnboardingCompleted(true);
-      return;
-    }
-
     apiClient
       .get<OnboardingStatus>('/customer/onboarding/status')
       .then((status) => {
@@ -76,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // If the check fails, don't block the user
         setOnboardingCompleted(true);
       });
-  }, [isAuthenticated, isLoading, onboardingCompleted, user, navigate, location.pathname, setOnboardingCompleted]);
+  }, [isAuthenticated, isLoading, onboardingCompleted, navigate, location.pathname, setOnboardingCompleted]);
 
   const login = useCallback((provider?: SocialProvider) => {
     const params = new URLSearchParams();

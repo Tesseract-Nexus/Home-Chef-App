@@ -110,7 +110,7 @@ export function AppRoutes() {
         <Route
           path="user-info"
           element={
-            <ProtectedRoute roles={['customer']}>
+            <ProtectedRoute>
               <UserInfoPage />
             </ProtectedRoute>
           }
@@ -126,7 +126,7 @@ export function AppRoutes() {
           <Route
             path="cart"
             element={
-              <ProtectedRoute roles={['customer']}>
+              <ProtectedRoute>
                 <CartPage />
               </ProtectedRoute>
             }
@@ -134,7 +134,7 @@ export function AppRoutes() {
           <Route
             path="checkout"
             element={
-              <ProtectedRoute roles={['customer']}>
+              <ProtectedRoute>
                 <CheckoutPage />
               </ProtectedRoute>
             }
@@ -142,7 +142,7 @@ export function AppRoutes() {
           <Route
             path="orders"
             element={
-              <ProtectedRoute roles={['customer']}>
+              <ProtectedRoute>
                 <OrdersPage />
               </ProtectedRoute>
             }
@@ -150,7 +150,7 @@ export function AppRoutes() {
           <Route
             path="orders/:id"
             element={
-              <ProtectedRoute roles={['customer']}>
+              <ProtectedRoute>
                 <OrderDetailPage />
               </ProtectedRoute>
             }
@@ -158,7 +158,7 @@ export function AppRoutes() {
           <Route
             path="profile"
             element={
-              <ProtectedRoute roles={['customer']}>
+              <ProtectedRoute>
                 <ProfilePage />
               </ProtectedRoute>
             }
@@ -166,7 +166,7 @@ export function AppRoutes() {
           <Route
             path="catering"
             element={
-              <ProtectedRoute roles={['customer']}>
+              <ProtectedRoute>
                 <CateringRequestPage />
               </ProtectedRoute>
             }
@@ -174,7 +174,7 @@ export function AppRoutes() {
           <Route
             path="catering/quotes"
             element={
-              <ProtectedRoute roles={['customer']}>
+              <ProtectedRoute>
                 <CateringQuotesPage />
               </ProtectedRoute>
             }

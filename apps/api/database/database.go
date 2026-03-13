@@ -76,6 +76,7 @@ func Migrate() error {
 		&models.ChefDocument{},
 
 		// Menu
+		&models.MenuCategory{},
 		&models.MenuItem{},
 		&models.MenuItemImage{},
 

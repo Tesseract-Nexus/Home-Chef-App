@@ -157,7 +157,7 @@ func (p *Post) ToResponse(userID *uuid.UUID) PostResponse {
 			ID:    p.MenuItem.ID,
 			Name:  p.MenuItem.Name,
 			Price: p.MenuItem.Price,
-			Image: p.MenuItem.Image,
+			Image: p.MenuItem.ImageURL,
 		}
 	}
 

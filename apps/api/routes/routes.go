@@ -45,6 +45,7 @@ func SetupRouter() *gin.Engine {
 	orderHandler := handlers.NewOrderHandler()
 	healthHandler := handlers.NewHealthHandler()
 	uploadHandler := handlers.NewUploadHandler()
+	menuHandler := handlers.NewMenuHandler()
 
 	// Health check endpoints
 	r.GET("/health", healthHandler.Health)
@@ -98,6 +99,21 @@ func SetupRouter() *gin.Engine {
 			chefOnboarding.POST("/profile-image", uploadHandler.UploadProfileImage)
 		}
 
+		// Menu management routes (authenticated — accessible during onboarding and after)
+		chefMenu := v1.Group("/chef/menu")
+		chefMenu.Use(middleware.AuthMiddleware())
+		{
+			chefMenu.GET("", menuHandler.GetChefMenuItems)
+			chefMenu.GET("/categories", menuHandler.GetCategories)
+			chefMenu.POST("/categories", menuHandler.CreateCategory)
+			chefMenu.PUT("/categories/:categoryId", menuHandler.UpdateCategory)
+			chefMenu.DELETE("/categories/:categoryId", menuHandler.DeleteCategory)
+			chefMenu.GET("/items/:itemId", menuHandler.GetMenuItem)
+			chefMenu.POST("/items", menuHandler.CreateMenuItem)
+			chefMenu.PUT("/items/:itemId", menuHandler.UpdateMenuItem)
+			chefMenu.DELETE("/items/:itemId", menuHandler.DeleteMenuItem)
+		}
+
 		// Chef dashboard routes (chef only)
 		chefDashboard := v1.Group("/chef")
 		chefDashboard.Use(middleware.AuthMiddleware(), middleware.RequireChef())
@@ -107,11 +123,6 @@ func SetupRouter() *gin.Engine {
 			chefDashboard.PUT("/profile", chefHandler.UpdateChefProfile)
 			chefDashboard.GET("/orders", chefHandler.GetChefOrders)
 			chefDashboard.PUT("/orders/:orderId/status", chefHandler.UpdateOrderStatus)
-			// Menu management endpoints would go here
-			// chefDashboard.GET("/menu", menuHandler.GetChefMenu)
-			// chefDashboard.POST("/menu", menuHandler.CreateMenuItem)
-			// chefDashboard.PUT("/menu/:itemId", menuHandler.UpdateMenuItem)
-			// chefDashboard.DELETE("/menu/:itemId", menuHandler.DeleteMenuItem)
 		}
 
 		// Customer order routes

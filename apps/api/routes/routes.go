@@ -93,7 +93,8 @@ func SetupRouter() *gin.Engine {
 		chefOnboarding := v1.Group("/chef")
 		chefOnboarding.Use(middleware.AuthMiddleware())
 		{
-			chefOnboarding.POST("/onboarding", uploadHandler.Onboarding)
+			chefOnboarding.GET("/onboarding/status", uploadHandler.GetOnboardingStatus)
+		chefOnboarding.POST("/onboarding", uploadHandler.Onboarding)
 			chefOnboarding.POST("/documents", uploadHandler.UploadDocument)
 			chefOnboarding.GET("/documents", uploadHandler.GetDocuments)
 			chefOnboarding.POST("/profile-image", uploadHandler.UploadProfileImage)

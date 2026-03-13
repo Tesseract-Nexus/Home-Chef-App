@@ -182,6 +182,38 @@ func (h *UploadHandler) UploadProfileImage(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"url": fileURL})
 }
 
+// GetOnboardingStatus checks if the authenticated user has completed chef onboarding.
+// GET /chef/onboarding/status — accessible to any authenticated user (no RequireChef)
+func (h *UploadHandler) GetOnboardingStatus(c *gin.Context) {
+	userID, _ := middleware.GetUserID(c)
+
+	var chef models.ChefProfile
+	if err := database.DB.Where("user_id = ?", userID).First(&chef).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{
+			"status":    "not_started",
+			"completed": false,
+		})
+		return
+	}
+
+	// Placeholder profile (auto-created by upload handler) has no business name
+	if chef.BusinessName == "" {
+		c.JSON(http.StatusOK, gin.H{
+			"status":    "in_progress",
+			"completed": false,
+			"chefId":    chef.ID,
+		})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":       "completed",
+		"completed":    true,
+		"chefId":       chef.ID,
+		"businessName": chef.BusinessName,
+	})
+}
+
 // Onboarding handles the chef onboarding form submission (JSON only — files uploaded separately)
 // POST /chef/onboarding
 func (h *UploadHandler) Onboarding(c *gin.Context) {

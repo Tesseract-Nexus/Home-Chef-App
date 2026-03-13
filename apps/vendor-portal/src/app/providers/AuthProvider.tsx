@@ -10,7 +10,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/auth-store';
 import { apiClient } from '@/shared/services/api-client';
 import type { SessionUser, SocialProvider } from '@/shared/types/auth';
-import type { Chef } from '@/shared/types';
 
 const BFF_URL = import.meta.env.VITE_BFF_URL || 'https://identity.fe3dr.com';
 
@@ -51,10 +50,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const checkOnboarding = async () => {
       try {
-        const profile = await apiClient.get<Chef | null>('/chef/profile');
-        if (!profile || !profile.businessName) {
+        const status = await apiClient.get<{ completed: boolean; status: string }>('/chef/onboarding/status');
+        if (!status.completed) {
           setNeedsOnboarding(true);
-          // Only redirect if not already on onboarding page
           if (!location.pathname.startsWith('/onboarding')) {
             navigate('/onboarding', { replace: true });
           }
@@ -62,7 +60,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setNeedsOnboarding(false);
         }
       } catch {
-        // No profile found = new vendor, needs onboarding
+        // API error — assume needs onboarding to be safe
         setNeedsOnboarding(true);
         if (!location.pathname.startsWith('/onboarding')) {
           navigate('/onboarding', { replace: true });

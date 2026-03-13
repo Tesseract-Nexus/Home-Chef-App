@@ -66,6 +66,23 @@ type ChefSchedule struct {
 	Chef ChefProfile `gorm:"foreignKey:ChefID" json:"-"`
 }
 
+// ChefSettings stores vendor preferences (notifications, auto-accept, etc.)
+type ChefSettings struct {
+	ID                   uuid.UUID `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	ChefID               uuid.UUID `gorm:"type:uuid;uniqueIndex;not null" json:"chefId"`
+	AutoAcceptOrders     bool      `gorm:"default:false" json:"autoAcceptOrders"`
+	AutoAcceptThreshold  float64   `gorm:"default:0" json:"autoAcceptThreshold"`
+	PushNewOrder         bool      `gorm:"default:true" json:"pushNewOrder"`
+	PushOrderUpdate      bool      `gorm:"default:true" json:"pushOrderUpdate"`
+	EmailDailySummary    bool      `gorm:"default:true" json:"emailDailySummary"`
+	EmailWeeklyReport    bool      `gorm:"default:true" json:"emailWeeklyReport"`
+	SmsNewOrder          bool      `gorm:"default:false" json:"smsNewOrder"`
+	CreatedAt            time.Time `gorm:"autoCreateTime" json:"createdAt"`
+	UpdatedAt            time.Time `gorm:"autoUpdateTime" json:"updatedAt"`
+
+	Chef ChefProfile `gorm:"foreignKey:ChefID" json:"-"`
+}
+
 // DTOs
 type ChefProfileResponse struct {
 	ID              uuid.UUID `json:"id"`

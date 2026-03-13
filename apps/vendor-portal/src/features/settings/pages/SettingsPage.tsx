@@ -205,9 +205,17 @@ export default function SettingsPage() {
           <Button
             size="sm"
             disabled={!passwordForm.currentPassword || !passwordForm.newPassword || passwordForm.newPassword !== passwordForm.confirmPassword}
-            onClick={() => {
-              toast.success('Password updated successfully');
-              setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+            onClick={async () => {
+              try {
+                await apiClient.put('/profile/password', {
+                  currentPassword: passwordForm.currentPassword,
+                  newPassword: passwordForm.newPassword,
+                });
+                toast.success('Password updated successfully');
+                setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+              } catch {
+                toast.error('Failed to update password. Check your current password.');
+              }
             }}
           >
             Update Password

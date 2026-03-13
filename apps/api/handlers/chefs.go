@@ -586,3 +586,102 @@ func (h *ChefHandler) ReplyToReview(c *gin.Context) {
 
 	c.JSON(http.StatusOK, review.ToResponse())
 }
+
+// GetChefSettings returns the chef's settings (creates defaults if not found)
+func (h *ChefHandler) GetChefSettings(c *gin.Context) {
+	userID, _ := middleware.GetUserID(c)
+
+	var chef models.ChefProfile
+	if err := database.DB.Where("user_id = ?", userID).First(&chef).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Chef profile not found"})
+		return
+	}
+
+	var settings models.ChefSettings
+	if err := database.DB.Where("chef_id = ?", chef.ID).First(&settings).Error; err != nil {
+		// Create default settings
+		settings = models.ChefSettings{
+			ChefID:              chef.ID,
+			AutoAcceptOrders:    false,
+			AutoAcceptThreshold: 0,
+			PushNewOrder:        true,
+			PushOrderUpdate:     true,
+			EmailDailySummary:   true,
+			EmailWeeklyReport:   true,
+			SmsNewOrder:         false,
+		}
+		database.DB.Create(&settings)
+	}
+
+	// Return in the shape the frontend expects
+	c.JSON(http.StatusOK, gin.H{
+		"notifications": gin.H{
+			"pushNewOrder":     settings.PushNewOrder,
+			"pushOrderUpdate":  settings.PushOrderUpdate,
+			"emailDailySummary": settings.EmailDailySummary,
+			"emailWeeklyReport": settings.EmailWeeklyReport,
+			"smsNewOrder":      settings.SmsNewOrder,
+		},
+		"autoAcceptOrders":    settings.AutoAcceptOrders,
+		"autoAcceptThreshold": settings.AutoAcceptThreshold,
+		"acceptingOrders":     chef.AcceptingOrders,
+	})
+}
+
+// UpdateChefSettings updates the chef's settings
+func (h *ChefHandler) UpdateChefSettings(c *gin.Context) {
+	userID, _ := middleware.GetUserID(c)
+
+	var chef models.ChefProfile
+	if err := database.DB.Where("user_id = ?", userID).First(&chef).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Chef profile not found"})
+		return
+	}
+
+	var req struct {
+		Notifications struct {
+			PushNewOrder     bool `json:"pushNewOrder"`
+			PushOrderUpdate  bool `json:"pushOrderUpdate"`
+			EmailDailySummary bool `json:"emailDailySummary"`
+			EmailWeeklyReport bool `json:"emailWeeklyReport"`
+			SmsNewOrder      bool `json:"smsNewOrder"`
+		} `json:"notifications"`
+		AutoAcceptOrders    bool    `json:"autoAcceptOrders"`
+		AutoAcceptThreshold float64 `json:"autoAcceptThreshold"`
+		AcceptingOrders     bool    `json:"acceptingOrders"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Update acceptingOrders on chef profile
+	database.DB.Model(&chef).Update("accepting_orders", req.AcceptingOrders)
+
+	// Upsert chef settings
+	var settings models.ChefSettings
+	if err := database.DB.Where("chef_id = ?", chef.ID).First(&settings).Error; err != nil {
+		settings = models.ChefSettings{ChefID: chef.ID}
+	}
+	settings.AutoAcceptOrders = req.AutoAcceptOrders
+	settings.AutoAcceptThreshold = req.AutoAcceptThreshold
+	settings.PushNewOrder = req.Notifications.PushNewOrder
+	settings.PushOrderUpdate = req.Notifications.PushOrderUpdate
+	settings.EmailDailySummary = req.Notifications.EmailDailySummary
+	settings.EmailWeeklyReport = req.Notifications.EmailWeeklyReport
+	settings.SmsNewOrder = req.Notifications.SmsNewOrder
+	database.DB.Save(&settings)
+
+	c.JSON(http.StatusOK, gin.H{
+		"notifications": gin.H{
+			"pushNewOrder":     settings.PushNewOrder,
+			"pushOrderUpdate":  settings.PushOrderUpdate,
+			"emailDailySummary": settings.EmailDailySummary,
+			"emailWeeklyReport": settings.EmailWeeklyReport,
+			"smsNewOrder":      settings.SmsNewOrder,
+		},
+		"autoAcceptOrders":    settings.AutoAcceptOrders,
+		"autoAcceptThreshold": settings.AutoAcceptThreshold,
+		"acceptingOrders":     req.AcceptingOrders,
+	})
+}

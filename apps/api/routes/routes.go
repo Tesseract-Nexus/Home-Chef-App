@@ -131,6 +131,8 @@ func SetupRouter() *gin.Engine {
 			chefDashboard.PUT("/orders/:orderId/status", chefHandler.UpdateOrderStatus)
 			chefDashboard.GET("/reviews", chefHandler.GetChefReviewsForDashboard)
 			chefDashboard.POST("/reviews/:reviewId/reply", chefHandler.ReplyToReview)
+			chefDashboard.GET("/settings", chefHandler.GetChefSettings)
+			chefDashboard.PUT("/settings", chefHandler.UpdateChefSettings)
 		}
 
 		// Customer order routes

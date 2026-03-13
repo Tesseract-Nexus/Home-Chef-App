@@ -111,6 +111,9 @@ func Migrate() error {
 		&models.PaymentMethod{},
 		&models.Transaction{},
 
+		// Chef Settings
+		&models.ChefSettings{},
+
 		// Notifications
 		&models.Notification{},
 

@@ -18,8 +18,6 @@ export function StepAddress() {
   const [countries, setCountries] = useState<LocationOption[]>([]);
   const [states, setStates] = useState<LocationOption[]>([]);
   const [cities, setCities] = useState<LocationOption[]>([]);
-  const [postcodes, setPostcodes] = useState<{ code: string; areaName: string }[]>([]);
-
   // Load countries on mount
   useEffect(() => {
     apiClient.get<LocationOption[]>('/locations/countries')
@@ -32,7 +30,6 @@ export function StepAddress() {
     if (!data.addressCountry) return;
     setStates([]);
     setCities([]);
-    setPostcodes([]);
     apiClient.get<LocationOption[]>(`/locations/countries/${data.addressCountry}/states`)
       .then(setStates)
       .catch(() => {});
@@ -42,20 +39,10 @@ export function StepAddress() {
   useEffect(() => {
     if (!data.addressState) return;
     setCities([]);
-    setPostcodes([]);
     apiClient.get<LocationOption[]>(`/locations/states/${data.addressState}/cities`)
       .then(setCities)
       .catch(() => {});
   }, [data.addressState]);
-
-  // Load postcodes when city changes
-  useEffect(() => {
-    if (!data.addressCity) return;
-    setPostcodes([]);
-    apiClient.get<{ code: string; areaName: string }[]>(`/locations/cities/${data.addressCity}/postcodes`)
-      .then(setPostcodes)
-      .catch(() => {});
-  }, [data.addressCity]);
 
   return (
     <Card>
@@ -145,29 +132,13 @@ export function StepAddress() {
           </select>
         </div>
 
-        {/* Postcode */}
-        {postcodes.length > 0 ? (
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-foreground">PIN code</label>
-            <select
-              value={data.addressPostalCode}
-              onChange={(e) => updateData({ addressPostalCode: e.target.value })}
-              className="w-full h-10 px-4 text-sm rounded-lg border-2 border-input bg-background shadow-sm hover:border-primary/30 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-ring/20 focus-visible:border-ring"
-            >
-              <option value="">Select PIN code</option>
-              {postcodes.map((p) => (
-                <option key={p.code} value={p.code}>{p.code} - {p.areaName}</option>
-              ))}
-            </select>
-          </div>
-        ) : (
-          <Input
-            label="PIN code"
-            value={data.addressPostalCode}
-            onChange={(e) => updateData({ addressPostalCode: e.target.value })}
-            placeholder="Enter PIN code"
-          />
-        )}
+        {/* PIN code */}
+        <Input
+          label="PIN code"
+          value={data.addressPostalCode}
+          onChange={(e) => updateData({ addressPostalCode: e.target.value })}
+          placeholder="Enter PIN code"
+        />
 
         <Input
           label="Address line 1"

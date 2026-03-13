@@ -622,7 +622,6 @@ function AddressesTab() {
   const [countries, setCountries] = useState<LocationOption[]>([]);
   const [states, setStates] = useState<LocationOption[]>([]);
   const [cities, setCities] = useState<LocationOption[]>([]);
-  const [postcodes, setPostcodes] = useState<{ code: string; areaName: string }[]>([]);
 
   const fetchAddresses = useCallback(() => {
     setLoading(true);
@@ -645,7 +644,7 @@ function AddressesTab() {
 
   // Load states when country changes or form opens
   useEffect(() => {
-    if (formMode === 'hidden' || !formData.country) { setStates([]); setCities([]); setPostcodes([]); return; }
+    if (formMode === 'hidden' || !formData.country) { setStates([]); setCities([]); return; }
     apiClient.get<LocationOption[]>(`/locations/countries/${formData.country}/states`)
       .then(setStates)
       .catch(() => setStates([]));
@@ -653,19 +652,12 @@ function AddressesTab() {
 
   // Load cities when state changes
   useEffect(() => {
-    if (formMode === 'hidden' || !formData.state) { setCities([]); setPostcodes([]); return; }
+    if (formMode === 'hidden' || !formData.state) { setCities([]); return; }
     apiClient.get<LocationOption[]>(`/locations/states/${formData.state}/cities`)
       .then(setCities)
       .catch(() => setCities([]));
   }, [formData.state, formKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Load postcodes when city changes
-  useEffect(() => {
-    if (formMode === 'hidden' || !formData.city) { setPostcodes([]); return; }
-    apiClient.get<{ code: string; areaName: string }[]>(`/locations/cities/${formData.city}/postcodes`)
-      .then(setPostcodes)
-      .catch(() => setPostcodes([]));
-  }, [formData.city, formKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const openAdd = () => {
     setFormData(emptyAddressForm);
@@ -837,31 +829,12 @@ function AddressesTab() {
               </select>
             </div>
 
-            {/* PIN code - dropdown if postcodes available, text input fallback */}
-            {postcodes.length > 0 ? (
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-gray-700">PIN code *</label>
-                <select
-                  value={formData.postalCode}
-                  onChange={(e) => updateField('postalCode', e.target.value)}
-                  className={selectClass}
-                >
-                  <option value="">Select PIN code</option>
-                  {postcodes.map((p) => (
-                    <option key={p.code} value={p.code}>{p.code} — {p.areaName}</option>
-                  ))}
-                </select>
-              </div>
-            ) : (
-              <div>
-                <label className="mb-1.5 block text-sm font-medium text-gray-700">PIN code *</label>
-                <Input
-                  placeholder="Enter PIN code"
-                  value={formData.postalCode}
-                  onChange={(e) => updateField('postalCode', e.target.value)}
-                />
-              </div>
-            )}
+            <Input
+              label="PIN code *"
+              placeholder="Enter PIN code"
+              value={formData.postalCode}
+              onChange={(e) => updateField('postalCode', e.target.value)}
+            />
 
             <Input
               label="Address line 1 *"

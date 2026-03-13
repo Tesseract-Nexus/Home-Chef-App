@@ -345,48 +345,6 @@ export const mockEarnings = {
   ],
 };
 
-// ── Mock Analytics ─────────────────────────────────────────────
-export const mockAnalytics = {
-  orderTrends: {
-    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-    data: [12, 19, 15, 22, 28, 35, 18],
-  },
-  revenueTrends: {
-    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-    data: [145, 198, 167, 234, 312, 445, 178],
-  },
-  popularItems: [
-    { name: 'Masala Dosa', orders: 45, percentage: 28 },
-    { name: 'Butter Chicken', orders: 38, percentage: 24 },
-    { name: 'Samosa', orders: 32, percentage: 20 },
-    { name: 'Vegetable Biryani', orders: 25, percentage: 16 },
-    { name: 'Idli Sambar', orders: 19, percentage: 12 },
-  ],
-  peakHours: [
-    { hour: '8 AM', orders: 5 },
-    { hour: '9 AM', orders: 8 },
-    { hour: '10 AM', orders: 3 },
-    { hour: '11 AM', orders: 6 },
-    { hour: '12 PM', orders: 22 },
-    { hour: '1 PM', orders: 28 },
-    { hour: '2 PM', orders: 15 },
-    { hour: '3 PM', orders: 4 },
-    { hour: '4 PM', orders: 7 },
-    { hour: '5 PM', orders: 10 },
-    { hour: '6 PM', orders: 18 },
-    { hour: '7 PM', orders: 32 },
-    { hour: '8 PM', orders: 25 },
-    { hour: '9 PM', orders: 12 },
-  ],
-  revenueByCategory: [
-    { category: 'Main Course', revenue: 2599.15, percentage: 42 },
-    { category: 'Breakfast', revenue: 1654.88, percentage: 27 },
-    { category: 'Snacks', revenue: 987.50, percentage: 16 },
-    { category: 'Desserts', revenue: 543.25, percentage: 9 },
-    { category: 'Beverages', revenue: 362.72, percentage: 6 },
-  ],
-};
-
 // ── Mock Settings ──────────────────────────────────────────────
 export const mockSettings = {
   notifications: {

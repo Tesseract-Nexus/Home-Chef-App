@@ -1,7 +1,9 @@
 package handlers
 
 import (
+	"fmt"
 	"log"
+	"math"
 	"net/http"
 	"strconv"
 	"time"
@@ -688,5 +690,186 @@ func (h *ChefHandler) UpdateChefSettings(c *gin.Context) {
 		"autoAcceptOrders":    settings.AutoAcceptOrders,
 		"autoAcceptThreshold": settings.AutoAcceptThreshold,
 		"acceptingOrders":     req.AcceptingOrders,
+	})
+}
+
+// GetChefAnalytics returns analytics data for the authenticated chef
+func (h *ChefHandler) GetChefAnalytics(c *gin.Context) {
+	userID, _ := middleware.GetUserID(c)
+
+	var chef models.ChefProfile
+	if err := database.DB.Where("user_id = ?", userID).First(&chef).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Chef profile not found"})
+		return
+	}
+
+	// Parse period (7d, 30d, 90d)
+	period := c.DefaultQuery("period", "7d")
+	var days int
+	switch period {
+	case "30d":
+		days = 30
+	case "90d":
+		days = 90
+	default:
+		days = 7
+	}
+
+	since := time.Now().AddDate(0, 0, -days)
+
+	// ── Order & Revenue Trends (grouped by date) ──
+	type dailyStat struct {
+		Date     string  `json:"date"`
+		Orders   int     `json:"orders"`
+		Revenue  float64 `json:"revenue"`
+	}
+	var dailyStats []dailyStat
+	database.DB.Raw(`
+		SELECT DATE(created_at) as date,
+		       COUNT(*) as orders,
+		       COALESCE(SUM(total), 0) as revenue
+		FROM orders
+		WHERE chef_id = ? AND created_at >= ? AND deleted_at IS NULL
+		GROUP BY DATE(created_at)
+		ORDER BY date
+	`, chef.ID, since).Scan(&dailyStats)
+
+	// Build label→value maps for the full date range
+	dateMap := make(map[string]dailyStat)
+	for _, ds := range dailyStats {
+		dateMap[ds.Date] = ds
+	}
+
+	var orderLabels []string
+	var orderData []int
+	var revenueLabels []string
+	var revenueData []float64
+
+	for i := days - 1; i >= 0; i-- {
+		d := time.Now().AddDate(0, 0, -i)
+		dateStr := d.Format("2006-01-02")
+		var label string
+		if days <= 7 {
+			label = d.Format("Mon")
+		} else {
+			label = d.Format("Jan 2")
+		}
+
+		ds := dateMap[dateStr]
+		orderLabels = append(orderLabels, label)
+		orderData = append(orderData, ds.Orders)
+		revenueLabels = append(revenueLabels, label)
+		revenueData = append(revenueData, math.Round(ds.Revenue*100)/100)
+	}
+
+	// ── Popular Items (top 5 by order count) ──
+	type popularItem struct {
+		Name   string `json:"name"`
+		Orders int    `json:"orders"`
+	}
+	var topItems []popularItem
+	database.DB.Raw(`
+		SELECT oi.name, SUM(oi.quantity) as orders
+		FROM order_items oi
+		JOIN orders o ON o.id = oi.order_id
+		WHERE o.chef_id = ? AND o.created_at >= ? AND o.deleted_at IS NULL
+		GROUP BY oi.name
+		ORDER BY orders DESC
+		LIMIT 5
+	`, chef.ID, since).Scan(&topItems)
+
+	// Calculate percentages
+	var totalItemOrders int
+	for _, it := range topItems {
+		totalItemOrders += it.Orders
+	}
+	popularItemsResp := make([]gin.H, len(topItems))
+	for i, it := range topItems {
+		pct := 0
+		if totalItemOrders > 0 {
+			pct = int(math.Round(float64(it.Orders) / float64(totalItemOrders) * 100))
+		}
+		popularItemsResp[i] = gin.H{
+			"name":       it.Name,
+			"orders":     it.Orders,
+			"percentage": pct,
+		}
+	}
+
+	// ── Peak Hours ──
+	type hourStat struct {
+		Hour   int `json:"hour"`
+		Orders int `json:"orders"`
+	}
+	var hourStats []hourStat
+	database.DB.Raw(`
+		SELECT EXTRACT(HOUR FROM created_at)::int as hour, COUNT(*) as orders
+		FROM orders
+		WHERE chef_id = ? AND created_at >= ? AND deleted_at IS NULL
+		GROUP BY hour
+		ORDER BY hour
+	`, chef.ID, since).Scan(&hourStats)
+
+	hourMap := make(map[int]int)
+	for _, hs := range hourStats {
+		hourMap[hs.Hour] = hs.Orders
+	}
+	peakHours := make([]gin.H, 0)
+	for h := 8; h <= 22; h++ {
+		label := fmt.Sprintf("%d %s", func() int {
+			if h == 12 { return 12 }
+			if h > 12 { return h - 12 }
+			return h
+		}(), func() string {
+			if h >= 12 { return "PM" }
+			return "AM"
+		}())
+		peakHours = append(peakHours, gin.H{
+			"hour":   label,
+			"orders": hourMap[h],
+		})
+	}
+
+	// ── Revenue by Category ──
+	type categoryStat struct {
+		Category string  `json:"category"`
+		Revenue  float64 `json:"revenue"`
+	}
+	var catStats []categoryStat
+	database.DB.Raw(`
+		SELECT COALESCE(mc.name, 'Uncategorized') as category,
+		       COALESCE(SUM(oi.subtotal), 0) as revenue
+		FROM order_items oi
+		JOIN orders o ON o.id = oi.order_id
+		LEFT JOIN menu_items mi ON mi.id = oi.menu_item_id
+		LEFT JOIN menu_categories mc ON mc.id = mi.category_id
+		WHERE o.chef_id = ? AND o.created_at >= ? AND o.deleted_at IS NULL
+		GROUP BY mc.name
+		ORDER BY revenue DESC
+	`, chef.ID, since).Scan(&catStats)
+
+	var totalCatRevenue float64
+	for _, cs := range catStats {
+		totalCatRevenue += cs.Revenue
+	}
+	revByCat := make([]gin.H, len(catStats))
+	for i, cs := range catStats {
+		pct := 0
+		if totalCatRevenue > 0 {
+			pct = int(math.Round(cs.Revenue / totalCatRevenue * 100))
+		}
+		revByCat[i] = gin.H{
+			"category":   cs.Category,
+			"revenue":    math.Round(cs.Revenue*100) / 100,
+			"percentage": pct,
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"orderTrends":       gin.H{"labels": orderLabels, "data": orderData},
+		"revenueTrends":     gin.H{"labels": revenueLabels, "data": revenueData},
+		"popularItems":      popularItemsResp,
+		"peakHours":         peakHours,
+		"revenueByCategory": revByCat,
 	})
 }

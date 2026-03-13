@@ -7,7 +7,6 @@ import {
   mockOrders,
   mockDashboardStats,
   mockEarnings,
-  mockAnalytics,
   mockSettings,
 } from './data';
 
@@ -144,11 +143,6 @@ class MockService {
 
     if (endpoint === '/chef/profile' && method === 'PUT') {
       return { ...mockChefs[0], ...body } as unknown as T;
-    }
-
-    // ── Analytics ───────────────────────────────────────────
-    if (endpoint === '/chef/analytics' && method === 'GET') {
-      return mockAnalytics as unknown as T;
     }
 
     // ── Settings ────────────────────────────────────────────

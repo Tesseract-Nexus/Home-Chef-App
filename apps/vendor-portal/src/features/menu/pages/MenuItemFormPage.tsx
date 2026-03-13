@@ -57,7 +57,7 @@ const menuItemSchema = z.object({
     .max(9999.99, 'Price must be under $10,000'),
   categoryId: z.string().optional().or(z.literal('')),
   dietaryTags: z.array(z.string()).default([]),
-  allergens: z.string().optional().or(z.literal('')),
+  allergens: z.array(z.string()).default([]),
   prepTime: z
     .number({ invalid_type_error: 'Prep time is required' })
     .min(1, 'Prep time must be at least 1 minute')
@@ -80,6 +80,85 @@ const DIETARY_TAG_OPTIONS = [
 ];
 
 const NEW_CATEGORY_VALUE = '__new__';
+
+function AllergenTagInput({
+  value,
+  onChange,
+  error,
+}: {
+  value: string[];
+  onChange: (v: string[]) => void;
+  error?: string;
+}) {
+  const [input, setInput] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const addTag = (tag: string) => {
+    const trimmed = tag.trim().toLowerCase();
+    if (trimmed && !value.includes(trimmed)) {
+      onChange([...value, trimmed]);
+    }
+    setInput('');
+  };
+
+  const removeTag = (tag: string) => {
+    onChange(value.filter((t) => t !== tag));
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      addTag(input);
+    } else if (e.key === 'Backspace' && !input && value.length > 0) {
+      removeTag(value[value.length - 1]!);
+    }
+  };
+
+  return (
+    <div>
+      <label className="mb-1.5 block text-sm font-medium text-foreground">Allergens</label>
+      <div
+        className={`flex min-h-[42px] flex-wrap items-center gap-1.5 rounded-lg border-2 px-3 py-2 transition-all focus-within:border-ring focus-within:ring-4 focus-within:ring-ring/20 ${
+          error ? 'border-destructive' : 'border-input hover:border-primary/30'
+        }`}
+        onClick={() => inputRef.current?.focus()}
+      >
+        {value.map((tag) => (
+          <span
+            key={tag}
+            className="inline-flex items-center gap-1 rounded-md bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive"
+          >
+            {tag}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                removeTag(tag);
+              }}
+              className="rounded-full p-0.5 hover:bg-destructive/20"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </span>
+        ))}
+        <input
+          ref={inputRef}
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onBlur={() => { if (input.trim()) addTag(input); }}
+          placeholder={value.length === 0 ? 'Type an allergen and press Enter' : ''}
+          className="min-w-[120px] flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground/60"
+        />
+      </div>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Type each allergen and press Enter to add
+      </p>
+      {error && <p className="mt-1.5 text-sm text-destructive">{error}</p>}
+    </div>
+  );
+}
 
 export default function MenuItemFormPage() {
   const { id } = useParams<{ id: string }>();
@@ -153,7 +232,7 @@ export default function MenuItemFormPage() {
       price: undefined as unknown as number,
       categoryId: '',
       dietaryTags: [],
-      allergens: '',
+      allergens: [],
       prepTime: undefined as unknown as number,
       portionSize: '',
       serves: 1,
@@ -173,7 +252,7 @@ export default function MenuItemFormPage() {
         price: existingItem.price,
         categoryId: existingItem.categoryId || '',
         dietaryTags: existingItem.dietaryTags || [],
-        allergens: existingItem.allergens?.join(', ') || '',
+        allergens: existingItem.allergens || [],
         prepTime: existingItem.prepTime,
         portionSize: existingItem.portionSize || '',
         serves: existingItem.serves,
@@ -202,13 +281,7 @@ export default function MenuItemFormPage() {
   // Create mutation
   const createItem = useMutation({
     mutationFn: (data: MenuItemFormValues) => {
-      const payload = {
-        ...data,
-        allergens: data.allergens
-          ? data.allergens.split(',').map((a) => a.trim()).filter(Boolean)
-          : [],
-      };
-      return apiClient.post<MenuItem>('/chef/menu/items', payload);
+      return apiClient.post<MenuItem>('/chef/menu/items', data);
     },
     onSuccess: async (newItem) => {
       // Upload pending images for the newly created item
@@ -228,13 +301,7 @@ export default function MenuItemFormPage() {
   // Update mutation
   const updateItem = useMutation({
     mutationFn: (data: MenuItemFormValues) => {
-      const payload = {
-        ...data,
-        allergens: data.allergens
-          ? data.allergens.split(',').map((a) => a.trim()).filter(Boolean)
-          : [],
-      };
-      return apiClient.put<MenuItem>(`/chef/menu/items/${id}`, payload);
+      return apiClient.put<MenuItem>(`/chef/menu/items/${id}`, data);
     },
     onSuccess: async () => {
       // Upload any new pending images
@@ -547,12 +614,16 @@ export default function MenuItemFormPage() {
                 )}
               </div>
 
-              <Input
-                label="Allergens"
-                placeholder="e.g. dairy, nuts, gluten (comma-separated)"
-                hint="List allergens separated by commas"
-                error={errors.allergens?.message}
-                {...register('allergens')}
+              <Controller
+                name="allergens"
+                control={control}
+                render={({ field }) => (
+                  <AllergenTagInput
+                    value={field.value}
+                    onChange={field.onChange}
+                    error={errors.allergens?.message}
+                  />
+                )}
               />
             </div>
           </Card>

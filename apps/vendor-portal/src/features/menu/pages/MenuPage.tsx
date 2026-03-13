@@ -417,12 +417,17 @@ function MenuItemCard({
           )}
         </div>
 
-        {/* Dietary tags */}
-        {(item.dietaryTags ?? []).length > 0 && (
+        {/* Dietary tags & allergens */}
+        {((item.dietaryTags ?? []).length > 0 || (item.allergens ?? []).length > 0) && (
           <div className="mt-2 flex flex-wrap gap-1">
             {(item.dietaryTags ?? []).map((tag) => (
-              <Badge key={tag} variant="outline" size="sm">
+              <Badge key={`diet-${tag}`} variant="outline" size="sm">
                 {tag}
+              </Badge>
+            ))}
+            {(item.allergens ?? []).map((allergen) => (
+              <Badge key={`allergen-${allergen}`} variant="destructive" size="sm">
+                {allergen}
               </Badge>
             ))}
           </div>

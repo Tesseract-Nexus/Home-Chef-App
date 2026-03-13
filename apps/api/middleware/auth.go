@@ -20,87 +20,119 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-// AuthMiddleware validates JWT tokens and sets user context
+// AuthMiddleware validates JWT tokens and sets user context.
+// Supports two authentication methods:
+//  1. Authorization: Bearer <JWT> — traditional JWT from the app's own auth
+//  2. x-jwt-claim-sub header — trusted user ID from BFF proxy or Istio mesh
+//     (only accepted for internal mesh requests where the BFF already validated the session)
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
-			c.Abort()
+
+		// Try JWT-based auth first
+		if authHeader != "" {
+			parts := strings.Split(authHeader, " ")
+			if len(parts) == 2 && parts[0] == "Bearer" {
+				tokenString := parts[1]
+				claims := &Claims{}
+				token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+					return []byte(config.AppConfig.JWTSecret), nil
+				})
+
+				if err == nil && token.Valid {
+					var user models.User
+					if err := database.DB.First(&user, "id = ?", claims.UserID).Error; err != nil {
+						c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+						c.Abort()
+						return
+					}
+					if !user.IsActive {
+						c.JSON(http.StatusForbidden, gin.H{"error": "Account is suspended"})
+						c.Abort()
+						return
+					}
+					c.Set("userID", claims.UserID)
+					c.Set("userEmail", claims.Email)
+					c.Set("userRole", claims.Role)
+					c.Set("user", &user)
+					c.Next()
+					return
+				}
+				// JWT parsing failed — fall through to x-jwt-claim-sub
+			}
+		}
+
+		// Fallback: trust x-jwt-claim-sub from BFF proxy / Istio mesh
+		// The BFF validates the session cookie and sets this header with the authenticated user ID
+		sub := c.GetHeader("x-jwt-claim-sub")
+		if sub != "" {
+			userID, err := uuid.Parse(sub)
+			if err != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in x-jwt-claim-sub"})
+				c.Abort()
+				return
+			}
+
+			var user models.User
+			if err := database.DB.First(&user, "id = ?", userID).Error; err != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
+				c.Abort()
+				return
+			}
+			if !user.IsActive {
+				c.JSON(http.StatusForbidden, gin.H{"error": "Account is suspended"})
+				c.Abort()
+				return
+			}
+
+			c.Set("userID", user.ID)
+			c.Set("userEmail", user.Email)
+			c.Set("userRole", user.Role)
+			c.Set("user", &user)
+			c.Next()
 			return
 		}
 
-		// Extract token from "Bearer <token>"
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization header format"})
-			c.Abort()
-			return
-		}
-
-		tokenString := parts[1]
-
-		// Parse and validate token
-		claims := &Claims{}
-		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-			return []byte(config.AppConfig.JWTSecret), nil
-		})
-
-		if err != nil || !token.Valid {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
-			c.Abort()
-			return
-		}
-
-		// Verify user still exists and is active
-		var user models.User
-		if err := database.DB.First(&user, "id = ?", claims.UserID).Error; err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "User not found"})
-			c.Abort()
-			return
-		}
-
-		if !user.IsActive {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Account is suspended"})
-			c.Abort()
-			return
-		}
-
-		// Set user info in context
-		c.Set("userID", claims.UserID)
-		c.Set("userEmail", claims.Email)
-		c.Set("userRole", claims.Role)
-		c.Set("user", &user)
-
-		c.Next()
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization required"})
+		c.Abort()
 	}
 }
 
-// OptionalAuthMiddleware extracts user info if token is present, but doesn't require it
+// OptionalAuthMiddleware extracts user info if token is present, but doesn't require it.
+// Supports both JWT and x-jwt-claim-sub header.
 func OptionalAuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Try JWT first
 		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			c.Next()
-			return
+		if authHeader != "" {
+			parts := strings.Split(authHeader, " ")
+			if len(parts) == 2 && parts[0] == "Bearer" {
+				claims := &Claims{}
+				token, err := jwt.ParseWithClaims(parts[1], claims, func(token *jwt.Token) (interface{}, error) {
+					return []byte(config.AppConfig.JWTSecret), nil
+				})
+				if err == nil && token.Valid {
+					c.Set("userID", claims.UserID)
+					c.Set("userEmail", claims.Email)
+					c.Set("userRole", claims.Role)
+					c.Next()
+					return
+				}
+			}
 		}
 
-		parts := strings.Split(authHeader, " ")
-		if len(parts) != 2 || parts[0] != "Bearer" {
-			c.Next()
-			return
-		}
-
-		tokenString := parts[1]
-		claims := &Claims{}
-		token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
-			return []byte(config.AppConfig.JWTSecret), nil
-		})
-
-		if err == nil && token.Valid {
-			c.Set("userID", claims.UserID)
-			c.Set("userEmail", claims.Email)
-			c.Set("userRole", claims.Role)
+		// Fallback: x-jwt-claim-sub from BFF/Istio
+		sub := c.GetHeader("x-jwt-claim-sub")
+		if sub != "" {
+			userID, err := uuid.Parse(sub)
+			if err == nil {
+				var user models.User
+				if err := database.DB.First(&user, "id = ?", userID).Error; err == nil {
+					c.Set("userID", user.ID)
+					c.Set("userEmail", user.Email)
+					c.Set("userRole", user.Role)
+				}
+			}
 		}
 
 		c.Next()

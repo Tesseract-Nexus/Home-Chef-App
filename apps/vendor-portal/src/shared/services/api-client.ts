@@ -1,6 +1,8 @@
 import type { ApiResponse, ApiError } from '@/shared/types';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://api.fe3dr.com/api/v1';
+// API calls go through the BFF proxy which handles session auth (cookies → JWT)
+const BFF_URL = import.meta.env.VITE_BFF_URL || 'https://auth.fe3dr.com';
+const API_URL = `${BFF_URL}/api/v1`;
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, string | number | boolean | undefined>;

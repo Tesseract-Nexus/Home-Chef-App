@@ -23,9 +23,19 @@ func SetupRouter() *gin.Engine {
 
 	// CORS configuration
 	corsConfig := cors.DefaultConfig()
-	corsConfig.AllowOrigins = []string{"http://localhost:5173", "http://localhost:3000", "https://homechef.app"}
+	corsConfig.AllowOrigins = []string{
+		"http://localhost:5173",
+		"http://localhost:3000",
+		"https://homechef.app",
+		"https://fe3dr.com",
+		"https://www.fe3dr.com",
+		"https://vendors.fe3dr.com",
+		"https://admin.fe3dr.com",
+		"https://auth.fe3dr.com",
+		"https://delivery.fe3dr.com",
+	}
 	corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
-	corsConfig.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
+	corsConfig.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Request-ID", "x-jwt-claim-sub", "x-jwt-claim-tenant-id", "x-jwt-claim-tenant-slug"}
 	corsConfig.AllowCredentials = true
 	r.Use(cors.New(corsConfig))
 

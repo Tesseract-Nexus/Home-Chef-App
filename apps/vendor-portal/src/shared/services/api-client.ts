@@ -1,4 +1,4 @@
-import type { ApiResponse, ApiError } from '@/shared/types';
+import type { ApiError } from '@/shared/types';
 
 // API calls go through the BFF proxy which handles session auth (cookies → JWT)
 const BFF_URL = import.meta.env.VITE_BFF_URL || 'https://identity.fe3dr.com';
@@ -81,8 +81,9 @@ class ApiClient {
       throw error;
     }
 
-    const data: ApiResponse<T> = await response.json();
-    return data.data;
+    // The Go API returns raw JSON (not wrapped in { data: T }),
+    // so return the parsed response directly.
+    return await response.json();
   }
 
   async get<T>(endpoint: string, params?: RequestOptions['params']): Promise<T> {

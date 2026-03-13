@@ -120,7 +120,7 @@ func SetupRouter() *gin.Engine {
 		chefDashboard.Use(middleware.AuthMiddleware(), middleware.RequireChef())
 		{
 			chefDashboard.GET("/dashboard", chefHandler.GetChefDashboard)
-			chefDashboard.GET("/profile", chefHandler.GetChefDashboard) // Same data
+			chefDashboard.GET("/profile", chefHandler.GetChefProfile)
 			chefDashboard.PUT("/profile", chefHandler.UpdateChefProfile)
 			chefDashboard.GET("/orders", chefHandler.GetChefOrders)
 			chefDashboard.PUT("/orders/:orderId/status", chefHandler.UpdateOrderStatus)

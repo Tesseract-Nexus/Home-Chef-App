@@ -185,6 +185,19 @@ func (h *ChefHandler) GetChefReviews(c *gin.Context) {
 
 // ---- Chef Dashboard Endpoints ----
 
+// GetChefProfile returns the full chef profile for the authenticated chef
+func (h *ChefHandler) GetChefProfile(c *gin.Context) {
+	userID, _ := middleware.GetUserID(c)
+
+	var chef models.ChefProfile
+	if err := database.DB.Where("user_id = ?", userID).First(&chef).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Chef profile not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, chef.ToResponse())
+}
+
 // GetChefDashboard returns the chef's dashboard data
 func (h *ChefHandler) GetChefDashboard(c *gin.Context) {
 	userID, _ := middleware.GetUserID(c)

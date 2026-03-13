@@ -120,10 +120,20 @@ export default function MenuItemFormPage() {
       setShowNewCategoryDialog(false);
       setNewCategoryName('');
     },
-    onError: () => {
-      toast.error('Failed to create category');
+    onError: (err: unknown) => {
+      const message = (err as { message?: string })?.message ?? '';
+      if (message.toLowerCase().includes('already exists')) {
+        toast.error('A category with this name already exists');
+      } else {
+        toast.error('Failed to create category');
+      }
     },
   });
+
+  // Case-insensitive duplicate check for new category name
+  const isDuplicateCategory = categories.some(
+    (c) => c.name.toLowerCase() === newCategoryName.trim().toLowerCase()
+  );
 
   // Form setup
   const {
@@ -576,19 +586,26 @@ export default function MenuItemFormPage() {
         size="sm"
       >
         <div className="mt-4 space-y-4">
-          <Input
-            label="Category Name"
-            placeholder="e.g. Starters, Main Course, Desserts"
-            value={newCategoryName}
-            onChange={(e) => setNewCategoryName(e.target.value)}
-            autoFocus
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && newCategoryName.trim()) {
-                e.preventDefault();
-                createCategory.mutate(newCategoryName.trim());
-              }
-            }}
-          />
+          <div>
+            <Input
+              label="Category Name"
+              placeholder="e.g. Starters, Main Course, Desserts"
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && newCategoryName.trim() && !isDuplicateCategory) {
+                  e.preventDefault();
+                  createCategory.mutate(newCategoryName.trim());
+                }
+              }}
+            />
+            {isDuplicateCategory && (
+              <p className="mt-1 text-sm text-red-500">
+                A category with this name already exists
+              </p>
+            )}
+          </div>
           <DialogFooter>
             <Button
               variant="outline"
@@ -601,7 +618,7 @@ export default function MenuItemFormPage() {
             </Button>
             <Button
               onClick={() => createCategory.mutate(newCategoryName.trim())}
-              disabled={!newCategoryName.trim() || createCategory.isPending}
+              disabled={!newCategoryName.trim() || isDuplicateCategory || createCategory.isPending}
               isLoading={createCategory.isPending}
             >
               Create

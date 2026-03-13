@@ -296,6 +296,13 @@ func (h *MenuHandler) CreateCategory(c *gin.Context) {
 		return
 	}
 
+	// Case-insensitive duplicate check
+	var existing models.MenuCategory
+	if err := database.DB.Where("chef_id = ? AND LOWER(name) = LOWER(?)", chef.ID, req.Name).First(&existing).Error; err == nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "A category with this name already exists"})
+		return
+	}
+
 	category := models.MenuCategory{
 		ChefID:      chef.ID,
 		Name:        req.Name,
@@ -339,6 +346,12 @@ func (h *MenuHandler) UpdateCategory(c *gin.Context) {
 
 	updates := map[string]interface{}{}
 	if req.Name != nil {
+		// Case-insensitive duplicate check (exclude self)
+		var existing models.MenuCategory
+		if err := database.DB.Where("chef_id = ? AND LOWER(name) = LOWER(?) AND id != ?", chef.ID, *req.Name, category.ID).First(&existing).Error; err == nil {
+			c.JSON(http.StatusConflict, gin.H{"error": "A category with this name already exists"})
+			return
+		}
 		updates["name"] = *req.Name
 	}
 	if req.Description != nil {

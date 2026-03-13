@@ -11,8 +11,8 @@ import (
 // MenuCategory represents a chef-scoped menu category (e.g., "Starters", "Main Course", "Desserts")
 type MenuCategory struct {
 	ID          uuid.UUID      `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
-	ChefID      uuid.UUID      `gorm:"type:uuid;not null;index" json:"chefId"`
-	Name        string         `gorm:"not null" json:"name"`
+	ChefID      uuid.UUID      `gorm:"type:uuid;not null;uniqueIndex:idx_menu_categories_chef_name" json:"chefId"`
+	Name        string         `gorm:"not null;uniqueIndex:idx_menu_categories_chef_name" json:"name"`
 	Description string         `gorm:"type:text" json:"description,omitempty"`
 	SortOrder   int            `gorm:"default:0" json:"sortOrder"`
 	IsActive    bool           `gorm:"default:true" json:"isActive"`

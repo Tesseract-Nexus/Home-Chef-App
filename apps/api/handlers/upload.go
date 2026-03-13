@@ -478,6 +478,7 @@ func (h *UploadHandler) createSchedules(chef *models.ChefProfile, hours map[stri
 }
 
 // seedDefaultCategories inserts the standard starter menu categories for a new chef.
+// Skips any category whose name already exists (case-insensitive) for this chef.
 func (h *UploadHandler) seedDefaultCategories(chefID uuid.UUID) {
 	categories := []string{
 		"Starters & Snacks",
@@ -492,6 +493,10 @@ func (h *UploadHandler) seedDefaultCategories(chefID uuid.UUID) {
 		"Specials of the Day",
 	}
 	for i, name := range categories {
+		var existing models.MenuCategory
+		if err := database.DB.Where("chef_id = ? AND LOWER(name) = LOWER(?)", chefID, name).First(&existing).Error; err == nil {
+			continue // already exists
+		}
 		cat := models.MenuCategory{
 			ChefID:    chefID,
 			Name:      name,

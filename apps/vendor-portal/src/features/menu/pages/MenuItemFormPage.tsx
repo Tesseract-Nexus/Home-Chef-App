@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -8,16 +8,18 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft,
   Save,
-  ImageIcon,
   Clock,
   DollarSign,
   Users,
   UtensilsCrossed,
   Loader2,
   Plus,
+  X,
+  Upload,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiClient } from '@/shared/services/api-client';
+import { uploadMenuItemImage, deleteMenuItemImage } from '@/shared/services/upload-service';
 import { staggerContainer, fadeInUp } from '@/shared/utils/animations';
 import { Button } from '@/shared/components/ui/Button';
 import { Input, Textarea } from '@/shared/components/ui/Input';
@@ -34,7 +36,7 @@ import {
   SimpleDialog,
   DialogFooter,
 } from '@/shared/components/ui/Dialog';
-import type { MenuItem, MenuCategory } from '@/shared/types';
+import type { MenuItem, MenuCategory, MenuItemImage } from '@/shared/types';
 import { useDraftForm } from '@/shared/hooks/useDraftForm';
 
 // --- Zod validation schema ---
@@ -65,7 +67,6 @@ const menuItemSchema = z.object({
     .number({ invalid_type_error: 'Serves count is required' })
     .min(1, 'Must serve at least 1')
     .max(100, 'Must serve under 100'),
-  imageUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
 });
 
 type MenuItemFormValues = z.infer<typeof menuItemSchema>;
@@ -156,7 +157,6 @@ export default function MenuItemFormPage() {
       prepTime: undefined as unknown as number,
       portionSize: '',
       serves: 1,
-      imageUrl: '',
     },
   });
 
@@ -177,7 +177,6 @@ export default function MenuItemFormPage() {
         prepTime: existingItem.prepTime,
         portionSize: existingItem.portionSize || '',
         serves: existingItem.serves,
-        imageUrl: existingItem.imageUrl || '',
       };
       const draft = loadDraft();
       reset(draft ?? serverValues);
@@ -211,7 +210,11 @@ export default function MenuItemFormPage() {
       };
       return apiClient.post<MenuItem>('/chef/menu/items', payload);
     },
-    onSuccess: () => {
+    onSuccess: async (newItem) => {
+      // Upload pending images for the newly created item
+      if (pendingFiles.length > 0) {
+        await uploadPendingImages(newItem.id);
+      }
       clearDraft();
       queryClient.invalidateQueries({ queryKey: ['chef-menu'] });
       toast.success('Menu item created successfully');
@@ -233,7 +236,11 @@ export default function MenuItemFormPage() {
       };
       return apiClient.put<MenuItem>(`/chef/menu/items/${id}`, payload);
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      // Upload any new pending images
+      if (pendingFiles.length > 0 && id) {
+        await uploadPendingImages(id);
+      }
       clearDraft();
       queryClient.invalidateQueries({ queryKey: ['chef-menu'] });
       queryClient.invalidateQueries({ queryKey: ['chef-menu-item', id] });
@@ -255,7 +262,81 @@ export default function MenuItemFormPage() {
 
   const isSubmitting = createItem.isPending || updateItem.isPending;
 
-  const watchedImageUrl = watch('imageUrl');
+  // Image management state
+  const [itemImages, setItemImages] = useState<MenuItemImage[]>([]);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync images from existing item (edit mode)
+  useEffect(() => {
+    if (existingItem?.images) {
+      setItemImages(existingItem.images);
+    }
+  }, [existingItem]);
+
+  const totalImageCount = itemImages.length + pendingFiles.length;
+  const canAddMore = totalImageCount < 5;
+
+  const handleFileSelect = useCallback((files: FileList | null) => {
+    if (!files) return;
+    const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+    const maxSize = 5 * 1024 * 1024;
+    const remaining = 5 - totalImageCount;
+    const newFiles: File[] = [];
+
+    for (let i = 0; i < Math.min(files.length, remaining); i++) {
+      const f = files.item(i);
+      if (!f) continue;
+      if (!allowed.includes(f.type)) {
+        toast.error(`${f.name}: Invalid type. Allowed: JPEG, PNG, WebP.`);
+        continue;
+      }
+      if (f.size > maxSize) {
+        toast.error(`${f.name}: Too large. Max 5 MB.`);
+        continue;
+      }
+      newFiles.push(f);
+    }
+    if (newFiles.length > 0) {
+      setPendingFiles((prev) => [...prev, ...newFiles]);
+    }
+  }, [totalImageCount]);
+
+  const removePendingFile = (index: number) => {
+    setPendingFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleDeleteImage = async (image: MenuItemImage) => {
+    if (!existingItem) return;
+    try {
+      await deleteMenuItemImage(existingItem.id, image.id);
+      setItemImages((prev) => prev.filter((img) => img.id !== image.id));
+      queryClient.invalidateQueries({ queryKey: ['chef-menu-item', id] });
+      toast.success('Image deleted');
+    } catch {
+      toast.error('Failed to delete image');
+    }
+  };
+
+  // Upload pending files to the API (called after item creation or directly in edit mode)
+  const uploadPendingImages = async (itemId: string) => {
+    if (pendingFiles.length === 0) return;
+    setIsUploading(true);
+    try {
+      for (const file of pendingFiles) {
+        const img = await uploadMenuItemImage(itemId, file);
+        setItemImages((prev) => [...prev, img]);
+      }
+      setPendingFiles([]);
+      queryClient.invalidateQueries({ queryKey: ['chef-menu-item', itemId] });
+    } catch {
+      toast.error('Some images failed to upload');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const watchedDietaryTags = watch('dietaryTags') ?? [];
 
   // Loading state for edit mode
@@ -515,46 +596,108 @@ export default function MenuItemFormPage() {
           </Card>
         </motion.div>
 
-        {/* Image */}
+        {/* Images */}
         <motion.div variants={fadeInUp}>
           <Card>
-            <h2 className="mb-4 text-lg font-semibold text-foreground">
-              Image
-            </h2>
-            <div className="space-y-4">
-              <Input
-                label="Image URL"
-                placeholder="https://example.com/image.jpg"
-                error={errors.imageUrl?.message}
-                leftIcon={<ImageIcon className="h-4 w-4" />}
-                {...register('imageUrl')}
-              />
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-foreground">
+                Images
+              </h2>
+              <span className="text-sm text-muted-foreground">
+                {totalImageCount}/5 (min 1)
+              </span>
+            </div>
 
-              {/* Image preview */}
-              {watchedImageUrl && !errors.imageUrl && (
-                <div className="relative aspect-video w-full max-w-sm overflow-hidden rounded-lg border border-border bg-muted">
+            {/* Image grid */}
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+              {/* Existing uploaded images */}
+              {itemImages.map((img) => (
+                <div key={img.id} className="group relative aspect-square overflow-hidden rounded-lg border border-border bg-muted">
                   <img
-                    src={watchedImageUrl}
-                    alt="Preview"
+                    src={img.url}
+                    alt="Menu item"
                     className="h-full w-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
                   />
+                  {img.isPrimary && (
+                    <span className="absolute left-1 top-1 rounded bg-primary/90 px-1.5 py-0.5 text-[10px] font-medium text-primary-foreground">
+                      Primary
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteImage(img)}
+                    className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-500/90 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
                 </div>
-              )}
+              ))}
 
-              {!watchedImageUrl && (
-                <div className="flex aspect-video w-full max-w-sm items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/50">
-                  <div className="text-center">
-                    <ImageIcon className="mx-auto h-8 w-8 text-muted-foreground/40" />
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      Add an image URL above to preview
-                    </p>
-                  </div>
+              {/* Pending files (not yet uploaded) */}
+              {pendingFiles.map((file, i) => (
+                <div key={`pending-${i}`} className="group relative aspect-square overflow-hidden rounded-lg border border-dashed border-primary/50 bg-primary/5">
+                  <img
+                    src={URL.createObjectURL(file)}
+                    alt={file.name}
+                    className="h-full w-full object-cover opacity-70"
+                  />
+                  <span className="absolute left-1 top-1 rounded bg-amber-500/90 px-1.5 py-0.5 text-[10px] font-medium text-white">
+                    Pending
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => removePendingFile(i)}
+                    className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-500/90 text-white opacity-0 transition-opacity group-hover:opacity-100"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
                 </div>
+              ))}
+
+              {/* Add image button */}
+              {canAddMore && (
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex aspect-square flex-col items-center justify-center rounded-lg border-2 border-dashed border-border bg-muted/50 text-muted-foreground transition-colors hover:border-primary hover:bg-primary/5 hover:text-primary"
+                >
+                  <Upload className="mb-1 h-6 w-6" />
+                  <span className="text-xs font-medium">Add Image</span>
+                </button>
               )}
             </div>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              multiple
+              className="hidden"
+              onChange={(e) => {
+                handleFileSelect(e.target.files);
+                e.target.value = '';
+              }}
+            />
+
+            {/* Upload button for edit mode (immediate upload) */}
+            {isEditMode && pendingFiles.length > 0 && (
+              <div className="mt-3">
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => id && uploadPendingImages(id)}
+                  isLoading={isUploading}
+                  disabled={isUploading}
+                  leftIcon={<Upload className="h-4 w-4" />}
+                >
+                  Upload {pendingFiles.length} image{pendingFiles.length > 1 ? 's' : ''}
+                </Button>
+              </div>
+            )}
+
+            <p className="mt-2 text-xs text-muted-foreground">
+              JPEG, PNG, or WebP. Max 5 MB each. First image is the primary display image.
+            </p>
           </Card>
         </motion.div>
 

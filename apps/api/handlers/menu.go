@@ -1,15 +1,19 @@
 package handlers
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/homechef/api/config"
 	"github.com/homechef/api/database"
 	"github.com/homechef/api/middleware"
 	"github.com/homechef/api/models"
+	"github.com/homechef/api/services"
 	"github.com/lib/pq"
+	"gorm.io/gorm"
 )
 
 type MenuHandler struct{}
@@ -33,7 +37,9 @@ func (h *MenuHandler) GetChefMenuItems(c *gin.Context) {
 	}
 
 	var items []models.MenuItem
-	database.DB.Where("chef_id = ?", chef.ID).Order("sort_order ASC, created_at DESC").Find(&items)
+	database.DB.Where("chef_id = ?", chef.ID).Preload("Images", func(db *gorm.DB) *gorm.DB {
+		return db.Order("sort_order ASC")
+	}).Order("sort_order ASC, created_at DESC").Find(&items)
 
 	// Ensure nil slices are returned as empty arrays in JSON
 	for i := range items {
@@ -45,6 +51,9 @@ func (h *MenuHandler) GetChefMenuItems(c *gin.Context) {
 		}
 		if items[i].Ingredients == nil {
 			items[i].Ingredients = pq.StringArray{}
+		}
+		if items[i].Images == nil {
+			items[i].Images = []models.MenuItemImage{}
 		}
 	}
 
@@ -64,7 +73,9 @@ func (h *MenuHandler) GetMenuItem(c *gin.Context) {
 	}
 
 	var item models.MenuItem
-	if err := database.DB.Where("id = ? AND chef_id = ?", itemID, chef.ID).First(&item).Error; err != nil {
+	if err := database.DB.Preload("Images", func(db *gorm.DB) *gorm.DB {
+		return db.Order("sort_order ASC")
+	}).Where("id = ? AND chef_id = ?", itemID, chef.ID).First(&item).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Menu item not found"})
 		return
 	}
@@ -77,6 +88,9 @@ func (h *MenuHandler) GetMenuItem(c *gin.Context) {
 	}
 	if item.Ingredients == nil {
 		item.Ingredients = pq.StringArray{}
+	}
+	if item.Images == nil {
+		item.Images = []models.MenuItemImage{}
 	}
 
 	c.JSON(http.StatusOK, item)
@@ -394,6 +408,140 @@ func (h *MenuHandler) DeleteCategory(c *gin.Context) {
 	database.DB.Model(&models.MenuItem{}).Where("category_id = ? AND chef_id = ?", categoryID, chef.ID).Update("category_id", nil)
 
 	c.JSON(http.StatusOK, gin.H{"message": "Category deleted"})
+}
+
+// ---------- Menu Item Images ----------
+
+// UploadMenuItemImage uploads an image for a menu item to GCS (public bucket).
+// POST /chef/menu/items/:itemId/images — multipart/form-data with field: file
+// Max 5 images per item.
+func (h *MenuHandler) UploadMenuItemImage(c *gin.Context) {
+	userID, _ := middleware.GetUserID(c)
+	itemID := c.Param("itemId")
+
+	var chef models.ChefProfile
+	if err := database.DB.Where("user_id = ?", userID).First(&chef).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Chef profile not found"})
+		return
+	}
+
+	var item models.MenuItem
+	if err := database.DB.Where("id = ? AND chef_id = ?", itemID, chef.ID).First(&item).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Menu item not found"})
+		return
+	}
+
+	// Check existing image count (max 5)
+	var imageCount int64
+	database.DB.Model(&models.MenuItemImage{}).Where("menu_item_id = ?", item.ID).Count(&imageCount)
+	if imageCount >= 5 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Maximum 5 images per menu item"})
+		return
+	}
+
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "File is required"})
+		return
+	}
+	defer file.Close()
+
+	// Validate file size (5MB max)
+	if header.Size > 5*1024*1024 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "File too large. Maximum 5 MB."})
+		return
+	}
+
+	contentType := header.Header.Get("Content-Type")
+	if !services.IsImageContentType(contentType) {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file type. Allowed: JPEG, PNG, WebP."})
+		return
+	}
+
+	// Upload to public bucket: chefs/{chefID}/menu/{itemID}/{uuid}.{ext}
+	folder := fmt.Sprintf("chefs/%s/menu/%s", chef.ID.String(), item.ID.String())
+	fileURL, err := services.UploadPublicFile(c.Request.Context(), folder, header.Filename, file, contentType)
+	if err != nil {
+		log.Printf("Failed to upload menu item image: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload image"})
+		return
+	}
+
+	// Determine sort order (append to end)
+	isPrimary := imageCount == 0
+
+	img := models.MenuItemImage{
+		MenuItemID: item.ID,
+		URL:        fileURL,
+		IsPrimary:  isPrimary,
+		SortOrder:  int(imageCount),
+	}
+	if err := database.DB.Create(&img).Error; err != nil {
+		log.Printf("Failed to save menu item image: %v", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save image"})
+		return
+	}
+
+	// Also set the first image as the item's main imageUrl
+	if isPrimary {
+		database.DB.Model(&item).Update("image_url", fileURL)
+	}
+
+	c.JSON(http.StatusCreated, img)
+}
+
+// DeleteMenuItemImage deletes a menu item image from GCS and the database.
+// DELETE /chef/menu/items/:itemId/images/:imageId
+func (h *MenuHandler) DeleteMenuItemImage(c *gin.Context) {
+	userID, _ := middleware.GetUserID(c)
+	itemID := c.Param("itemId")
+	imageID := c.Param("imageId")
+
+	var chef models.ChefProfile
+	if err := database.DB.Where("user_id = ?", userID).First(&chef).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Chef profile not found"})
+		return
+	}
+
+	// Verify the item belongs to this chef
+	var item models.MenuItem
+	if err := database.DB.Where("id = ? AND chef_id = ?", itemID, chef.ID).First(&item).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Menu item not found"})
+		return
+	}
+
+	var img models.MenuItemImage
+	if err := database.DB.Where("id = ? AND menu_item_id = ?", imageID, item.ID).First(&img).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Image not found"})
+		return
+	}
+
+	// Delete from GCS (best effort — don't fail if GCS delete fails)
+	bucket := config.AppConfig.GCSPublicBucket
+	// Extract object path from full URL: https://storage.googleapis.com/{bucket}/{path}
+	prefix := fmt.Sprintf("https://storage.googleapis.com/%s/", bucket)
+	if objectPath := img.URL; len(objectPath) > len(prefix) {
+		objectPath = objectPath[len(prefix):]
+		if err := services.DeleteFile(c.Request.Context(), bucket, objectPath); err != nil {
+			log.Printf("Warning: failed to delete GCS object %s: %v", objectPath, err)
+		}
+	}
+
+	database.DB.Delete(&img)
+
+	// If deleted image was primary, promote next one
+	if img.IsPrimary {
+		var nextImg models.MenuItemImage
+		if err := database.DB.Where("menu_item_id = ?", item.ID).Order("sort_order ASC").First(&nextImg).Error; err == nil {
+			database.DB.Model(&nextImg).Update("is_primary", true)
+			database.DB.Model(&item).Update("image_url", nextImg.URL)
+		} else {
+			// No images left
+			database.DB.Model(&item).Update("image_url", "")
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Image deleted"})
 }
 
 // ---------- Request types ----------

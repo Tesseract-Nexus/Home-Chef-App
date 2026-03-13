@@ -58,6 +58,51 @@ export async function uploadDocument(
   return res.json();
 }
 
+export async function uploadMenuItemImage(
+  itemId: string,
+  file: File
+): Promise<{
+  id: string;
+  menuItemId: string;
+  url: string;
+  isPrimary: boolean;
+  sortOrder: number;
+}> {
+  const error = validateFile(file, ALLOWED_IMAGE_TYPES, MAX_IMAGE_SIZE);
+  if (error) throw new Error(error);
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const res = await fetch(`${BFF_URL}/api/v1/chef/menu/items/${itemId}/images`, {
+    method: 'POST',
+    body: formData,
+    credentials: 'include',
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Upload failed' }));
+    throw new Error(err.error || err.message || 'Upload failed');
+  }
+
+  return res.json();
+}
+
+export async function deleteMenuItemImage(
+  itemId: string,
+  imageId: string
+): Promise<void> {
+  const res = await fetch(`${BFF_URL}/api/v1/chef/menu/items/${itemId}/images/${imageId}`, {
+    method: 'DELETE',
+    credentials: 'include',
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Delete failed' }));
+    throw new Error(err.error || err.message || 'Delete failed');
+  }
+}
+
 export async function uploadProfileImage(file: File): Promise<string> {
   const error = validateFile(file, ALLOWED_IMAGE_TYPES, MAX_IMAGE_SIZE);
   if (error) throw new Error(error);

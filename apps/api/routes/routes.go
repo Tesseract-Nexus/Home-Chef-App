@@ -116,6 +116,8 @@ func SetupRouter() *gin.Engine {
 			chefMenu.POST("/items", menuHandler.CreateMenuItem)
 			chefMenu.PUT("/items/:itemId", menuHandler.UpdateMenuItem)
 			chefMenu.DELETE("/items/:itemId", menuHandler.DeleteMenuItem)
+			chefMenu.POST("/items/:itemId/images", menuHandler.UploadMenuItemImage)
+			chefMenu.DELETE("/items/:itemId/images/:imageId", menuHandler.DeleteMenuItemImage)
 		}
 
 		// Chef dashboard routes (chef only)

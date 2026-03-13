@@ -164,6 +164,14 @@ export interface MenuCategory {
   isActive: boolean;
 }
 
+export interface MenuItemImage {
+  id: string;
+  menuItemId: string;
+  url: string;
+  isPrimary: boolean;
+  sortOrder: number;
+}
+
 export interface MenuItem {
   id: string;
   chefId: string;
@@ -173,7 +181,7 @@ export interface MenuItem {
   price: number;
   comparePrice?: number;
   imageUrl?: string;
-  images?: string[];
+  images?: MenuItemImage[];
   dietaryTags: string[];
   allergens: string[];
   prepTime: number;

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -14,6 +14,7 @@ import {
   Users,
   UtensilsCrossed,
   Loader2,
+  Plus,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiClient } from '@/shared/services/api-client';
@@ -29,6 +30,10 @@ import {
   SelectItem,
   SelectValue,
 } from '@/shared/components/ui/Select';
+import {
+  SimpleDialog,
+  DialogFooter,
+} from '@/shared/components/ui/Dialog';
 import type { MenuItem, MenuCategory } from '@/shared/types';
 
 // --- Zod validation schema ---
@@ -72,10 +77,14 @@ const DIETARY_TAG_OPTIONS = [
   { value: 'nut-free', label: 'Nut-Free' },
 ];
 
+const NEW_CATEGORY_VALUE = '__new__';
+
 export default function MenuItemFormPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [showNewCategoryDialog, setShowNewCategoryDialog] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
 
   const isEditMode = Boolean(id);
 
@@ -95,6 +104,23 @@ export default function MenuItemFormPage() {
     queryFn: () => apiClient.get<MenuCategory[]>('/chef/menu/categories'),
   });
 
+  // Create category mutation
+  const createCategory = useMutation({
+    mutationFn: (name: string) =>
+      apiClient.post<MenuCategory>('/chef/menu/categories', { name }),
+    onSuccess: (newCategory) => {
+      queryClient.invalidateQueries({ queryKey: ['chef-menu-categories'] });
+      toast.success(`Category "${newCategory.name}" created`);
+      // Auto-select the newly created category
+      setValue('categoryId', newCategory.id);
+      setShowNewCategoryDialog(false);
+      setNewCategoryName('');
+    },
+    onError: () => {
+      toast.error('Failed to create category');
+    },
+  });
+
   // Form setup
   const {
     register,
@@ -102,6 +128,7 @@ export default function MenuItemFormPage() {
     control,
     reset,
     watch,
+    setValue,
     formState: { errors, isDirty },
   } = useForm<MenuItemFormValues>({
     resolver: zodResolver(menuItemSchema),
@@ -273,7 +300,13 @@ export default function MenuItemFormPage() {
                       </label>
                       <Select
                         value={field.value || ''}
-                        onValueChange={field.onChange}
+                        onValueChange={(value) => {
+                          if (value === NEW_CATEGORY_VALUE) {
+                            setShowNewCategoryDialog(true);
+                          } else {
+                            field.onChange(value);
+                          }
+                        }}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Select category" />
@@ -284,6 +317,12 @@ export default function MenuItemFormPage() {
                               {category.name}
                             </SelectItem>
                           ))}
+                          <SelectItem value={NEW_CATEGORY_VALUE}>
+                            <span className="flex items-center gap-1.5 text-primary font-medium">
+                              <Plus className="h-3.5 w-3.5" />
+                              New Category
+                            </span>
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                       {errors.categoryId?.message && (
@@ -498,6 +537,49 @@ export default function MenuItemFormPage() {
           </Button>
         </motion.div>
       </form>
+
+      {/* New Category Dialog */}
+      <SimpleDialog
+        open={showNewCategoryDialog}
+        onOpenChange={setShowNewCategoryDialog}
+        title="Create New Category"
+        description="Add a category to organize your menu items."
+        size="sm"
+      >
+        <div className="mt-4 space-y-4">
+          <Input
+            label="Category Name"
+            placeholder="e.g. Starters, Main Course, Desserts"
+            value={newCategoryName}
+            onChange={(e) => setNewCategoryName(e.target.value)}
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && newCategoryName.trim()) {
+                e.preventDefault();
+                createCategory.mutate(newCategoryName.trim());
+              }
+            }}
+          />
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowNewCategoryDialog(false);
+                setNewCategoryName('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => createCategory.mutate(newCategoryName.trim())}
+              disabled={!newCategoryName.trim() || createCategory.isPending}
+              isLoading={createCategory.isPending}
+            >
+              Create
+            </Button>
+          </DialogFooter>
+        </div>
+      </SimpleDialog>
     </motion.div>
   );
 }

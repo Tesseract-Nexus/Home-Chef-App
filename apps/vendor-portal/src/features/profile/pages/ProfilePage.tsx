@@ -23,6 +23,11 @@ import {
   Camera,
   ArrowRight,
   Loader2,
+  FileText,
+  Upload,
+  Download,
+  CheckCircle,
+  AlertCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiClient } from '@/shared/services/api-client';
@@ -568,6 +573,20 @@ export default function ProfilePage() {
         </Card>
       </motion.div>
 
+      {/* Documents & Certificates */}
+      <motion.div variants={fadeInUp}>
+        <Card>
+          <div className="flex items-center gap-3 mb-6">
+            <FileText className="h-5 w-5 text-brand-500" />
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">Documents & Certificates</h3>
+              <p className="text-sm text-gray-500">Upload required documents for verification</p>
+            </div>
+          </div>
+          <DocumentsSection chefId={profile?.id} />
+        </Card>
+      </motion.div>
+
       {/* Kitchen Setup Link */}
       <motion.div variants={fadeInUp}>
         <Link to="/profile/kitchen">
@@ -591,4 +610,173 @@ export default function ProfilePage() {
       </motion.div>
     </motion.div>
   );
+}
+
+// ============================================================================
+// Documents & Certificates Section
+// ============================================================================
+
+interface ChefDocument {
+  id: string;
+  type: string;
+  fileName: string;
+  fileUrl?: string;
+  contentType: string;
+  fileSize: number;
+  status: string;
+  rejectionReason?: string;
+  createdAt: string;
+}
+
+const DOCUMENT_TYPES = [
+  { type: 'fssai_license', label: 'FSSAI License', description: 'Food Safety and Standards Authority certificate', required: true },
+  { type: 'pan_card', label: 'PAN Card', description: 'Permanent Account Number card', required: true },
+  { type: 'aadhaar_card', label: 'Aadhaar Card', description: 'Aadhaar identity card', required: true },
+  { type: 'food_safety_cert', label: 'Food Safety Certificate', description: 'Food safety training certificate', required: false },
+  { type: 'cancelled_cheque', label: 'Cancelled Cheque', description: 'For bank account verification', required: false },
+];
+
+function DocumentsSection({ chefId }: { chefId?: string }) {
+  const queryClient = useQueryClient();
+  const [uploadingType, setUploadingType] = useState<string | null>(null);
+
+  const { data: docsData } = useQuery({
+    queryKey: ['chef-documents'],
+    queryFn: () => apiClient.get<ChefDocument[]>('/chef/documents'),
+    enabled: !!chefId,
+  });
+
+  const docs: ChefDocument[] = Array.isArray(docsData) ? docsData : [];
+
+  const getDocByType = (type: string) => docs.find((d) => d.type === type);
+
+  const handleUpload = async (file: File, docType: string) => {
+    setUploadingType(docType);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('type', docType);
+
+      const BFF_URL = typeof window !== 'undefined' && window.location.hostname !== 'localhost'
+        ? `${window.location.origin}/bff`
+        : '/bff';
+
+      const res = await fetch(`${BFF_URL}/api/v1/chef/documents`, {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: 'Upload failed' }));
+        throw new Error(err.error || 'Upload failed');
+      }
+
+      toast.success(`${DOCUMENT_TYPES.find(d => d.type === docType)?.label || docType} uploaded`);
+      queryClient.invalidateQueries({ queryKey: ['chef-documents'] });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Upload failed');
+    } finally {
+      setUploadingType(null);
+    }
+  };
+
+  const statusBadge = (status: string) => {
+    switch (status) {
+      case 'verified':
+        return <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-600"><CheckCircle className="h-3 w-3" />Verified</span>;
+      case 'rejected':
+        return <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-600"><AlertCircle className="h-3 w-3" />Rejected</span>;
+      default:
+        return <span className="inline-flex items-center gap-1 rounded-full bg-yellow-50 px-2 py-0.5 text-xs font-medium text-yellow-600"><Clock className="h-3 w-3" />Pending</span>;
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      {DOCUMENT_TYPES.map((docDef) => {
+        const existingDoc = getDocByType(docDef.type);
+        const isUploading = uploadingType === docDef.type;
+
+        return (
+          <div key={docDef.type} className="flex items-center gap-4 rounded-lg border border-gray-200 bg-gray-50/50 p-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-50">
+              <FileText className="h-5 w-5 text-brand-500" />
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-medium text-gray-900">{docDef.label}</p>
+                {docDef.required && <span className="text-xs text-red-500">Required</span>}
+              </div>
+              <p className="text-xs text-gray-500">{docDef.description}</p>
+
+              {existingDoc && (
+                <div className="mt-1 flex items-center gap-2">
+                  <p className="text-xs text-gray-400 truncate max-w-[200px]">{existingDoc.fileName}</p>
+                  <span className="text-xs text-gray-300">|</span>
+                  <p className="text-xs text-gray-400">{formatBytes(existingDoc.fileSize)}</p>
+                  {statusBadge(existingDoc.status)}
+                </div>
+              )}
+
+              {existingDoc?.rejectionReason && (
+                <p className="mt-1 text-xs text-red-500">Reason: {existingDoc.rejectionReason}</p>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              {existingDoc?.fileUrl && (
+                <a href={existingDoc.fileUrl} target="_blank" rel="noopener noreferrer"
+                  className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors" title="Download">
+                  <Download className="h-4 w-4" />
+                </a>
+              )}
+
+              {/* Upload button - can re-upload if not verified */}
+              {(!existingDoc || existingDoc.status !== 'verified') && (
+                <label className="cursor-pointer">
+                  <input
+                    type="file"
+                    className="hidden"
+                    accept=".jpg,.jpeg,.png,.pdf,.webp"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleUpload(file, docDef.type);
+                      e.target.value = '';
+                    }}
+                    disabled={isUploading}
+                  />
+                  <span className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                    existingDoc
+                      ? 'border border-gray-200 text-gray-600 hover:bg-gray-100'
+                      : 'bg-brand-500 text-white hover:bg-brand-600'
+                  } ${isUploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                    {isUploading ? (
+                      <><Loader2 className="h-3.5 w-3.5 animate-spin" />Uploading...</>
+                    ) : existingDoc ? (
+                      <><Upload className="h-3.5 w-3.5" />Re-upload</>
+                    ) : (
+                      <><Upload className="h-3.5 w-3.5" />Upload</>
+                    )}
+                  </span>
+                </label>
+              )}
+
+              {existingDoc?.status === 'verified' && (
+                <span className="text-xs text-green-600 font-medium">Approved</span>
+              )}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function formatBytes(bytes: number): string {
+  if (!bytes) return '0 B';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }

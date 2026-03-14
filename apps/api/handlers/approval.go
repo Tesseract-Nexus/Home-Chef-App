@@ -470,3 +470,37 @@ func (h *ApprovalHandler) GetDocumentDownload(c *gin.Context) {
 		"contentType": doc.ContentType,
 	})
 }
+
+// GetChefApprovalRequests returns approval requests for the authenticated chef's kitchen
+// GET /chef/admin-requests — accessible to chefs (not admin-only)
+func (h *ApprovalHandler) GetChefApprovalRequests(c *gin.Context) {
+	userID, _ := middleware.GetUserID(c)
+
+	// Find chef profile for this user
+	var chef models.ChefProfile
+	if err := database.DB.Where("user_id = ?", userID).First(&chef).Error; err != nil {
+		c.JSON(http.StatusOK, gin.H{"data": []interface{}{}, "pagination": gin.H{
+			"page": 1, "limit": 20, "total": 0, "totalPages": 0, "hasNext": false, "hasPrev": false,
+		}})
+		return
+	}
+
+	// Get all approval requests for this chef's kitchen
+	var requests []models.ApprovalRequest
+	database.DB.Where("chef_id = ?", chef.ID).
+		Preload("ReviewedBy").
+		Order("created_at DESC").
+		Find(&requests)
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": requests,
+		"pagination": gin.H{
+			"page":       1,
+			"limit":      100,
+			"total":      len(requests),
+			"totalPages": 1,
+			"hasNext":    false,
+			"hasPrev":    false,
+		},
+	})
+}

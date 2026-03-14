@@ -10,6 +10,7 @@ import {
   FileText,
   Loader2,
   CheckCheck,
+  Clock,
 } from 'lucide-react';
 import { apiClient } from '@/shared/services/api-client';
 
@@ -24,6 +25,18 @@ interface Notification {
   createdAt: string;
 }
 
+interface ApprovalRequest {
+  id: string;
+  type: string;
+  status: string;
+  priority: string;
+  title: string;
+  description: string;
+  adminNotes: string;
+  reviewedAt?: string;
+  createdAt: string;
+}
+
 interface NotificationsResponse {
   data: Notification[];
   pagination: {
@@ -33,6 +46,30 @@ interface NotificationsResponse {
     totalPages: number;
   };
 }
+
+const statusLabels: Record<string, string> = {
+  pending: 'Pending Review',
+  approved: 'Approved',
+  rejected: 'Rejected',
+  info_requested: 'Info Requested',
+  cancelled: 'Cancelled',
+};
+
+const statusIcons: Record<string, typeof Bell> = {
+  pending: Clock,
+  approved: CheckCircle,
+  rejected: XCircle,
+  info_requested: AlertCircle,
+  cancelled: XCircle,
+};
+
+const statusStyles: Record<string, string> = {
+  pending: 'bg-warning/10 text-warning',
+  approved: 'bg-success/10 text-success',
+  rejected: 'bg-destructive/10 text-destructive',
+  info_requested: 'bg-info/10 text-info',
+  cancelled: 'bg-muted text-muted-foreground',
+};
 
 const typeIcons: Record<string, typeof Bell> = {
   approval_approved: CheckCircle,
@@ -64,10 +101,20 @@ const typeStyles: Record<string, string> = {
 export default function NotificationsPage() {
   const queryClient = useQueryClient();
 
-  const { data, isLoading } = useQuery({
+  // Fetch approval requests directly for this chef's kitchen
+  // This works regardless of which user account the notifications were sent to
+  const { data: approvalData, isLoading: approvalsLoading } = useQuery({
+    queryKey: ['chef-admin-requests'],
+    queryFn: () => apiClient.get<{ data: ApprovalRequest[] }>('/chef/admin-requests'),
+  });
+
+  // Also fetch notifications (for non-approval notifications)
+  const { data, isLoading: notifsLoading } = useQuery({
     queryKey: ['notifications'],
     queryFn: () => apiClient.get<NotificationsResponse>('/notifications', { limit: 50 }),
   });
+
+  const isLoading = approvalsLoading && notifsLoading;
 
   const markReadMutation = useMutation({
     mutationFn: (id: string) => apiClient.put(`/notifications/${id}/read`),
@@ -85,13 +132,19 @@ export default function NotificationsPage() {
     },
   });
 
-  // apiClient auto-unwraps {data, pagination} responses, returning just the array.
-  // Handle both cases: raw array (auto-unwrapped) or full response object.
+  // Parse approval requests (primary data source for admin requests)
+  const rawApproval = approvalData as unknown;
+  const approvals: ApprovalRequest[] = Array.isArray(rawApproval)
+    ? rawApproval
+    : (rawApproval as { data: ApprovalRequest[] })?.data ?? [];
+
+  // Parse notifications (secondary - for other notifications)
   const rawData = data as unknown;
   const notifications: Notification[] = Array.isArray(rawData)
     ? rawData
     : (rawData as NotificationsResponse)?.data ?? [];
   const hasUnread = notifications.some((n) => !n.isRead);
+  const hasContent = approvals.length > 0 || notifications.length > 0;
 
   if (isLoading) {
     return (
@@ -121,10 +174,69 @@ export default function NotificationsPage() {
         )}
       </div>
 
-      {notifications.length === 0 ? (
+      {/* Approval Requests Section */}
+      {approvals.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-lg font-semibold text-foreground">Kitchen Review Status</h2>
+          {approvals.map((req) => {
+            const StatusIcon = statusIcons[req.status] || Clock;
+            const style = statusStyles[req.status] || statusStyles.pending;
+            return (
+              <div key={req.id} className="rounded-xl border border-border bg-card p-4 shadow-card">
+                <div className="flex items-start gap-4">
+                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${style}`}>
+                    <StatusIcon className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <h3 className="text-sm font-semibold text-foreground">{req.title}</h3>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${style}`}>
+                            {statusLabels[req.status] || req.status}
+                          </span>
+                          <span className="text-xs text-muted-foreground">{formatTimeAgo(req.createdAt)}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="mt-1 text-sm text-muted-foreground">{req.description}</p>
+
+                    {req.adminNotes && (
+                      <div className="mt-3 rounded-lg border border-warning/20 bg-warning/5 p-3">
+                        <div className="flex items-center gap-1.5 mb-1">
+                          <AlertCircle className="h-3.5 w-3.5 text-warning" />
+                          <span className="text-xs font-medium text-warning">Admin Notes</span>
+                        </div>
+                        <p className="text-sm text-foreground">{req.adminNotes}</p>
+                      </div>
+                    )}
+
+                    {(req.status === 'info_requested' || req.status === 'rejected') && (
+                      <div className="mt-3">
+                        <a href="/profile"
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+                          <ChefHat className="h-3.5 w-3.5" />
+                          Update Profile
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Notifications Section */}
+      {notifications.length > 0 && (
+        <h2 className="text-lg font-semibold text-foreground">Notifications</h2>
+      )}
+
+      {!hasContent ? (
         <div className="rounded-xl border border-border bg-card p-20 text-center shadow-card">
           <Bell className="mx-auto h-12 w-12 text-muted-foreground/30" />
-          <p className="mt-4 text-lg font-medium text-foreground">No notifications yet</p>
+          <p className="mt-4 text-lg font-medium text-foreground">No admin requests yet</p>
           <p className="mt-1 text-sm text-muted-foreground">
             Admin requests for document uploads, profile updates, and review feedback will appear here.
           </p>

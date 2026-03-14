@@ -214,15 +214,17 @@ export default function NotificationsPage() {
                       </div>
                     )}
 
-                    {(req.status === 'info_requested' || req.status === 'rejected') && (
+                    {req.status !== 'approved' && req.status !== 'cancelled' && (
                       <div className="mt-3 space-y-3">
-                        <div className="flex items-center gap-2">
-                          <a href="/profile"
-                            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
-                            <ChefHat className="h-3.5 w-3.5" />
-                            Update Profile
-                          </a>
-                        </div>
+                        {(req.status === 'info_requested' || req.status === 'rejected') && (
+                          <div className="flex items-center gap-2">
+                            <a href="/profile"
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+                              <ChefHat className="h-3.5 w-3.5" />
+                              Update Profile
+                            </a>
+                          </div>
+                        )}
                         <RespondForm requestId={req.id} />
                       </div>
                     )}

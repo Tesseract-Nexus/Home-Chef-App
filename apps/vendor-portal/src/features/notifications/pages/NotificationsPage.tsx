@@ -204,6 +204,12 @@ export default function NotificationsPage() {
                     </div>
                     <p className="mt-1 text-sm text-muted-foreground">{req.description}</p>
 
+                    {req.status === 'pending' && (
+                      <p className="mt-1.5 text-xs text-muted-foreground/80 italic">
+                        Typically reviewed within 24-48 hours
+                      </p>
+                    )}
+
                     {req.adminNotes && (
                       <div className="mt-3 rounded-lg border border-warning/20 bg-warning/5 p-3">
                         <div className="flex items-center gap-1.5 mb-1">

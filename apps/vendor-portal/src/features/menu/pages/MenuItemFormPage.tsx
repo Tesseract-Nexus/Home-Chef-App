@@ -9,7 +9,7 @@ import {
   ArrowLeft,
   Save,
   Clock,
-  DollarSign,
+  IndianRupee,
   Users,
   UtensilsCrossed,
   Loader2,
@@ -51,7 +51,7 @@ const menuItemSchema = z.object({
     .max(500, 'Description must be under 500 characters'),
   price: z
     .number({ invalid_type_error: 'Price is required' })
-    .min(0.01, 'Price must be greater than 0')
+    .min(20, 'Minimum price is ₹20')
     .max(9999.99, 'Price must be under ₹10,000'),
   categoryId: z.string().min(1, 'Category is required'),
   dietaryTags: z.array(z.string()).min(1, 'Select at least one dietary tag'),
@@ -337,6 +337,10 @@ export default function MenuItemFormPage() {
   });
 
   const onSubmit = (data: MenuItemFormValues) => {
+    if (itemImages.length === 0 && pendingFiles.length === 0) {
+      toast.error('At least one image is required');
+      return;
+    }
     if (isEditMode) {
       updateItem.mutate(data);
     } else {
@@ -483,13 +487,13 @@ export default function MenuItemFormPage() {
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Input
-                  label="Price ($)"
+                  label="Price (₹)"
                   type="number"
                   step="0.01"
                   min="0"
                   placeholder="0.00"
                   error={errors.price?.message}
-                  leftIcon={<DollarSign className="h-4 w-4" />}
+                  leftIcon={<IndianRupee className="h-4 w-4" />}
                   {...register('price', { valueAsNumber: true })}
                 />
 
@@ -726,7 +730,7 @@ export default function MenuItemFormPage() {
             </div>
 
             {/* Image grid */}
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               {/* Existing uploaded images */}
               {itemImages.map((img) => (
                 <div key={img.id} className="group relative aspect-square overflow-hidden rounded-lg border border-border bg-muted">

@@ -387,11 +387,11 @@ function MenuItemCard({
           <div className="flex items-baseline gap-1 shrink-0">
             {item.comparePrice && item.comparePrice > item.price && (
               <span className="text-xs text-muted-foreground line-through">
-                ${item.comparePrice.toFixed(2)}
+                ₹{item.comparePrice.toFixed(2)}
               </span>
             )}
             <span className="font-bold text-primary">
-              ${item.price.toFixed(2)}
+              ₹{item.price.toFixed(2)}
             </span>
           </div>
         </div>

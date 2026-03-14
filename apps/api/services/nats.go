@@ -32,6 +32,11 @@ const (
 	SubjectNotificationEmail = "notifications.email"
 	SubjectNotificationPush  = "notifications.push"
 	SubjectNotificationSMS   = "notifications.sms"
+
+	SubjectApprovalCreated       = "approvals.created"
+	SubjectApprovalApproved      = "approvals.approved"
+	SubjectApprovalRejected      = "approvals.rejected"
+	SubjectApprovalInfoRequested = "approvals.info_requested"
 )
 
 // Event represents a generic event message
@@ -244,6 +249,20 @@ func (n *NATSClient) setupStreams() error {
 	})
 	if err != nil {
 		log.Printf("Failed to create CATERING stream: %v", err)
+	}
+
+	// Approvals stream
+	_, err = n.js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
+		Name:        "APPROVALS",
+		Description: "Approval request lifecycle events",
+		Subjects:    []string{"approvals.*"},
+		Retention:   jetstream.WorkQueuePolicy,
+		MaxAge:      30 * 24 * time.Hour,
+		Storage:     jetstream.FileStorage,
+		Replicas:    1,
+	})
+	if err != nil {
+		log.Printf("Failed to create APPROVALS stream: %v", err)
 	}
 
 	log.Println("NATS JetStream streams configured")

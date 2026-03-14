@@ -4,6 +4,7 @@ import {
   Users,
   ChefHat,
   ShoppingBag,
+  ClipboardCheck,
   Truck,
   BarChart3,
   Settings,
@@ -15,7 +16,9 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/app/providers/AuthProvider';
+import { apiClient } from '@/shared/services/api-client';
 import { useIsMobile, useOnlineStatus } from '@/shared/hooks/useMobile';
 import { ErrorBoundary } from '@/shared/components/ErrorBoundary';
 
@@ -24,6 +27,7 @@ const navigation = [
   { name: 'Users', href: '/users', icon: Users },
   { name: 'Chefs / Kitchens', href: '/chefs', icon: ChefHat },
   { name: 'Orders', href: '/orders', icon: ShoppingBag },
+  { name: 'Reviews', href: '/approvals', icon: ClipboardCheck },
   { name: 'Delivery', href: '/delivery', icon: Truck },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Settings', href: '/settings', icon: Settings },
@@ -36,6 +40,13 @@ export function AdminLayout() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const isMobile = useIsMobile('lg');
   const isOnline = useOnlineStatus();
+
+  const { data: approvalCounts } = useQuery({
+    queryKey: ['admin-approval-counts'],
+    queryFn: () => apiClient.get<{ pending: number }>('/admin/approvals/counts'),
+    refetchInterval: 30000,
+  });
+  const pendingCount = (approvalCounts as unknown as { pending: number } | undefined)?.pending ?? 0;
 
   const isActive = (href: string) =>
     location.pathname === href || location.pathname.startsWith(href + '/');
@@ -75,6 +86,11 @@ export function AdminLayout() {
                 >
                   <Icon className="h-5 w-5" />
                   {item.name}
+                  {item.name === 'Reviews' && pendingCount > 0 && (
+                    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-xs font-bold text-destructive-foreground">
+                      {pendingCount > 99 ? '99+' : pendingCount}
+                    </span>
+                  )}
                 </Link>
               );
             })}
@@ -158,6 +174,11 @@ export function AdminLayout() {
                     >
                       <Icon className="h-5 w-5" />
                       {item.name}
+                      {item.name === 'Reviews' && pendingCount > 0 && (
+                        <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-xs font-bold text-destructive-foreground">
+                          {pendingCount > 99 ? '99+' : pendingCount}
+                        </span>
+                      )}
                     </Link>
                   );
                 })}

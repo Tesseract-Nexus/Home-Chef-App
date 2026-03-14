@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -133,6 +134,34 @@ func (h *UploadHandler) UploadDocument(c *gin.Context) {
 	// If it's a profile image, also update the chef profile
 	if docType == models.DocProfileImage {
 		database.DB.Model(chef).Update("profile_image", fileURL)
+	}
+
+	// Create approval request for document verification (skip for profile images)
+	if docType != models.DocProfileImage {
+		approvalReq := models.ApprovalRequest{
+			Type:          models.ApprovalDocumentVerification,
+			Status:        models.ApprovalPending,
+			Priority:      "normal",
+			ChefID:        chef.ID,
+			SubmittedByID: userID,
+			EntityType:    "chef_document",
+			EntityID:      doc.ID,
+			Title:         fmt.Sprintf("Document Verification: %s", string(docType)),
+			Description:   fmt.Sprintf("Document uploaded for verification: %s (%s)", header.Filename, string(docType)),
+			SubmittedData: fmt.Sprintf(`{"document_id":"%s","type":"%s","file_name":"%s"}`, doc.ID.String(), string(docType), header.Filename),
+		}
+		// Cancel any existing pending request for the same doc type+chef
+		database.DB.Model(&models.ApprovalRequest{}).
+			Where("chef_id = ? AND type = ? AND entity_id = ? AND status = ?", chef.ID, models.ApprovalDocumentVerification, doc.ID, models.ApprovalPending).
+			Update("status", models.ApprovalCancelled)
+		database.DB.Create(&approvalReq)
+
+		services.PublishEvent(services.SubjectApprovalCreated, "approval.created", userID, map[string]interface{}{
+			"approval_id": approvalReq.ID.String(),
+			"type":        string(approvalReq.Type),
+			"chef_id":     chef.ID.String(),
+			"title":       approvalReq.Title,
+		})
 	}
 
 	c.JSON(http.StatusOK, doc.ToResponse())
@@ -439,6 +468,34 @@ func (h *UploadHandler) Onboarding(c *gin.Context) {
 	// Seed default menu categories for the new chef
 	h.seedDefaultCategories(chef.ID)
 
+	// Create approval request for admin review
+	submittedData, _ := json.Marshal(req)
+	approvalReq := models.ApprovalRequest{
+		Type:          models.ApprovalKitchenOnboarding,
+		Status:        models.ApprovalPending,
+		Priority:      "high",
+		ChefID:        chef.ID,
+		SubmittedByID: userID,
+		EntityType:    "chef_profile",
+		EntityID:      chef.ID,
+		Title:         fmt.Sprintf("Kitchen Onboarding: %s", req.BusinessName),
+		Description:   fmt.Sprintf("%s submitted kitchen onboarding for review", req.FullName),
+		SubmittedData: string(submittedData),
+	}
+	// Cancel any existing pending request of same type+chef
+	database.DB.Model(&models.ApprovalRequest{}).
+		Where("chef_id = ? AND type = ? AND status = ?", chef.ID, models.ApprovalKitchenOnboarding, models.ApprovalPending).
+		Update("status", models.ApprovalCancelled)
+	database.DB.Create(&approvalReq)
+
+	// Publish NATS event
+	services.PublishEvent(services.SubjectApprovalCreated, "approval.created", userID, map[string]interface{}{
+		"approval_id": approvalReq.ID.String(),
+		"type":        string(approvalReq.Type),
+		"chef_id":     chef.ID.String(),
+		"title":       approvalReq.Title,
+	})
+
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Onboarding submitted successfully",
 		"chefId":  chef.ID,
@@ -482,6 +539,34 @@ func (h *UploadHandler) updateOnboarding(c *gin.Context, chef *models.ChefProfil
 	// Recreate schedules
 	database.DB.Where("chef_id = ?", chef.ID).Delete(&models.ChefSchedule{})
 	h.createSchedules(chef, req.OperatingHours)
+
+	// Create approval request for admin review
+	submittedData, _ := json.Marshal(req)
+	approvalReq := models.ApprovalRequest{
+		Type:          models.ApprovalKitchenOnboarding,
+		Status:        models.ApprovalPending,
+		Priority:      "high",
+		ChefID:        chef.ID,
+		SubmittedByID: chef.UserID,
+		EntityType:    "chef_profile",
+		EntityID:      chef.ID,
+		Title:         fmt.Sprintf("Kitchen Onboarding: %s", req.BusinessName),
+		Description:   fmt.Sprintf("%s submitted kitchen onboarding for review", req.FullName),
+		SubmittedData: string(submittedData),
+	}
+	// Upsert: cancel any existing pending request of same type+chef
+	database.DB.Model(&models.ApprovalRequest{}).
+		Where("chef_id = ? AND type = ? AND status = ?", chef.ID, models.ApprovalKitchenOnboarding, models.ApprovalPending).
+		Update("status", models.ApprovalCancelled)
+	database.DB.Create(&approvalReq)
+
+	// Publish NATS event
+	services.PublishEvent(services.SubjectApprovalCreated, "approval.created", chef.UserID, map[string]interface{}{
+		"approval_id": approvalReq.ID.String(),
+		"type":        string(approvalReq.Type),
+		"chef_id":     chef.ID.String(),
+		"title":       approvalReq.Title,
+	})
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Onboarding updated successfully",

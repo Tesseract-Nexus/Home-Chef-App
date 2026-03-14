@@ -54,6 +54,7 @@ func SetupRouter() *gin.Engine {
 	preferenceHandler := handlers.NewPreferenceHandler()
 	currencyHandler := handlers.NewCurrencyHandler()
 	adminHandler := handlers.NewAdminHandler()
+	approvalHandler := handlers.NewApprovalHandler()
 
 	// Health check endpoints
 	r.GET("/health", healthHandler.Health)
@@ -269,6 +270,16 @@ func SetupRouter() *gin.Engine {
 			// Settings
 			admin.GET("/settings", adminHandler.GetSettings)
 			admin.PUT("/settings", adminHandler.UpdateSettings)
+
+			// Approval/Review workflow
+			admin.GET("/approvals", approvalHandler.GetApprovalRequests)
+			admin.GET("/approvals/counts", approvalHandler.GetApprovalCounts)
+			admin.GET("/approvals/:id", approvalHandler.GetApprovalRequest)
+			admin.PUT("/approvals/:id/approve", approvalHandler.ApproveRequest)
+			admin.PUT("/approvals/:id/reject", approvalHandler.RejectRequest)
+			admin.PUT("/approvals/:id/request-info", approvalHandler.RequestMoreInfo)
+			admin.GET("/approvals/:id/history", approvalHandler.GetApprovalHistory)
+			admin.GET("/approvals/:id/documents/:docId", approvalHandler.GetDocumentDownload)
 		}
 
 		// Addresses

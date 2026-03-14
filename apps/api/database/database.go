@@ -135,6 +135,10 @@ func Migrate() error {
 		// Currency
 		&models.Currency{},
 		&models.ExchangeRate{},
+
+		// Approvals
+		&models.ApprovalRequest{},
+		&models.ApprovalRequestHistory{},
 	)
 
 	if err != nil {

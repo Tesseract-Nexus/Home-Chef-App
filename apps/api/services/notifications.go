@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -78,6 +79,11 @@ func (s *NotificationService) Start() error {
 	// Subscribe to delivery events
 	if err := s.subscribeToDeliveryEvents(); err != nil {
 		log.Printf("Warning: Failed to subscribe to delivery events: %v", err)
+	}
+
+	// Subscribe to approval events
+	if err := s.subscribeToApprovalEvents(); err != nil {
+		log.Printf("Warning: Failed to subscribe to approval events: %v", err)
 	}
 
 	s.running = true
@@ -480,6 +486,220 @@ func (s *NotificationService) handleDeliveryPickedUp(event Event) {
 			Message: "Your order has been picked up and is on its way to you!",
 			Data:    event.Data,
 		})
+	}
+}
+
+// subscribeToApprovalEvents subscribes to approval lifecycle events
+func (s *NotificationService) subscribeToApprovalEvents() error {
+	// Approval approved - notify the chef
+	sub, err := s.nats.QueueSubscribe(SubjectApprovalApproved, "notification-workers", func(msg *nats.Msg) {
+		var event Event
+		if err := json.Unmarshal(msg.Data, &event); err != nil {
+			log.Printf("Failed to unmarshal approval approved event: %v", err)
+			return
+		}
+		s.handleApprovalApproved(event)
+	})
+	if err != nil {
+		return err
+	}
+	s.subscriptions = append(s.subscriptions, sub)
+
+	// Approval rejected - notify the chef
+	sub, err = s.nats.QueueSubscribe(SubjectApprovalRejected, "notification-workers", func(msg *nats.Msg) {
+		var event Event
+		if err := json.Unmarshal(msg.Data, &event); err != nil {
+			log.Printf("Failed to unmarshal approval rejected event: %v", err)
+			return
+		}
+		s.handleApprovalRejected(event)
+	})
+	if err != nil {
+		return err
+	}
+	s.subscriptions = append(s.subscriptions, sub)
+
+	// Approval info requested - notify the chef
+	sub, err = s.nats.QueueSubscribe(SubjectApprovalInfoRequested, "notification-workers", func(msg *nats.Msg) {
+		var event Event
+		if err := json.Unmarshal(msg.Data, &event); err != nil {
+			log.Printf("Failed to unmarshal approval info_requested event: %v", err)
+			return
+		}
+		s.handleApprovalInfoRequested(event)
+	})
+	if err != nil {
+		return err
+	}
+	s.subscriptions = append(s.subscriptions, sub)
+
+	// Approval created - notify all admins
+	sub, err = s.nats.QueueSubscribe(SubjectApprovalCreated, "notification-workers", func(msg *nats.Msg) {
+		var event Event
+		if err := json.Unmarshal(msg.Data, &event); err != nil {
+			log.Printf("Failed to unmarshal approval created event: %v", err)
+			return
+		}
+		s.handleApprovalCreated(event)
+	})
+	if err != nil {
+		return err
+	}
+	s.subscriptions = append(s.subscriptions, sub)
+
+	return nil
+}
+
+func (s *NotificationService) handleApprovalApproved(event Event) {
+	log.Printf("Processing approval approved event: %s", event.ID)
+
+	approvalType, _ := event.Data["type"].(string)
+	chefIDStr, _ := event.Data["chef_id"].(string)
+	title, _ := event.Data["title"].(string)
+
+	// Find the chef's user ID
+	chefID, err := uuid.Parse(chefIDStr)
+	if err != nil {
+		log.Printf("Failed to parse chef_id in approval approved event: %v", err)
+		return
+	}
+	var chef models.ChefProfile
+	if err := database.DB.First(&chef, "id = ?", chefID).Error; err != nil {
+		log.Printf("Failed to find chef for approval notification: %v", err)
+		return
+	}
+
+	data, _ := json.Marshal(event.Data)
+	notification := &models.Notification{
+		UserID:  chef.UserID,
+		Type:    "approval_approved",
+		Title:   "Request Approved",
+		Message: fmt.Sprintf("Your %s has been approved: %s", approvalType, title),
+		Data:    string(data),
+	}
+	if err := s.saveNotification(notification); err != nil {
+		log.Printf("Failed to save approval approved notification: %v", err)
+	}
+
+	// Send push notification
+	PublishNotification(NotificationEvent{
+		UserID:  chef.UserID,
+		Type:    "push",
+		Title:   "Request Approved!",
+		Message: fmt.Sprintf("Your %s has been approved", approvalType),
+		Data:    event.Data,
+	})
+}
+
+func (s *NotificationService) handleApprovalRejected(event Event) {
+	log.Printf("Processing approval rejected event: %s", event.ID)
+
+	approvalType, _ := event.Data["type"].(string)
+	chefIDStr, _ := event.Data["chef_id"].(string)
+	notes, _ := event.Data["notes"].(string)
+
+	chefID, err := uuid.Parse(chefIDStr)
+	if err != nil {
+		log.Printf("Failed to parse chef_id in approval rejected event: %v", err)
+		return
+	}
+	var chef models.ChefProfile
+	if err := database.DB.First(&chef, "id = ?", chefID).Error; err != nil {
+		log.Printf("Failed to find chef for approval notification: %v", err)
+		return
+	}
+
+	message := fmt.Sprintf("Your %s has been rejected.", approvalType)
+	if notes != "" {
+		message += fmt.Sprintf(" Notes: %s", notes)
+	}
+
+	data, _ := json.Marshal(event.Data)
+	notification := &models.Notification{
+		UserID:  chef.UserID,
+		Type:    "approval_rejected",
+		Title:   "Request Rejected",
+		Message: message,
+		Data:    string(data),
+	}
+	if err := s.saveNotification(notification); err != nil {
+		log.Printf("Failed to save approval rejected notification: %v", err)
+	}
+
+	PublishNotification(NotificationEvent{
+		UserID:  chef.UserID,
+		Type:    "push",
+		Title:   "Request Rejected",
+		Message: message,
+		Data:    event.Data,
+	})
+}
+
+func (s *NotificationService) handleApprovalInfoRequested(event Event) {
+	log.Printf("Processing approval info_requested event: %s", event.ID)
+
+	approvalType, _ := event.Data["type"].(string)
+	chefIDStr, _ := event.Data["chef_id"].(string)
+	notes, _ := event.Data["notes"].(string)
+
+	chefID, err := uuid.Parse(chefIDStr)
+	if err != nil {
+		log.Printf("Failed to parse chef_id in approval info_requested event: %v", err)
+		return
+	}
+	var chef models.ChefProfile
+	if err := database.DB.First(&chef, "id = ?", chefID).Error; err != nil {
+		log.Printf("Failed to find chef for approval notification: %v", err)
+		return
+	}
+
+	message := fmt.Sprintf("Admin needs more info about your %s.", approvalType)
+	if notes != "" {
+		message += fmt.Sprintf(" Notes: %s", notes)
+	}
+
+	data, _ := json.Marshal(event.Data)
+	notification := &models.Notification{
+		UserID:  chef.UserID,
+		Type:    "approval_info_requested",
+		Title:   "More Information Needed",
+		Message: message,
+		Data:    string(data),
+	}
+	if err := s.saveNotification(notification); err != nil {
+		log.Printf("Failed to save approval info_requested notification: %v", err)
+	}
+
+	PublishNotification(NotificationEvent{
+		UserID:  chef.UserID,
+		Type:    "push",
+		Title:   "More Information Needed",
+		Message: message,
+		Data:    event.Data,
+	})
+}
+
+func (s *NotificationService) handleApprovalCreated(event Event) {
+	log.Printf("Processing approval created event: %s", event.ID)
+
+	title, _ := event.Data["title"].(string)
+
+	// Notify all admin users
+	var admins []models.User
+	database.DB.Where("role = ?", models.RoleAdmin).Find(&admins)
+
+	data, _ := json.Marshal(event.Data)
+	for _, admin := range admins {
+		notification := &models.Notification{
+			UserID:  admin.ID,
+			Type:    "approval_created",
+			Title:   "New Approval Request",
+			Message: fmt.Sprintf("New approval request pending: %s", title),
+			Data:    string(data),
+		}
+		if err := s.saveNotification(notification); err != nil {
+			log.Printf("Failed to save approval created notification for admin %s: %v", admin.ID, err)
+		}
 	}
 }
 

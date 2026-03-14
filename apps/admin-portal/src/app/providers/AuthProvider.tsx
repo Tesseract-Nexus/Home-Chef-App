@@ -9,14 +9,22 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/auth-store';
 import type { SessionUser } from '@/shared/types/auth';
 
-const BFF_URL = import.meta.env.VITE_BFF_URL || 'https://internal-identity.fe3dr.com';
+// Same-origin /bff/ proxy — Istio routes /bff/* to auth-bff with x-auth-context: admin
+const BFF_URL = (() => {
+  const env = import.meta.env.VITE_BFF_URL;
+  if (env) return env;
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    return `${window.location.origin}/bff`;
+  }
+  return '/bff';
+})();
 
 interface AuthContextValue {
   user: SessionUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   csrfToken: string | null;
-  login: () => void;
+  login: (provider?: 'google' | 'facebook') => void;
   logout: () => Promise<void>;
 }
 
@@ -37,9 +45,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initialize();
   }, [initialize]);
 
-  const login = useCallback(() => {
+  const login = useCallback((provider?: 'google' | 'facebook') => {
     const params = new URLSearchParams();
     params.set('returnTo', `${window.location.origin}/dashboard`);
+    if (provider) {
+      params.set('kc_idp_hint', provider);
+    }
     window.location.href = `${BFF_URL}/auth/login?${params.toString()}`;
   }, []);
 

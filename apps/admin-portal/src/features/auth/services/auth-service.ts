@@ -1,25 +1,41 @@
 import type { SessionResponse } from '@/shared/types/auth';
 
 /**
- * Admin auth BFF URL — points to internal-identity.fe3dr.com which uses the
- * internal Keycloak realm (tesserix-internal) instead of the customer realm.
- * This ensures admin users are managed in a completely separate identity provider.
+ * Admin auth service — uses same-origin /bff/ proxy to the auth BFF.
+ * In production, Istio VirtualService on admin.fe3dr.com routes /bff/* to the
+ * auth-bff service with x-auth-context: admin, which makes the BFF use the
+ * internal Keycloak realm (tesserix-internal) for authentication.
+ *
+ * For the login redirect, we use the /bff/ prefix so the BFF constructs the
+ * Keycloak authorization URL with the correct internal realm.
  */
-const BFF_URL = import.meta.env.VITE_BFF_URL || 'https://internal-identity.fe3dr.com';
+const BFF_URL = (() => {
+  const env = import.meta.env.VITE_BFF_URL;
+  if (env) return env;
+  // In production, use same-origin /bff/ proxy
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    return `${window.location.origin}/bff`;
+  }
+  // In development, proxy through vite dev server
+  return '/bff';
+})();
 
 export const authService = {
   /**
-   * Build the OIDC login URL via the internal identity BFF.
-   * No social providers — admin login is email/password only via internal Keycloak.
+   * Build the OIDC login URL via the BFF.
+   * Supports Google and Facebook social login via kc_idp_hint.
    */
-  getLoginUrl(options?: { returnTo?: string }): string {
+  getLoginUrl(options?: { provider?: 'google' | 'facebook'; returnTo?: string }): string {
     const params = new URLSearchParams();
     params.set('returnTo', options?.returnTo || `${window.location.origin}/dashboard`);
+    if (options?.provider) {
+      params.set('kc_idp_hint', options.provider);
+    }
     return `${BFF_URL}/auth/login?${params.toString()}`;
   },
 
   /**
-   * Check current session with the internal identity BFF.
+   * Check current session with the BFF.
    */
   async getSession(): Promise<SessionResponse | null> {
     try {

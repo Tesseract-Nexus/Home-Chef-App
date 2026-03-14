@@ -112,11 +112,11 @@ export default function ApprovalDetailPage() {
   });
 
   const approval = data as unknown as ApprovalRequest | undefined;
-  const historyResp = historyData as unknown as HistoryResponse | undefined;
-  const history = historyResp?.data ?? [];
+  // History API returns array directly, not {data: [...]}
+  const history = (Array.isArray(historyData) ? historyData : (historyData as unknown as HistoryResponse)?.data ?? []) as HistoryEntry[];
 
   const approveMutation = useMutation({
-    mutationFn: () => apiClient.post(`/admin/approvals/${id}/approve`, { notes: adminNotes || undefined }),
+    mutationFn: () => apiClient.put(`/admin/approvals/${id}/approve`, { notes: adminNotes || undefined }),
     onSuccess: () => {
       toast.success('Approval request approved');
       queryClient.invalidateQueries({ queryKey: ['admin-approval', id] });
@@ -129,7 +129,7 @@ export default function ApprovalDetailPage() {
   });
 
   const rejectMutation = useMutation({
-    mutationFn: () => apiClient.post(`/admin/approvals/${id}/reject`, { notes: adminNotes || undefined }),
+    mutationFn: () => apiClient.put(`/admin/approvals/${id}/reject`, { notes: adminNotes || undefined }),
     onSuccess: () => {
       toast.success('Approval request rejected');
       queryClient.invalidateQueries({ queryKey: ['admin-approval', id] });
@@ -142,7 +142,7 @@ export default function ApprovalDetailPage() {
   });
 
   const requestInfoMutation = useMutation({
-    mutationFn: () => apiClient.post(`/admin/approvals/${id}/request-info`, { notes: adminNotes || undefined }),
+    mutationFn: () => apiClient.put(`/admin/approvals/${id}/request-info`, { notes: adminNotes || undefined }),
     onSuccess: () => {
       toast.success('More information requested from chef');
       queryClient.invalidateQueries({ queryKey: ['admin-approval', id] });
@@ -255,7 +255,11 @@ export default function ApprovalDetailPage() {
           {approval.submittedData && (
             <div className="rounded-xl border border-border bg-card p-6 shadow-card">
               <h2 className="text-lg font-semibold text-foreground mb-4">Submitted Data</h2>
-              <SubmittedDataView type={approval.type} data={approval.submittedData} />
+              <SubmittedDataView type={approval.type} data={
+                typeof approval.submittedData === 'string'
+                  ? (() => { try { return JSON.parse(approval.submittedData as unknown as string); } catch { return {}; } })()
+                  : approval.submittedData
+              } />
             </div>
           )}
 

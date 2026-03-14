@@ -29,15 +29,14 @@ WORKDIR /app/apps/admin-portal
 
 # Build arguments
 ARG VITE_API_URL
-ARG VITE_BFF_URL=https://internal-identity.fe3dr.com
 ARG GIT_COMMIT
 ARG GIT_BRANCH
 ARG BUILD_DATE
 ARG VERSION
 
 # Set environment variables for build
+# NOTE: VITE_BFF_URL is NOT set — the app detects same-origin /bff/ at runtime
 ENV VITE_API_URL=$VITE_API_URL
-ENV VITE_BFF_URL=$VITE_BFF_URL
 ENV VITE_GIT_COMMIT=$GIT_COMMIT
 ENV VITE_BUILD_DATE=$BUILD_DATE
 ENV VITE_VERSION=$VERSION

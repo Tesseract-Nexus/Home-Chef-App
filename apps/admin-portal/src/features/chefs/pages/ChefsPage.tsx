@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useState, useRef, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   ChefHat,
   Search,
@@ -68,6 +69,25 @@ export default function ChefsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
+  const queryClient = useQueryClient();
+
+  const verifyMutation = useMutation({
+    mutationFn: (id: string) => apiClient.put(`/admin/chefs/${id}/verify`),
+    onSuccess: () => { toast.success('Chef verified'); queryClient.invalidateQueries({ queryKey: ['admin-chefs'] }); },
+    onError: () => toast.error('Failed to verify chef'),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: (id: string) => apiClient.put(`/admin/chefs/${id}/reject`, { reason: 'Rejected by admin' }),
+    onSuccess: () => { toast.success('Chef rejected'); queryClient.invalidateQueries({ queryKey: ['admin-chefs'] }); },
+    onError: () => toast.error('Failed to reject chef'),
+  });
+
+  const suspendMutation = useMutation({
+    mutationFn: (id: string) => apiClient.put(`/admin/chefs/${id}/suspend`),
+    onSuccess: () => { toast.success('Chef suspended'); queryClient.invalidateQueries({ queryKey: ['admin-chefs'] }); },
+    onError: () => toast.error('Failed to suspend chef'),
+  });
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin-chefs', search, statusFilter, page],
@@ -156,9 +176,12 @@ export default function ChefsPage() {
                     </p>
                   </div>
                 </div>
-                <button className="rounded-lg p-2 hover:bg-secondary transition-colors">
-                  <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
-                </button>
+                <ChefActionMenu
+                  chef={chef}
+                  onVerify={() => verifyMutation.mutate(chef.id)}
+                  onReject={() => rejectMutation.mutate(chef.id)}
+                  onSuspend={() => suspendMutation.mutate(chef.id)}
+                />
               </div>
 
               {/* Stats Row */}
@@ -281,5 +304,53 @@ function OnlineIndicator({ status }: { status: string }) {
   };
   return (
     <Circle className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 fill-current ${colors[status] || colors.offline}`} />
+  );
+}
+
+function ChefActionMenu({ chef, onVerify, onReject, onSuspend }: {
+  chef: Chef;
+  onVerify: () => void;
+  onReject: () => void;
+  onSuspend: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button onClick={() => setOpen(!open)} className="rounded-lg p-2 hover:bg-secondary transition-colors">
+        <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border border-border bg-card shadow-elevated py-1">
+          {!chef.verified && (
+            <button onClick={() => { onVerify(); setOpen(false); }}
+              className="flex w-full items-center gap-2 px-4 py-2 text-sm text-success hover:bg-success/10">
+              <CheckCircle className="h-4 w-4" />Verify Kitchen
+            </button>
+          )}
+          {!chef.verified && (
+            <button onClick={() => { onReject(); setOpen(false); }}
+              className="flex w-full items-center gap-2 px-4 py-2 text-sm text-destructive hover:bg-destructive/10">
+              <XCircle className="h-4 w-4" />Reject Application
+            </button>
+          )}
+          {chef.isActive && (
+            <button onClick={() => { onSuspend(); setOpen(false); }}
+              className="flex w-full items-center gap-2 px-4 py-2 text-sm text-warning hover:bg-warning/10">
+              <XCircle className="h-4 w-4" />Suspend Kitchen
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

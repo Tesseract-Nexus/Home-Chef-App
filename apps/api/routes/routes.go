@@ -55,6 +55,7 @@ func SetupRouter() *gin.Engine {
 	currencyHandler := handlers.NewCurrencyHandler()
 	adminHandler := handlers.NewAdminHandler()
 	approvalHandler := handlers.NewApprovalHandler()
+	notificationHandler := handlers.NewNotificationHandler()
 
 	// Health check endpoints
 	r.GET("/health", healthHandler.Health)
@@ -336,9 +337,10 @@ func SetupRouter() *gin.Engine {
 		notifications := v1.Group("/notifications")
 		notifications.Use(middleware.AuthMiddleware())
 		{
-			// notifications.GET("", notificationHandler.GetNotifications)
-			// notifications.PUT("/:id/read", notificationHandler.MarkAsRead)
-			// notifications.PUT("/read-all", notificationHandler.MarkAllAsRead)
+			notifications.GET("", notificationHandler.GetNotifications)
+			notifications.GET("/unread-count", notificationHandler.GetUnreadCount)
+			notifications.PUT("/:id/read", notificationHandler.MarkAsRead)
+			notifications.PUT("/read-all", notificationHandler.MarkAllAsRead)
 		}
 	}
 

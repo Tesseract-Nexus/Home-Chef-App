@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Stepper, StepperItem } from '@tesserix/web';
@@ -79,14 +79,16 @@ export default function OnboardingPage() {
   const [isCreatingProfile, setIsCreatingProfile] = useState(false);
   const [showReview, setShowReview] = useState(false);
 
-  // Pre-fill email from session
-  if (user?.email && !data.email) {
-    useOnboardingStore.getState().updateData({ email: user.email });
-  }
-  if (user?.firstName && !data.fullName) {
-    const name = [user.firstName, user.lastName].filter(Boolean).join(' ');
-    useOnboardingStore.getState().updateData({ fullName: name });
-  }
+  // Always pre-fill email/name from current logged-in user's session
+  // This ensures a new user never sees a previous user's data
+  useEffect(() => {
+    if (user?.email) {
+      const updates: Partial<typeof data> = { email: user.email };
+      const name = [user.firstName, user.lastName].filter(Boolean).join(' ');
+      if (name) updates.fullName = name;
+      useOnboardingStore.getState().updateData(updates);
+    }
+  }, [user?.email, user?.firstName, user?.lastName]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const ensureProfile = async (): Promise<boolean> => {
     setIsCreatingProfile(true);

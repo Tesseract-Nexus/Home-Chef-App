@@ -65,10 +65,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           setNeedsOnboarding(true);
 
-          // Hydrate the onboarding form with any previously saved server data
-          // so users don't lose their progress
+          // Hydrate the onboarding form with server data.
+          // First check if the local store has data from a different user and reset if so.
+          const { useOnboardingStore } = await import('@/app/store/onboarding-store');
+          const localEmail = useOnboardingStore.getState().data.email;
+          const currentEmail = user?.email || status.profile?.email || '';
+          if (localEmail && currentEmail && localEmail !== currentEmail) {
+            // Different user logged in - clear stale data
+            useOnboardingStore.getState().reset();
+          }
           if (status.profile) {
-            const { useOnboardingStore } = await import('@/app/store/onboarding-store');
             useOnboardingStore.getState().hydrateFromServer(status.step || 0, status.profile);
           }
 
@@ -114,6 +120,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearAuth();
     setOnboardingChecked(false);
     setNeedsOnboarding(false);
+    // Clear onboarding form data to prevent cross-user contamination
+    import('@/app/store/onboarding-store').then(({ useOnboardingStore }) => {
+      useOnboardingStore.getState().reset();
+    });
     navigate('/login');
   }, [clearAuth, navigate]);
 

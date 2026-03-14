@@ -120,9 +120,16 @@ export const useOnboardingStore = create<OnboardingState>()(
 
       hydrateFromServer: (step, profile) =>
         set((s) => {
-          // Only hydrate if local data is empty (no businessName means form is blank)
-          const localHasData = s.data.businessName !== '';
-          if (localHasData) return s;
+          // Only skip hydration if local data matches the server profile (same user)
+          // If the emails differ, the local data is from a different user - reset and hydrate
+          if (profile.email && s.data.email && s.data.email !== profile.email) {
+            // Different user - reset local data first
+            localStorage.removeItem('vendor-onboarding');
+          } else {
+            // Same user - only hydrate if local data is empty
+            const localHasData = s.data.businessName?.trim() !== '' && s.data.cuisines.length > 0;
+            if (localHasData) return s;
+          }
 
           const merged: Partial<OnboardingData> = {};
           if (profile.fullName) merged.fullName = profile.fullName;

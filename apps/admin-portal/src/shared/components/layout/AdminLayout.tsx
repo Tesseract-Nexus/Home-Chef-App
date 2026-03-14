@@ -46,7 +46,8 @@ export function AdminLayout() {
     queryFn: () => apiClient.get<{ pending: number }>('/admin/approvals/counts'),
     refetchInterval: 30000,
   });
-  const pendingCount = (approvalCounts as unknown as { pending: number } | undefined)?.pending ?? 0;
+  const countsData = approvalCounts as unknown as { byStatus?: Record<string, number>; total?: number } | undefined;
+  const pendingCount = countsData?.byStatus?.pending ?? 0;
 
   const isActive = (href: string) =>
     location.pathname === href || location.pathname.startsWith(href + '/');

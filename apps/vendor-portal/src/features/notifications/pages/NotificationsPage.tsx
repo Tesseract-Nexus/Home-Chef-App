@@ -85,8 +85,12 @@ export default function NotificationsPage() {
     },
   });
 
-  const resp = data as unknown as NotificationsResponse | undefined;
-  const notifications = resp?.data ?? [];
+  // apiClient auto-unwraps {data, pagination} responses, returning just the array.
+  // Handle both cases: raw array (auto-unwrapped) or full response object.
+  const rawData = data as unknown;
+  const notifications: Notification[] = Array.isArray(rawData)
+    ? rawData
+    : (rawData as NotificationsResponse)?.data ?? [];
   const hasUnread = notifications.some((n) => !n.isRead);
 
   if (isLoading) {

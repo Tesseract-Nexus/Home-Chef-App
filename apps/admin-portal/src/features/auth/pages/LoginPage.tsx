@@ -1,6 +1,6 @@
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Shield, Activity, Users, ChefHat, ShoppingBag } from 'lucide-react';
+import { Shield, Check } from 'lucide-react';
 import { useAuth } from '@/app/providers/AuthProvider';
 import { Button } from '@/shared/components/ui/Button';
 import { fadeInUp, staggerContainer } from '@/shared/utils/animations';
@@ -25,10 +25,12 @@ function MetaIcon({ className }: { className?: string }) {
 }
 
 const FEATURES = [
-  { icon: Users, text: 'User & role management' },
-  { icon: ChefHat, text: 'Chef verification & approvals' },
-  { icon: ShoppingBag, text: 'Order monitoring & refunds' },
-  { icon: Activity, text: 'Platform analytics & insights' },
+  'User & role management',
+  'Chef verification & approvals',
+  'Order monitoring & refunds',
+  'Platform analytics & insights',
+  'Revenue tracking & payouts',
+  'Content moderation tools',
 ];
 
 export default function LoginPage() {
@@ -41,38 +43,48 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen bg-background">
-      {/* Left side - Branding */}
-      <div className="relative hidden flex-1 bg-sidebar lg:flex lg:flex-col lg:justify-center lg:px-14 xl:px-20">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, duration: 0.6 }}
-        >
-          <div className="flex items-center gap-2.5 mb-6">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-sidebar-primary">
-              <Shield className="h-6 w-6 text-primary-foreground" />
-            </div>
-            <span className="text-2xl font-bold text-sidebar-foreground font-display">Fe3dr</span>
-          </div>
+      {/* Left side - Image & Features */}
+      <div className="relative hidden flex-1 lg:block">
+        <img
+          src="https://images.unsplash.com/photo-1600565193348-f74bd3c7ccdf?w=1200&h=900&fit=crop&q=80"
+          alt="Overhead view of home-cooked Indian food spread on a wooden table"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20" />
 
-          <h2 className="max-w-md text-3xl font-bold leading-tight text-sidebar-foreground font-display xl:text-4xl">
-            Platform Administration
-          </h2>
-          <p className="mt-3 max-w-md text-base text-sidebar-foreground/70">
-            Manage users, chefs, orders, and analytics for the Fe3dr platform.
-          </p>
-
-          <div className="mt-10 space-y-4">
-            {FEATURES.map(({ icon: Icon, text }) => (
-              <div key={text} className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-sidebar-accent">
-                  <Icon className="h-5 w-5 text-sidebar-primary" />
-                </div>
-                <span className="text-sm text-sidebar-foreground/80">{text}</span>
+        {/* Content overlay */}
+        <div className="relative flex h-full flex-col justify-end p-10 xl:p-14">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3, duration: 0.6 }}
+          >
+            <div className="flex items-center gap-2.5 mb-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+                <Shield className="h-5 w-5 text-white" />
               </div>
-            ))}
-          </div>
-        </motion.div>
+              <span className="text-xl font-bold text-white font-display">Fe3dr</span>
+            </div>
+
+            <h2 className="max-w-md text-3xl font-bold leading-tight text-white font-display xl:text-4xl">
+              Platform Administration
+            </h2>
+            <p className="mt-3 max-w-md text-base text-white/80">
+              Manage users, chefs, orders, and analytics for the Fe3dr platform.
+            </p>
+
+            <div className="mt-8 grid grid-cols-2 gap-x-6 gap-y-3">
+              {FEATURES.map((feature) => (
+                <div key={feature} className="flex items-center gap-2.5">
+                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
+                    <Check className="h-3 w-3 text-white" />
+                  </div>
+                  <span className="text-sm text-white/90">{feature}</span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        </div>
       </div>
 
       {/* Right side - Login */}

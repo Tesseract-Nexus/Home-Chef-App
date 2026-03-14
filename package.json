@@ -9,9 +9,11 @@
   "scripts": {
     "dev": "pnpm --filter @homechef/web dev",
     "dev:vendor": "pnpm --filter @homechef/vendor-portal dev",
+    "dev:admin": "pnpm --filter @homechef/admin-portal dev",
     "dev:api": "cd apps/api && go run cmd/server/main.go",
     "build": "pnpm --filter @homechef/web build",
     "build:vendor": "pnpm --filter @homechef/vendor-portal build",
+    "build:admin": "pnpm --filter @homechef/admin-portal build",
     "build:all": "pnpm -r build",
     "lint": "pnpm -r lint",
     "lint:fix": "pnpm -r lint:fix",

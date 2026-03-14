@@ -31,12 +31,6 @@ interface City {
   isMajor: boolean;
 }
 
-interface Postcode {
-  id: string;
-  code: string;
-  areaName: string;
-}
-
 const selectClass =
   'w-full rounded-lg border-2 border-input bg-background px-4 py-2.5 text-sm shadow-sm transition-all hover:border-primary/30 focus:border-ring focus:outline-none focus:ring-4 focus:ring-ring/20 disabled:cursor-not-allowed disabled:opacity-50';
 
@@ -48,11 +42,8 @@ export function StepPersonalInfo({ errors }: Props) {
   const [countries, setCountries] = useState<Country[]>([]);
   const [states, setStates] = useState<StateItem[]>([]);
   const [cities, setCities] = useState<City[]>([]);
-  const [postcodes, setPostcodes] = useState<Postcode[]>([]);
-
   const [loadingStates, setLoadingStates] = useState(false);
   const [loadingCities, setLoadingCities] = useState(false);
-  const [loadingPostcodes, setLoadingPostcodes] = useState(false);
 
   // Fetch countries on mount
   useEffect(() => {
@@ -89,42 +80,19 @@ export function StepPersonalInfo({ errors }: Props) {
       .finally(() => setLoadingCities(false));
   }, [data.kitchenAddress.state, states, data.kitchenAddress.country]);
 
-  // Fetch postcodes when city changes
-  useEffect(() => {
-    if (!data.kitchenAddress.city) {
-      setPostcodes([]);
-      return;
-    }
-    const stateObj = states.find((s) => s.name === data.kitchenAddress.state);
-    if (!stateObj) return;
-    setLoadingPostcodes(true);
-    apiClient
-      .get<Postcode[]>(`/locations/cities/${encodeURIComponent(data.kitchenAddress.city)}/postcodes`, { state: stateObj.code })
-      .then(setPostcodes)
-      .catch(() => setPostcodes([]))
-      .finally(() => setLoadingPostcodes(false));
-  }, [data.kitchenAddress.city, states, data.kitchenAddress.state]);
-
   const handleCountryChange = (code: string) => {
     updateAddress({ country: code, state: '', city: '', postalCode: '' });
     setStates([]);
     setCities([]);
-    setPostcodes([]);
   };
 
   const handleStateChange = (name: string) => {
     updateAddress({ state: name, city: '', postalCode: '' });
     setCities([]);
-    setPostcodes([]);
   };
 
   const handleCityChange = (name: string) => {
     updateAddress({ city: name, postalCode: '' });
-    setPostcodes([]);
-  };
-
-  const handlePostcodeChange = (code: string) => {
-    updateAddress({ postalCode: code });
   };
 
   const handleAvatarChange = async (newFiles: File[]) => {
@@ -320,20 +288,18 @@ export function StepPersonalInfo({ errors }: Props) {
 
             {/* Postcode / PIN Code */}
             <div className="w-full">
-              <label className="mb-1.5 block text-sm font-medium text-foreground">PIN Code</label>
-              <select
+              <label className="mb-1.5 block text-sm font-medium text-foreground">PIN Code <span className="text-destructive">*</span></label>
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={10}
+                placeholder="Enter PIN code"
                 value={data.kitchenAddress.postalCode}
-                onChange={(e) => handlePostcodeChange(e.target.value)}
-                className={selectClass}
-                disabled={!data.kitchenAddress.city || loadingPostcodes}
-              >
-                <option value="">{loadingPostcodes ? 'Loading...' : 'Select PIN code'}</option>
-                {postcodes.map((p) => (
-                  <option key={p.id} value={p.code}>
-                    {p.code} {p.areaName ? `— ${p.areaName}` : ''}
-                  </option>
-                ))}
-              </select>
+                onChange={(e) => updateAddress({ postalCode: e.target.value.replace(/[^0-9]/g, '') })}
+                className={`h-10 w-full rounded-lg border bg-card px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring ${
+                  errors['kitchenAddress.postalCode'] ? 'border-destructive' : 'border-input'
+                }`}
+              />
               {errors['kitchenAddress.postalCode'] && (
                 <p className="mt-1.5 text-sm text-destructive">{errors['kitchenAddress.postalCode']}</p>
               )}

@@ -47,15 +47,14 @@ const menuItemSchema = z.object({
     .max(100, 'Name must be under 100 characters'),
   description: z
     .string()
-    .max(500, 'Description must be under 500 characters')
-    .optional()
-    .or(z.literal('')),
+    .min(10, 'Description must be at least 10 characters')
+    .max(500, 'Description must be under 500 characters'),
   price: z
     .number({ invalid_type_error: 'Price is required' })
     .min(0.01, 'Price must be greater than 0')
-    .max(9999.99, 'Price must be under $10,000'),
-  categoryId: z.string().optional().or(z.literal('')),
-  dietaryTags: z.array(z.string()).default([]),
+    .max(9999.99, 'Price must be under ₹10,000'),
+  categoryId: z.string().min(1, 'Category is required'),
+  dietaryTags: z.array(z.string()).min(1, 'Select at least one dietary tag'),
   allergens: z.array(z.string()).default([]),
   prepTime: z
     .number({ invalid_type_error: 'Prep time is required' })
@@ -273,11 +272,9 @@ export default function MenuItemFormPage() {
         portionSize: existingItem.portionSize || '',
         serves: existingItem.serves,
       };
-      const draft = loadDraft();
-      if (draft) {
-        draft.allergens = normalizeAllergens(draft.allergens);
-      }
-      reset(draft ?? serverValues);
+      // In edit mode, always use server data (not stale drafts from other items)
+      clearDraft();
+      reset(serverValues);
     } else {
       // New mode: restore draft if available
       const draft = loadDraft();
@@ -287,7 +284,7 @@ export default function MenuItemFormPage() {
         toast.info('Restored your unsaved draft');
       }
     }
-  }, [existingItem, reset, loadDraft]);
+  }, [existingItem, reset, loadDraft, clearDraft]);
 
   // Auto-save draft on form changes
   const formValues = watch();

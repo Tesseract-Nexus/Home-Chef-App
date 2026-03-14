@@ -317,12 +317,13 @@ func (h *UploadHandler) DeleteKitchenPhoto(c *gin.Context) {
 }
 
 // GetOnboardingStatus checks if the authenticated user has completed chef onboarding.
+// Returns the full chef profile data so the frontend can hydrate the onboarding form.
 // GET /chef/onboarding/status — accessible to any authenticated user (no RequireChef)
 func (h *UploadHandler) GetOnboardingStatus(c *gin.Context) {
 	userID, _ := middleware.GetUserID(c)
 
 	var chef models.ChefProfile
-	if err := database.DB.Where("user_id = ?", userID).First(&chef).Error; err != nil {
+	if err := database.DB.Where("user_id = ?", userID).Preload("User").First(&chef).Error; err != nil {
 		c.JSON(http.StatusOK, gin.H{
 			"status":    "not_started",
 			"completed": false,
@@ -330,21 +331,53 @@ func (h *UploadHandler) GetOnboardingStatus(c *gin.Context) {
 		return
 	}
 
-	// Placeholder profile (auto-created by upload handler) has no business name
-	if chef.BusinessName == "" {
-		c.JSON(http.StatusOK, gin.H{
-			"status":    "in_progress",
-			"completed": false,
-			"chefId":    chef.ID,
-		})
-		return
+	// Determine onboarding step based on what data is filled
+	step := 0
+	if chef.BusinessName != "" {
+		step = 2 // Kitchen details done
+	}
+	if chef.PrepTime != "" || chef.ServiceRadius > 0 {
+		step = 3 // Operations done
 	}
 
+	// Check if documents are uploaded
+	var docCount int64
+	database.DB.Model(&models.ChefDocument{}).Where("chef_id = ?", chef.ID).Count(&docCount)
+	if docCount > 0 {
+		step = 4 // Documents done
+	}
+
+	// Consider completed when verified OR has business name + documents
+	completed := chef.IsVerified || (chef.BusinessName != "" && docCount > 0 && step >= 4)
+
 	c.JSON(http.StatusOK, gin.H{
-		"status":       "completed",
-		"completed":    true,
-		"chefId":       chef.ID,
-		"businessName": chef.BusinessName,
+		"status":    map[bool]string{true: "completed", false: "in_progress"}[completed],
+		"completed": completed,
+		"step":      step,
+		"chefId":    chef.ID,
+		"profile": gin.H{
+			"businessName":  chef.BusinessName,
+			"description":   chef.Description,
+			"cuisines":      chef.Cuisines,
+			"specialties":   chef.Specialties,
+			"profileImage":  chef.ProfileImage,
+			"bannerImage":   chef.BannerImage,
+			"kitchenPhotos": chef.KitchenPhotos,
+			"prepTime":      chef.PrepTime,
+			"serviceRadius": chef.ServiceRadius,
+			"minimumOrder":  chef.MinimumOrder,
+			"deliveryRadius": chef.DeliveryRadius,
+			"addressLine1":  chef.AddressLine1,
+			"addressLine2":  chef.AddressLine2,
+			"city":          chef.City,
+			"state":         chef.State,
+			"postalCode":    chef.PostalCode,
+			"latitude":      chef.Latitude,
+			"longitude":     chef.Longitude,
+			"fullName":      chef.User.FirstName + " " + chef.User.LastName,
+			"email":         chef.User.Email,
+			"phone":         chef.User.Phone,
+		},
 	})
 }
 

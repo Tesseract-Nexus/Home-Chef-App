@@ -43,19 +43,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initialize();
   }, [initialize]);
 
-  // After auth, check if chef profile exists
+  // After auth, check if chef profile exists and hydrate form data from server
   useEffect(() => {
     if (!isAuthenticated || isLoading || onboardingChecked) return;
 
     const checkOnboarding = async () => {
       try {
-        // Direct fetch — apiClient.get expects { data: T } wrapper but
-        // the Go API returns raw JSON, so we call the BFF proxy directly
         const res = await fetch(`${BFF_URL}/api/v1/chef/onboarding/status`, {
           credentials: 'include',
         });
         if (!res.ok) {
-          // Non-200 = profile check failed, assume needs onboarding
           setNeedsOnboarding(true);
           if (!location.pathname.startsWith('/onboarding')) {
             navigate('/onboarding', { replace: true });
@@ -67,13 +64,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setNeedsOnboarding(false);
         } else {
           setNeedsOnboarding(true);
+
+          // Hydrate the onboarding form with any previously saved server data
+          // so users don't lose their progress
+          if (status.profile) {
+            const { useOnboardingStore } = await import('@/app/store/onboarding-store');
+            useOnboardingStore.getState().hydrateFromServer(status.step || 0, status.profile);
+          }
+
           if (!location.pathname.startsWith('/onboarding')) {
             navigate('/onboarding', { replace: true });
           }
         }
       } catch {
-        // Network error — don't redirect, just mark as not checked
-        // so it retries on next render
         setNeedsOnboarding(false);
       } finally {
         setOnboardingChecked(true);

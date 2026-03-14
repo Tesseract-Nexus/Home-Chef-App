@@ -15,6 +15,27 @@ const DEFAULT_HOURS: OperatingHours = {
   sunday: { open: '09:00', close: '21:00' },
 };
 
+interface ServerProfile {
+  businessName?: string;
+  description?: string;
+  cuisines?: string[];
+  specialties?: string[];
+  profileImage?: string;
+  prepTime?: string;
+  serviceRadius?: number;
+  minimumOrder?: number;
+  deliveryFee?: number;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+  fullName?: string;
+  email?: string;
+  phone?: string;
+}
+
 interface OnboardingState {
   currentStep: number;
   data: OnboardingData;
@@ -27,6 +48,7 @@ interface OnboardingState {
   updateHours: (day: keyof OperatingHours, hours: { open: string; close: string } | undefined) => void;
   addDocument: (doc: DocumentUpload) => void;
   removeDocument: (type: DocumentUpload['type']) => void;
+  hydrateFromServer: (step: number, profile: ServerProfile) => void;
   reset: () => void;
 }
 
@@ -95,6 +117,44 @@ export const useOnboardingStore = create<OnboardingState>()(
             documents: s.data.documents.filter((d) => d.type !== type),
           },
         })),
+
+      hydrateFromServer: (step, profile) =>
+        set((s) => {
+          // Only hydrate if local data is empty (no businessName means form is blank)
+          const localHasData = s.data.businessName !== '';
+          if (localHasData) return s;
+
+          const merged: Partial<OnboardingData> = {};
+          if (profile.fullName) merged.fullName = profile.fullName;
+          if (profile.phone) merged.phone = profile.phone;
+          if (profile.email) merged.email = profile.email;
+          if (profile.businessName) merged.businessName = profile.businessName;
+          if (profile.description) merged.description = profile.description;
+          if (profile.cuisines?.length) merged.cuisines = profile.cuisines;
+          if (profile.specialties?.length) merged.specialties = profile.specialties;
+          if (profile.profileImage) merged.profileImage = profile.profileImage;
+          if (profile.prepTime) merged.prepTime = profile.prepTime;
+          if (profile.serviceRadius) merged.serviceRadius = profile.serviceRadius;
+          if (profile.minimumOrder) merged.minimumOrder = profile.minimumOrder;
+          if (profile.deliveryFee) merged.deliveryFee = profile.deliveryFee;
+
+          const addr: Partial<KitchenAddress> = {};
+          if (profile.addressLine1) addr.line1 = profile.addressLine1;
+          if (profile.addressLine2) addr.line2 = profile.addressLine2;
+          if (profile.city) addr.city = profile.city;
+          if (profile.state) addr.state = profile.state;
+          if (profile.postalCode) addr.postalCode = profile.postalCode;
+          if (profile.country) addr.country = profile.country;
+
+          return {
+            currentStep: Math.max(s.currentStep, step),
+            data: {
+              ...s.data,
+              ...merged,
+              kitchenAddress: { ...s.data.kitchenAddress, ...addr },
+            },
+          };
+        }),
 
       reset: () => {
         localStorage.removeItem('vendor-onboarding');

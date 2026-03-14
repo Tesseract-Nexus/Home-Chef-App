@@ -69,23 +69,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (status.completed) {
           setNeedsOnboarding(false);
         } else {
-          setNeedsOnboarding(true);
+          // Only redirect to onboarding for first-time users who haven't submitted yet.
+          // For rejected/info_requested, the chef has already submitted their profile —
+          // let them stay on dashboard and see the notification in Admin Requests.
+          const shouldRedirectToOnboarding =
+            status.status === 'not_started' || status.status === 'in_progress';
 
-          // Hydrate the onboarding form with server data.
-          // First check if the local store has data from a different user and reset if so.
-          const { useOnboardingStore } = await import('@/app/store/onboarding-store');
-          const localEmail = useOnboardingStore.getState().data.email;
-          const currentEmail = user?.email || status.profile?.email || '';
-          if (localEmail && currentEmail && localEmail !== currentEmail) {
-            // Different user logged in - clear stale data
-            useOnboardingStore.getState().reset();
-          }
-          if (status.profile) {
-            useOnboardingStore.getState().hydrateFromServer(status.step || 0, status.profile);
-          }
+          if (shouldRedirectToOnboarding) {
+            setNeedsOnboarding(true);
 
-          if (!location.pathname.startsWith('/onboarding')) {
-            navigate('/onboarding', { replace: true });
+            // Hydrate the onboarding form with server data.
+            // First check if the local store has data from a different user and reset if so.
+            const { useOnboardingStore } = await import('@/app/store/onboarding-store');
+            const localEmail = useOnboardingStore.getState().data.email;
+            const currentEmail = user?.email || status.profile?.email || '';
+            if (localEmail && currentEmail && localEmail !== currentEmail) {
+              // Different user logged in - clear stale data
+              useOnboardingStore.getState().reset();
+            }
+            if (status.profile) {
+              useOnboardingStore.getState().hydrateFromServer(status.step || 0, status.profile);
+            }
+
+            if (!location.pathname.startsWith('/onboarding')) {
+              navigate('/onboarding', { replace: true });
+            }
+          } else {
+            // rejected or info_requested — profile already submitted, no redirect
+            setNeedsOnboarding(false);
           }
         }
       } catch {

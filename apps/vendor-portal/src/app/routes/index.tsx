@@ -50,7 +50,7 @@ const KitchenSetupPage = lazyWithRetry(() => import('@/features/profile/pages/Ki
 const ReviewsPage = lazyWithRetry(() => import('@/features/reviews/pages/ReviewsPage'));
 const AnalyticsPage = lazyWithRetry(() => import('@/features/analytics/pages/AnalyticsPage'));
 const SettingsPage = lazyWithRetry(() => import('@/features/settings/pages/SettingsPage'));
-const NotificationsPage = lazyWithRetry(() => import('@/features/notifications/pages/NotificationsPage'));
+const AdminRequestsPage = lazyWithRetry(() => import('@/features/notifications/pages/NotificationsPage'));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isLoading, isAuthenticated } = useAuth();
@@ -119,7 +119,7 @@ export function AppRoutes() {
           <Route path="profile" element={<ProfilePage />} />
           <Route path="profile/kitchen" element={<KitchenSetupPage />} />
           <Route path="reviews" element={<ReviewsPage />} />
-          <Route path="notifications" element={<NotificationsPage />} />
+          <Route path="admin-requests" element={<AdminRequestsPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>

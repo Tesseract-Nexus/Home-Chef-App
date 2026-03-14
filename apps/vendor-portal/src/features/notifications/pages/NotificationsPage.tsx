@@ -101,9 +101,9 @@ export default function NotificationsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="page-title">Notifications</h1>
+          <h1 className="page-title">Admin Requests</h1>
           <p className="page-description">
-            Updates from the admin team and platform activity
+            Requests and updates from the admin team
           </p>
         </div>
         {hasUnread && (
@@ -122,7 +122,7 @@ export default function NotificationsPage() {
           <Bell className="mx-auto h-12 w-12 text-muted-foreground/30" />
           <p className="mt-4 text-lg font-medium text-foreground">No notifications yet</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            You'll receive updates here when the admin reviews your kitchen application.
+            Admin requests for document uploads, profile updates, and review feedback will appear here.
           </p>
         </div>
       ) : (
@@ -190,7 +190,7 @@ export default function NotificationsPage() {
 
                       {notif.type === 'approval_info_requested' && (
                         <a
-                          href="/onboarding"
+                          href="/profile"
                           className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors"
                         >
                           <ChefHat className="h-3.5 w-3.5" />

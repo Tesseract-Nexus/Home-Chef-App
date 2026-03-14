@@ -476,16 +476,21 @@ function SubmittedDataView({ type, data }: { type: string; data: Record<string, 
     );
   }
 
-  if (type === 'menu_item_new') {
+  if (type === 'menu_item_new' || type === 'menu_item_update') {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <DataField label="Item Name" value={data.name || data.itemName} />
-        <DataField label="Price" value={data.price ? `₹${data.price}` : undefined} />
-        <DataField label="Description" value={data.description} />
-        <DataField label="Category" value={data.category} />
-        <DataField label="Prep Time" value={data.prepTime ? `${data.prepTime} mins` : undefined} />
-        <DataField label="Serves" value={data.serves} />
-        {renderExtraFields(data, ['name', 'itemName', 'price', 'description', 'category', 'prepTime', 'serves'])}
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <DataField label="Item Name" value={data.name || data.itemName} />
+          <DataField label="Price" value={data.price ? `₹${data.price}` : undefined} />
+          {(data.comparePrice as number) > 0 && <DataField label="Compare Price" value={`₹${data.comparePrice}`} />}
+          <DataField label="Description" value={data.description} />
+          <DataField label="Prep Time" value={data.prepTime ? `${data.prepTime} mins` : undefined} />
+          <DataField label="Portion Size" value={data.portionSize} />
+          <DataField label="Serves" value={data.serves} />
+          <DataField label="Featured" value={data.isFeatured} />
+          <DataField label="Dietary Tags" value={data.dietaryTags} />
+          <DataField label="Allergens" value={data.allergens} />
+        </div>
       </div>
     );
   }

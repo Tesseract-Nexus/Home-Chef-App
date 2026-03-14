@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -145,6 +146,32 @@ func (h *MenuHandler) CreateMenuItem(c *gin.Context) {
 		return
 	}
 
+	// Create approval request for admin review
+	submittedData, _ := json.Marshal(map[string]interface{}{
+		"name": item.Name, "description": item.Description,
+		"price": item.Price, "comparePrice": item.ComparePrice,
+		"dietaryTags": item.DietaryTags, "allergens": item.Allergens,
+		"prepTime": item.PrepTime, "portionSize": item.PortionSize,
+		"serves": item.Serves, "isFeatured": item.IsFeatured,
+	})
+	approvalReq := models.ApprovalRequest{
+		Type:          models.ApprovalMenuItemNew,
+		Status:        models.ApprovalPending,
+		Priority:      "normal",
+		ChefID:        chef.ID,
+		SubmittedByID: userID,
+		EntityType:    "menu_item",
+		EntityID:      item.ID,
+		Title:         fmt.Sprintf("New Menu Item: %s", item.Name),
+		Description:   fmt.Sprintf("New item ₹%.0f - %s", item.Price, item.Name),
+		SubmittedData: string(submittedData),
+	}
+	database.DB.Create(&approvalReq)
+	services.PublishEvent(services.SubjectApprovalCreated, "approval.created", userID, map[string]interface{}{
+		"approval_id": approvalReq.ID.String(), "type": string(approvalReq.Type),
+		"chef_id": chef.ID.String(), "title": approvalReq.Title,
+	})
+
 	c.JSON(http.StatusCreated, item)
 }
 
@@ -228,12 +255,44 @@ func (h *MenuHandler) UpdateMenuItem(c *gin.Context) {
 		}
 	}
 
+	// Track if price changed for approval
+	oldPrice := item.Price
+	priceChanged := false
+	if req.Price != nil && *req.Price != oldPrice {
+		priceChanged = true
+	}
+
 	if len(updates) > 0 {
 		if err := database.DB.Model(&item).Updates(updates).Error; err != nil {
 			log.Printf("Failed to update menu item: %v", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update menu item"})
 			return
 		}
+	}
+
+	// Create approval request for significant changes (price, name)
+	if priceChanged {
+		submittedData, _ := json.Marshal(map[string]interface{}{
+			"itemName": item.Name, "currentPrice": oldPrice,
+			"newPrice": *req.Price, "reason": "Price updated by chef",
+		})
+		approvalReq := models.ApprovalRequest{
+			Type:          models.ApprovalPricingChange,
+			Status:        models.ApprovalPending,
+			Priority:      "normal",
+			ChefID:        chef.ID,
+			SubmittedByID: userID,
+			EntityType:    "menu_item",
+			EntityID:      item.ID,
+			Title:         fmt.Sprintf("Price Change: %s", item.Name),
+			Description:   fmt.Sprintf("₹%.0f → ₹%.0f for %s", oldPrice, *req.Price, item.Name),
+			SubmittedData: string(submittedData),
+		}
+		database.DB.Create(&approvalReq)
+		services.PublishEvent(services.SubjectApprovalCreated, "approval.created", userID, map[string]interface{}{
+			"approval_id": approvalReq.ID.String(), "type": string(approvalReq.Type),
+			"chef_id": chef.ID.String(), "title": approvalReq.Title,
+		})
 	}
 
 	// Reload to return the updated item

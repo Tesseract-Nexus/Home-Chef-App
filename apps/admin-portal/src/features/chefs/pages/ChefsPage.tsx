@@ -330,7 +330,7 @@ function ChefActionMenu({ chef, onVerify, onReject, onSuspend }: {
         <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
       </button>
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border border-border bg-card shadow-elevated py-1">
+        <div className="absolute right-0 bottom-full z-50 mb-1 w-48 rounded-lg border border-border bg-card shadow-elevated py-1">
           {!chef.verified && (
             <button onClick={() => { onVerify(); setOpen(false); }}
               className="flex w-full items-center gap-2 px-4 py-2 text-sm text-success hover:bg-success/10">

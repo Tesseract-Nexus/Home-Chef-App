@@ -126,7 +126,7 @@ export default function UsersPage() {
       </div>
 
       {/* Users Table */}
-      <div className="rounded-xl border border-border bg-card shadow-card overflow-hidden">
+      <div className="rounded-xl border border-border bg-card shadow-card">
         {isLoading ? (
           <div className="flex items-center justify-center py-20">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -261,7 +261,7 @@ function ActionMenu({ user, onView, onSuspend, onActivate }: {
         <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
       </button>
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-1 w-48 rounded-lg border border-border bg-card shadow-elevated py-1">
+        <div className="absolute right-0 bottom-full z-50 mb-1 w-48 rounded-lg border border-border bg-card shadow-elevated py-1">
           <button onClick={() => { onView(); setOpen(false); }}
             className="flex w-full items-center gap-2 px-4 py-2 text-sm text-foreground hover:bg-secondary">
             <Eye className="h-4 w-4" />View Details

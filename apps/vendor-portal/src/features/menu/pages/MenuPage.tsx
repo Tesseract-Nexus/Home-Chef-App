@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Search,
   Plus,
+  Eye,
   Pencil,
   Trash2,
   UtensilsCrossed,
@@ -381,9 +382,11 @@ function MenuItemCard({
       <div className="p-4">
         {/* Name and price */}
         <div className="flex items-start justify-between gap-2">
-          <h3 className="font-semibold text-foreground line-clamp-1">
-            {item.name}
-          </h3>
+          <Link to={`/menu/${item.id}`} className="hover:text-primary transition-colors">
+            <h3 className="font-semibold text-foreground line-clamp-1">
+              {item.name}
+            </h3>
+          </Link>
           <div className="flex items-baseline gap-1 shrink-0">
             {item.comparePrice && item.comparePrice > item.price && (
               <span className="text-xs text-muted-foreground line-through">
@@ -475,8 +478,13 @@ function MenuItemCard({
             </span>
           </button>
 
-          {/* Edit / Delete buttons */}
+          {/* View / Edit / Delete buttons */}
           <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon-sm" asChild>
+              <Link to={`/menu/${item.id}`} aria-label="View item">
+                <Eye className="h-4 w-4" />
+              </Link>
+            </Button>
             <Button variant="ghost" size="icon-sm" asChild>
               <Link to={`/menu/${item.id}/edit`} aria-label="Edit item">
                 <Pencil className="h-4 w-4" />

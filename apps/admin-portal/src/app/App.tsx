@@ -22,7 +22,7 @@ export function App() {
         <AuthProvider>
           <AppRoutes />
           <Toaster
-            position="top-right"
+            position="bottom-right"
             expand={false}
             richColors
             closeButton

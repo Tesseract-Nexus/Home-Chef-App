@@ -221,8 +221,9 @@ func (h *AdminHandler) GetUsers(c *gin.Context) {
 	})
 }
 
-// GetUser returns a single user by ID
+// GetUser returns a single user by ID with order stats
 func (h *AdminHandler) GetUser(c *gin.Context) {
+	db := database.DB
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID"})
@@ -230,12 +231,35 @@ func (h *AdminHandler) GetUser(c *gin.Context) {
 	}
 
 	var user models.User
-	if err := database.DB.Preload("ChefProfile").Preload("CustomerProfile").First(&user, "id = ?", id).Error; err != nil {
+	if err := db.Preload("ChefProfile").Preload("CustomerProfile").First(&user, "id = ?", id).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
 
-	c.JSON(http.StatusOK, user)
+	// Enrich with order stats
+	type UserWithStats struct {
+		models.User
+		TotalOrders int     `json:"totalOrders"`
+		TotalSpent  float64 `json:"totalSpent"`
+		LastOrderAt *string `json:"lastOrderAt,omitempty"`
+	}
+
+	uw := UserWithStats{User: user}
+	var orderCount int64
+	var totalSpent float64
+	db.Model(&models.Order{}).Where("customer_id = ?", user.ID).Count(&orderCount)
+	db.Model(&models.Order{}).Where("customer_id = ? AND payment_status = ?", user.ID, "completed").
+		Select("COALESCE(SUM(total), 0)").Scan(&totalSpent)
+	uw.TotalOrders = int(orderCount)
+	uw.TotalSpent = totalSpent
+
+	var lastOrder models.Order
+	if err := db.Where("customer_id = ?", user.ID).Order("created_at DESC").First(&lastOrder).Error; err == nil {
+		ts := lastOrder.CreatedAt.Format("2006-01-02T15:04:05Z")
+		uw.LastOrderAt = &ts
+	}
+
+	c.JSON(http.StatusOK, uw)
 }
 
 // SuspendUser deactivates a user

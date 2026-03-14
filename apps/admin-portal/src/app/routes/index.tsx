@@ -30,6 +30,7 @@ const ChefsPage = lazyWithRetry(() => import('@/features/chefs/pages/ChefsPage')
 const OrdersPage = lazyWithRetry(() => import('@/features/orders/pages/OrdersPage'));
 const AnalyticsPage = lazyWithRetry(() => import('@/features/analytics/pages/AnalyticsPage'));
 const SettingsPage = lazyWithRetry(() => import('@/features/settings/pages/SettingsPage'));
+const UserDetailPage = lazyWithRetry(() => import('@/features/users/pages/UserDetailPage'));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isLoading, isAuthenticated } = useAuth();
@@ -77,6 +78,7 @@ export function AppRoutes() {
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="users" element={<UsersPage />} />
+          <Route path="users/:id" element={<UserDetailPage />} />
           <Route path="chefs" element={<ChefsPage />} />
           <Route path="orders" element={<OrdersPage />} />
           <Route path="delivery" element={<DashboardPage />} />

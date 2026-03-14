@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Search,
@@ -11,7 +12,6 @@ import {
   UserX,
   UserCheck,
   Eye,
-  X,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiClient } from '@/shared/services/api-client';
@@ -48,7 +48,7 @@ export default function UsersPage() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [page, setPage] = useState(1);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -67,7 +67,6 @@ export default function UsersPage() {
     onSuccess: () => {
       toast.success('User suspended');
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      setSelectedUser(null);
     },
     onError: () => toast.error('Failed to suspend user'),
   });
@@ -77,7 +76,6 @@ export default function UsersPage() {
     onSuccess: () => {
       toast.success('User activated');
       queryClient.invalidateQueries({ queryKey: ['admin-users'] });
-      setSelectedUser(null);
     },
     onError: () => toast.error('Failed to activate user'),
   });
@@ -197,7 +195,7 @@ export default function UsersPage() {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => setSelectedUser(user)} title="View Details"
+                        <button onClick={() => navigate(`/users/${user.id}`)} title="View Details"
                           className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
                           <Eye className="h-4 w-4" />
                         </button>
@@ -240,54 +238,6 @@ export default function UsersPage() {
         )}
       </div>
 
-      {/* User Detail Modal */}
-      {selectedUser && (
-        <UserDetailModal user={selectedUser} onClose={() => setSelectedUser(null)} />
-      )}
-    </div>
-  );
-}
-
-function UserDetailModal({ user, onClose }: { user: User; onClose: () => void }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/50">
-      <div className="w-full max-w-lg rounded-xl bg-card shadow-modal p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-semibold text-foreground">User Details</h2>
-          <button onClick={onClose} className="rounded-lg p-1 hover:bg-secondary"><X className="h-5 w-5" /></button>
-        </div>
-        <div className="space-y-4">
-          <div className="flex items-center gap-4">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-              <span className="text-2xl font-bold text-primary">{(user.firstName?.[0] || '?').toUpperCase()}</span>
-            </div>
-            <div>
-              <h3 className="text-xl font-semibold text-foreground">{user.firstName} {user.lastName}</h3>
-              <p className="text-sm text-muted-foreground">{user.email}</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4 rounded-lg bg-muted/50 p-4">
-            <Detail label="Role" value={user.role} />
-            <Detail label="Auth Provider" value={user.authProvider || 'email'} />
-            <Detail label="Phone" value={user.phone || 'Not provided'} />
-            <Detail label="Status" value={user.isActive ? 'Active' : 'Suspended'} />
-            <Detail label="Email Verified" value={user.emailVerified ? 'Yes' : 'No'} />
-            <Detail label="Joined" value={new Date(user.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })} />
-            <Detail label="Total Orders" value={String(user.totalOrders || 0)} />
-            <Detail label="Total Spent" value={`₹${(user.totalSpent || 0).toLocaleString('en-IN')}`} />
-          </div>
-          <p className="text-xs text-muted-foreground">User ID: {user.id}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Detail({ label, value }: { label: string; value: string }) {
-  return (
-    <div>
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-sm font-medium text-foreground capitalize">{value}</p>
     </div>
   );
 }

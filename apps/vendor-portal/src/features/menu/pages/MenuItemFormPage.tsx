@@ -24,7 +24,6 @@ import { staggerContainer, fadeInUp } from '@/shared/utils/animations';
 import { Button } from '@/shared/components/ui/Button';
 import { Input, Textarea } from '@/shared/components/ui/Input';
 import { Card } from '@/shared/components/ui/Card';
-import { Badge } from '@/shared/components/ui/Badge';
 import {
   Select,
   SelectTrigger,
@@ -73,10 +72,16 @@ type MenuItemFormValues = z.infer<typeof menuItemSchema>;
 
 const DIETARY_TAG_OPTIONS = [
   { value: 'vegetarian', label: 'Vegetarian' },
+  { value: 'non-vegetarian', label: 'Non-Veg' },
+  { value: 'eggetarian', label: 'Eggetarian' },
   { value: 'vegan', label: 'Vegan' },
+  { value: 'jain', label: 'Jain' },
   { value: 'gluten-free', label: 'Gluten-Free' },
   { value: 'halal', label: 'Halal' },
+  { value: 'kosher', label: 'Kosher' },
   { value: 'nut-free', label: 'Nut-Free' },
+  { value: 'dairy-free', label: 'Dairy-Free' },
+  { value: 'sugar-free', label: 'Sugar-Free' },
 ];
 
 const NEW_CATEGORY_VALUE = '__new__';
@@ -617,13 +622,42 @@ export default function MenuItemFormPage() {
                     </div>
                   )}
                 />
+                {/* Custom dietary tag input */}
+                <Controller
+                  name="dietaryTags"
+                  control={control}
+                  render={({ field }) => (
+                    <div className="mt-2">
+                      <input
+                        type="text"
+                        placeholder="Add custom tag (press Enter)"
+                        className="h-9 w-full max-w-xs rounded-lg border border-input bg-background px-3 text-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            const val = (e.target as HTMLInputElement).value.trim().toLowerCase();
+                            if (val && !(field.value ?? []).includes(val)) {
+                              field.onChange([...(field.value ?? []), val]);
+                              (e.target as HTMLInputElement).value = '';
+                            }
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
+                />
                 {watchedDietaryTags.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1">
                     {watchedDietaryTags.map((tag) => (
-                      <Badge key={tag} variant="brand" size="sm">
-                        {DIETARY_TAG_OPTIONS.find((o) => o.value === tag)
-                          ?.label || tag}
-                      </Badge>
+                      <span key={tag} className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                        {DIETARY_TAG_OPTIONS.find((o) => o.value === tag)?.label || tag}
+                        <button type="button" onClick={() => {
+                          const current = watchedDietaryTags.filter(t => t !== tag);
+                          setValue('dietaryTags', current);
+                        }} className="ml-0.5 hover:text-destructive">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
                     ))}
                   </div>
                 )}

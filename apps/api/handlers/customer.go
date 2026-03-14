@@ -305,8 +305,13 @@ func (h *CustomerHandler) CompleteOnboarding(c *gin.Context) {
 }
 
 // SkipOnboarding marks onboarding as complete without saving data.
+// POST /customer/onboarding/skip — no request body required
 func (h *CustomerHandler) SkipOnboarding(c *gin.Context) {
-	userID, _ := middleware.GetUserID(c)
+	userID, exists := middleware.GetUserID(c)
+	if !exists {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+		return
+	}
 
 	var profile models.CustomerProfile
 	result := database.DB.Where("user_id = ?", userID).First(&profile)
@@ -316,7 +321,11 @@ func (h *CustomerHandler) SkipOnboarding(c *gin.Context) {
 			OnboardingCompleted: true,
 			OnboardingStep:      3,
 		}
-		database.DB.Create(&profile)
+		if err := database.DB.Create(&profile).Error; err != nil {
+			log.Printf("Failed to create customer profile on skip: %v", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to skip onboarding"})
+			return
+		}
 	} else {
 		database.DB.Model(&profile).Updates(map[string]interface{}{
 			"onboarding_completed": true,

@@ -53,6 +53,7 @@ func SetupRouter() *gin.Engine {
 	addressHandler := handlers.NewAddressHandler()
 	preferenceHandler := handlers.NewPreferenceHandler()
 	currencyHandler := handlers.NewCurrencyHandler()
+	adminHandler := handlers.NewAdminHandler()
 
 	// Health check endpoints
 	r.GET("/health", healthHandler.Health)
@@ -245,33 +246,29 @@ func SetupRouter() *gin.Engine {
 		admin.Use(middleware.AuthMiddleware(), middleware.RequireAdmin())
 		{
 			// Dashboard
-			// admin.GET("/dashboard", adminHandler.GetDashboard)
-			// admin.GET("/analytics", adminHandler.GetAnalytics)
+			admin.GET("/stats", adminHandler.GetStats)
+			admin.GET("/activities", adminHandler.GetActivities)
+			admin.GET("/analytics", adminHandler.GetAnalytics)
 
 			// User management
-			// admin.GET("/users", adminHandler.GetUsers)
-			// admin.GET("/users/:id", adminHandler.GetUser)
-			// admin.PUT("/users/:id/suspend", adminHandler.SuspendUser)
-			// admin.PUT("/users/:id/activate", adminHandler.ActivateUser)
+			admin.GET("/users", adminHandler.GetUsers)
+			admin.GET("/users/:id", adminHandler.GetUser)
+			admin.PUT("/users/:id/suspend", adminHandler.SuspendUser)
+			admin.PUT("/users/:id/activate", adminHandler.ActivateUser)
 
 			// Chef management
-			// admin.GET("/chefs", adminHandler.GetChefs)
-			// admin.PUT("/chefs/:id/verify", adminHandler.VerifyChef)
-			// admin.PUT("/chefs/:id/reject", adminHandler.RejectChef)
-			// admin.PUT("/chefs/:id/suspend", adminHandler.SuspendChef)
+			admin.GET("/chefs", adminHandler.GetChefs)
+			admin.PUT("/chefs/:id/verify", adminHandler.VerifyChef)
+			admin.PUT("/chefs/:id/reject", adminHandler.RejectChef)
+			admin.PUT("/chefs/:id/suspend", adminHandler.SuspendChef)
 
 			// Order management
-			// admin.GET("/orders", adminHandler.GetAllOrders)
-			// admin.GET("/orders/:id", adminHandler.GetOrderDetails)
+			admin.GET("/orders", adminHandler.GetAllOrders)
+			admin.GET("/orders/:id", adminHandler.GetOrderDetails)
 
 			// Settings
-			// admin.GET("/settings", adminHandler.GetSettings)
-			// admin.PUT("/settings", adminHandler.UpdateSettings)
-
-			// Content moderation
-			// admin.GET("/moderation/posts", adminHandler.GetFlaggedPosts)
-			// admin.PUT("/moderation/posts/:id/approve", adminHandler.ApprovePost)
-			// admin.PUT("/moderation/posts/:id/reject", adminHandler.RejectPost)
+			admin.GET("/settings", adminHandler.GetSettings)
+			admin.PUT("/settings", adminHandler.UpdateSettings)
 		}
 
 		// Addresses

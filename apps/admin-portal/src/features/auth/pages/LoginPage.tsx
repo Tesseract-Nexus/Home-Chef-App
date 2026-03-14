@@ -159,26 +159,6 @@ export default function LoginPage() {
             </Button>
           </motion.div>
 
-          {/* Divider */}
-          <motion.div variants={fadeInUp} className="my-6 flex items-center gap-4">
-            <div className="h-px flex-1 bg-border" />
-            <span className="text-sm text-muted-foreground">or</span>
-            <div className="h-px flex-1 bg-border" />
-          </motion.div>
-
-          {/* Email login */}
-          <motion.div variants={fadeInUp}>
-            <Button
-              variant="default"
-              size="xl"
-              fullWidth
-              onClick={() => login()}
-              className="justify-center rounded-xl"
-            >
-              Sign in with Email
-            </Button>
-          </motion.div>
-
           {/* Security notice */}
           <motion.div variants={fadeInUp} className="mt-8">
             <div className="rounded-xl border border-border bg-muted/50 p-4">

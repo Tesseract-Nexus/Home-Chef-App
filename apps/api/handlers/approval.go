@@ -504,3 +504,77 @@ func (h *ApprovalHandler) GetChefApprovalRequests(c *gin.Context) {
 		},
 	})
 }
+
+// RespondToApprovalRequest allows a chef to respond to an admin request
+// PUT /chef/admin-requests/:id/respond — accessible to chefs
+func (h *ApprovalHandler) RespondToApprovalRequest(c *gin.Context) {
+	userID, _ := middleware.GetUserID(c)
+	requestID, err := uuid.Parse(c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request ID"})
+		return
+	}
+
+	var req struct {
+		Response string `json:"response" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Response message is required"})
+		return
+	}
+
+	// Verify the approval belongs to this chef
+	var chef models.ChefProfile
+	if err := database.DB.Where("user_id = ?", userID).First(&chef).Error; err != nil {
+		c.JSON(http.StatusForbidden, gin.H{"error": "No kitchen profile found"})
+		return
+	}
+
+	var approval models.ApprovalRequest
+	if err := database.DB.Where("id = ? AND chef_id = ?", requestID, chef.ID).First(&approval).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Request not found"})
+		return
+	}
+
+	// Update status back to pending (chef has responded)
+	oldStatus := string(approval.Status)
+	database.DB.Model(&approval).Updates(map[string]interface{}{
+		"status": models.ApprovalPending,
+	})
+
+	// Create history entry for the chef's response
+	history := models.ApprovalRequestHistory{
+		ApprovalID:  approval.ID,
+		FromStatus:  oldStatus,
+		ToStatus:    string(models.ApprovalPending),
+		ChangedByID: userID,
+		Notes:       req.Response,
+	}
+	database.DB.Create(&history)
+
+	// Publish NATS event to notify admins
+	if err := services.PublishEvent(services.SubjectApprovalCreated, "approval.chef_responded", userID, map[string]interface{}{
+		"approval_id": approval.ID.String(),
+		"type":        string(approval.Type),
+		"chef_id":     chef.ID.String(),
+		"title":       approval.Title,
+		"response":    req.Response,
+	}); err != nil {
+		log.Printf("Failed to publish chef response event: %v", err)
+	}
+
+	// Create notification for all admin users
+	var admins []models.User
+	database.DB.Where("role = ?", models.RoleAdmin).Find(&admins)
+	for _, admin := range admins {
+		notif := &models.Notification{
+			UserID:  admin.ID,
+			Type:    "chef_responded",
+			Title:   "Chef Responded: " + approval.Title,
+			Message: req.Response,
+		}
+		database.DB.Create(notif)
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Response sent to admin"})
+}

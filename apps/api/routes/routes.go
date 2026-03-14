@@ -166,6 +166,7 @@ func SetupRouter() *gin.Engine {
 			chefDashboard.PUT("/settings", chefHandler.UpdateChefSettings)
 			chefDashboard.GET("/analytics", chefHandler.GetChefAnalytics)
 			chefDashboard.GET("/admin-requests", approvalHandler.GetChefApprovalRequests)
+			chefDashboard.PUT("/admin-requests/:id/respond", approvalHandler.RespondToApprovalRequest)
 		}
 
 		// Customer order routes

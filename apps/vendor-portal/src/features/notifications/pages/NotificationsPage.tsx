@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import {
   Bell,
   CheckCircle,
@@ -11,6 +13,7 @@ import {
   Loader2,
   CheckCheck,
   Clock,
+  Send,
 } from 'lucide-react';
 import { apiClient } from '@/shared/services/api-client';
 
@@ -212,12 +215,15 @@ export default function NotificationsPage() {
                     )}
 
                     {(req.status === 'info_requested' || req.status === 'rejected') && (
-                      <div className="mt-3">
-                        <a href="/profile"
-                          className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
-                          <ChefHat className="h-3.5 w-3.5" />
-                          Update Profile
-                        </a>
+                      <div className="mt-3 space-y-3">
+                        <div className="flex items-center gap-2">
+                          <a href="/profile"
+                            className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+                            <ChefHat className="h-3.5 w-3.5" />
+                            Update Profile
+                          </a>
+                        </div>
+                        <RespondForm requestId={req.id} />
                       </div>
                     )}
                   </div>
@@ -331,6 +337,52 @@ export default function NotificationsPage() {
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+function RespondForm({ requestId }: { requestId: string }) {
+  const [response, setResponse] = useState('');
+  const [sending, setSending] = useState(false);
+  const queryClient = useQueryClient();
+
+  const handleSend = async () => {
+    if (!response.trim()) {
+      toast.error('Please enter a response');
+      return;
+    }
+    setSending(true);
+    try {
+      await apiClient.put(`/chef/admin-requests/${requestId}/respond`, { response: response.trim() });
+      toast.success('Response sent to admin');
+      setResponse('');
+      queryClient.invalidateQueries({ queryKey: ['chef-admin-requests'] });
+    } catch {
+      toast.error('Failed to send response');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="rounded-lg border border-border bg-muted/30 p-3">
+      <textarea
+        value={response}
+        onChange={(e) => setResponse(e.target.value)}
+        placeholder="Type your response to the admin... (e.g., I've uploaded the FSSAI license, please review)"
+        rows={2}
+        className="w-full rounded-lg border border-input bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring resize-none"
+      />
+      <div className="mt-2 flex justify-end">
+        <button
+          onClick={handleSend}
+          disabled={sending || !response.trim()}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-success px-4 py-1.5 text-xs font-medium text-success-foreground hover:bg-success/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {sending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+          Respond & Send
+        </button>
+      </div>
     </div>
   );
 }

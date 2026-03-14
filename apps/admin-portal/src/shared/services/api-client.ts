@@ -84,11 +84,7 @@ class ApiClient {
       throw error;
     }
 
-    const json = await response.json();
-    if (json && typeof json === 'object' && 'data' in json && 'pagination' in json) {
-      return json.data;
-    }
-    return json;
+    return await response.json();
   }
 
   async get<T>(endpoint: string, params?: RequestOptions['params']): Promise<T> {

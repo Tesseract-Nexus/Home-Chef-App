@@ -11,41 +11,87 @@ import {
   Clock,
   XCircle,
   Loader2,
+  MapPin,
+  UtensilsCrossed,
+  IndianRupee,
+  FileText,
+  Mail,
+  Phone,
+  Circle,
 } from 'lucide-react';
 import { apiClient } from '@/shared/services/api-client';
-import type { OnboardingStatus } from '@/shared/types';
 
 interface Chef {
   id: string;
   userId: string;
   businessName: string;
+  description: string;
   cuisines: string[];
+  specialties: string[];
+  profileImage: string;
   rating: number;
+  totalReviews: number;
   totalOrders: number;
+  totalRevenue: number;
+  menuItemCount: number;
+  documentCount: number;
   verified: boolean;
-  isOnline: boolean;
-  onboardingStatus?: OnboardingStatus;
+  isActive: boolean;
+  acceptingOrders: boolean;
+  onlineStatus: string;
+  ownerName: string;
+  ownerEmail: string;
+  ownerPhone: string;
+  addressLine1: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  serviceRadius: number;
+  prepTime: string;
+  minimumOrder: number;
   createdAt: string;
+}
+
+interface ChefsResponse {
+  data: Chef[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+  };
 }
 
 export default function ChefsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [page, setPage] = useState(1);
 
-  const { data: chefs, isLoading } = useQuery({
-    queryKey: ['admin-chefs', search, statusFilter],
+  const { data, isLoading } = useQuery({
+    queryKey: ['admin-chefs', search, statusFilter, page],
     queryFn: () =>
-      apiClient.get<Chef[]>('/admin/chefs', {
+      apiClient.get<ChefsResponse>('/admin/chefs', {
         search: search || undefined,
         status: statusFilter !== 'all' ? statusFilter : undefined,
+        page,
+        limit: 20,
       }),
   });
+
+  const resp = data as unknown as ChefsResponse | undefined;
+  const chefs = resp?.data ?? [];
+  const pagination = resp?.pagination;
 
   return (
     <div className="space-y-6">
       <div className="page-header">
-        <h1 className="page-title">Chefs</h1>
-        <p className="page-description">Manage and verify home chef registrations</p>
+        <h1 className="page-title">Chefs / Kitchens</h1>
+        <p className="page-description">
+          Manage home chef registrations and kitchen details
+          {pagination && <span className="ml-1 font-medium">({pagination.total} total)</span>}
+        </p>
       </div>
 
       {/* Filters */}
@@ -54,9 +100,9 @@ export default function ChefsPage() {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
-            placeholder="Search chefs by name or cuisine..."
+            placeholder="Search by kitchen name or cuisine..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             className="h-10 w-full rounded-lg border border-input bg-card pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring"
           />
         </div>
@@ -65,92 +111,152 @@ export default function ChefsPage() {
           <Filter className="h-4 w-4 text-muted-foreground" />
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
             className="h-10 rounded-lg border border-input bg-card px-3 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring"
           >
             <option value="all">All Status</option>
-            <option value="submitted">Pending Review</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
+            <option value="pending">Pending Verification</option>
+            <option value="approved">Verified</option>
           </select>
         </div>
       </div>
 
-      {/* Chefs Grid */}
+      {/* Chefs List */}
       {isLoading ? (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
+      ) : chefs.length === 0 ? (
+        <div className="rounded-xl border border-border bg-card p-20 text-center">
+          <ChefHat className="mx-auto h-12 w-12 text-muted-foreground/50" />
+          <p className="mt-4 text-muted-foreground">No chefs found</p>
+        </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {chefs?.map((chef) => (
-            <div key={chef.id} className="rounded-xl border border-border bg-card p-6 shadow-card card-hover-lift">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                    <ChefHat className="h-6 w-6 text-primary" />
+        <div className="space-y-4">
+          {chefs.map((chef) => (
+            <div key={chef.id} className="rounded-xl border border-border bg-card shadow-card overflow-hidden">
+              {/* Header */}
+              <div className="flex items-start justify-between p-6 pb-4">
+                <div className="flex items-center gap-4">
+                  <div className="relative flex h-14 w-14 items-center justify-center rounded-xl bg-primary/10">
+                    {chef.profileImage ? (
+                      <img src={chef.profileImage} alt={chef.businessName} className="h-14 w-14 rounded-xl object-cover" />
+                    ) : (
+                      <ChefHat className="h-7 w-7 text-primary" />
+                    )}
+                    <OnlineIndicator status={chef.onlineStatus} />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-foreground">{chef.businessName}</h3>
-                    <div className="flex items-center gap-2 mt-1">
-                      <OnboardingBadge status={chef.onboardingStatus} verified={chef.verified} />
-                      {chef.isOnline && (
-                        <span className="flex items-center gap-1 text-xs text-success">
-                          <span className="h-1.5 w-1.5 rounded-full bg-success" />
-                          Online
-                        </span>
-                      )}
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-lg font-semibold text-foreground">{chef.businessName || 'Unnamed Kitchen'}</h3>
+                      <VerificationBadge verified={chef.verified} />
                     </div>
+                    <p className="text-sm text-muted-foreground">
+                      by {chef.ownerName} &middot; {chef.ownerEmail}
+                    </p>
                   </div>
                 </div>
-                <button className="rounded-lg p-1.5 hover:bg-secondary transition-colors">
-                  <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
+                <button className="rounded-lg p-2 hover:bg-secondary transition-colors">
+                  <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
                 </button>
               </div>
 
-              {/* Cuisines */}
-              <div className="mt-4 flex flex-wrap gap-1.5">
-                {chef.cuisines.slice(0, 3).map((cuisine) => (
-                  <span key={cuisine} className="rounded-md bg-secondary px-2 py-0.5 text-xs text-secondary-foreground">
-                    {cuisine}
-                  </span>
-                ))}
-                {chef.cuisines.length > 3 && (
-                  <span className="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                    +{chef.cuisines.length - 3}
-                  </span>
+              {/* Stats Row */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4 px-6 pb-4">
+                <Stat icon={Star} label="Rating" value={chef.rating > 0 ? `${chef.rating.toFixed(1)} (${chef.totalReviews})` : 'No reviews'} />
+                <Stat icon={ShoppingBag} label="Orders" value={String(chef.totalOrders)} />
+                <Stat icon={IndianRupee} label="Revenue" value={`₹${(chef.totalRevenue || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}`} />
+                <Stat icon={UtensilsCrossed} label="Menu Items" value={String(chef.menuItemCount)} />
+                <Stat icon={FileText} label="Documents" value={String(chef.documentCount)} />
+                <Stat icon={Clock} label="Prep Time" value={chef.prepTime || '--'} />
+              </div>
+
+              {/* Kitchen Details */}
+              <div className="border-t border-border bg-muted/30 px-6 py-4">
+                <div className="flex flex-wrap gap-x-8 gap-y-2 text-sm">
+                  {chef.city && (
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <MapPin className="h-3.5 w-3.5" />
+                      {[chef.addressLine1, chef.city, chef.state].filter(Boolean).join(', ')}
+                      {chef.postalCode && ` - ${chef.postalCode}`}
+                    </div>
+                  )}
+                  {chef.ownerPhone && (
+                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                      <Phone className="h-3.5 w-3.5" />
+                      {chef.ownerPhone}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    <Mail className="h-3.5 w-3.5" />
+                    {chef.ownerEmail}
+                  </div>
+                </div>
+
+                {/* Cuisines & Specialties */}
+                {(chef.cuisines?.length > 0 || chef.specialties?.length > 0) && (
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {chef.cuisines?.map((c) => (
+                      <span key={c} className="rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{c}</span>
+                    ))}
+                    {chef.specialties?.map((s) => (
+                      <span key={s} className="rounded-md bg-secondary px-2 py-0.5 text-xs text-secondary-foreground">{s}</span>
+                    ))}
+                  </div>
                 )}
-              </div>
 
-              {/* Stats */}
-              <div className="mt-4 flex items-center gap-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <Star className="h-4 w-4 text-warning" />
-                  <span className="font-medium text-foreground">{chef.rating.toFixed(1)}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <ShoppingBag className="h-4 w-4" />
-                  <span>{chef.totalOrders} orders</span>
+                <div className="mt-3 flex items-center gap-4 text-xs text-muted-foreground">
+                  <span>Min order: ₹{chef.minimumOrder || 0}</span>
+                  <span>Service radius: {chef.serviceRadius || 0} km</span>
+                  <span>Joined: {new Date(chef.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                 </div>
               </div>
-
-              <p className="mt-3 text-xs text-muted-foreground">
-                Joined {new Date(chef.createdAt).toLocaleDateString()}
-              </p>
             </div>
           ))}
-          {(!chefs || chefs.length === 0) && (
-            <div className="col-span-full py-20 text-center text-muted-foreground">
-              No chefs found
-            </div>
-          )}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {pagination && pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between rounded-xl border border-border bg-card px-6 py-3">
+          <p className="text-sm text-muted-foreground">
+            Page {pagination.page} of {pagination.totalPages} ({pagination.total} kitchens)
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              disabled={!pagination.hasPrev}
+              className="rounded-lg border border-border px-3 py-1.5 text-sm hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
+            <button
+              onClick={() => setPage(p => p + 1)}
+              disabled={!pagination.hasNext}
+              className="rounded-lg border border-border px-3 py-1.5 text-sm hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
+          </div>
         </div>
       )}
     </div>
   );
 }
 
-function OnboardingBadge({ status, verified }: { status?: OnboardingStatus; verified: boolean }) {
+function Stat({ icon: Icon, label, value }: { icon: typeof Star; label: string; value: string }) {
+  return (
+    <div>
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Icon className="h-3.5 w-3.5" />
+        {label}
+      </div>
+      <p className="mt-0.5 text-sm font-medium text-foreground">{value}</p>
+    </div>
+  );
+}
+
+function VerificationBadge({ verified }: { verified: boolean }) {
   if (verified) {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
@@ -159,28 +265,21 @@ function OnboardingBadge({ status, verified }: { status?: OnboardingStatus; veri
       </span>
     );
   }
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
+      <XCircle className="h-3 w-3" />
+      Pending
+    </span>
+  );
+}
 
-  switch (status) {
-    case 'submitted':
-      return (
-        <span className="inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-xs font-medium text-warning">
-          <Clock className="h-3 w-3" />
-          Pending
-        </span>
-      );
-    case 'rejected':
-      return (
-        <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
-          <XCircle className="h-3 w-3" />
-          Rejected
-        </span>
-      );
-    default:
-      return (
-        <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-          <Clock className="h-3 w-3" />
-          {status || 'Not started'}
-        </span>
-      );
-  }
+function OnlineIndicator({ status }: { status: string }) {
+  const colors: Record<string, string> = {
+    online: 'text-success',
+    away: 'text-warning',
+    offline: 'text-muted-foreground',
+  };
+  return (
+    <Circle className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 fill-current ${colors[status] || colors.offline}`} />
+  );
 }

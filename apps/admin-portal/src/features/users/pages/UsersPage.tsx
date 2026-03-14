@@ -56,8 +56,9 @@ export default function UsersPage() {
       }),
   });
 
-  const users = (data as unknown as UsersResponse)?.data ?? [];
-  const pagination = (data as unknown as UsersResponse)?.pagination;
+  const resp = data as unknown as UsersResponse | undefined;
+  const users = resp?.data ?? [];
+  const pagination = resp?.pagination;
 
   return (
     <div className="space-y-6">

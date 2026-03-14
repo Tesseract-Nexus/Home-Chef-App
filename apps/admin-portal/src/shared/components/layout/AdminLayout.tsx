@@ -22,7 +22,7 @@ import { ErrorBoundary } from '@/shared/components/ErrorBoundary';
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Users', href: '/users', icon: Users },
-  { name: 'Chefs', href: '/chefs', icon: ChefHat },
+  { name: 'Chefs / Kitchens', href: '/chefs', icon: ChefHat },
   { name: 'Orders', href: '/orders', icon: ShoppingBag },
   { name: 'Delivery', href: '/delivery', icon: Truck },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },

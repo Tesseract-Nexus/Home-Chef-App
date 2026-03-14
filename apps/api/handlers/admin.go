@@ -309,8 +309,53 @@ func (h *AdminHandler) GetChefs(c *gin.Context) {
 	var chefs []models.ChefProfile
 	query.Order("created_at DESC").Offset(offset).Limit(limit).Find(&chefs)
 
+	// Enrich with stats
+	type ChefWithStats struct {
+		models.ChefProfile
+		OwnerName      string  `json:"ownerName"`
+		OwnerEmail     string  `json:"ownerEmail"`
+		OwnerPhone     string  `json:"ownerPhone"`
+		TotalOrders    int     `json:"totalOrders"`
+		TotalRevenue   float64 `json:"totalRevenue"`
+		MenuItemCount  int     `json:"menuItemCount"`
+		DocumentCount  int     `json:"documentCount"`
+		OnlineStatus   string  `json:"onlineStatus"`
+	}
+
+	var response []ChefWithStats
+	for _, ch := range chefs {
+		cws := ChefWithStats{ChefProfile: ch}
+		cws.OwnerName = ch.User.FirstName + " " + ch.User.LastName
+		cws.OwnerEmail = ch.User.Email
+		cws.OwnerPhone = ch.User.Phone
+
+		var orderCount int64
+		var revenue float64
+		db.Model(&models.Order{}).Where("chef_id = ?", ch.ID).Count(&orderCount)
+		db.Model(&models.Order{}).Where("chef_id = ? AND payment_status = ?", ch.ID, "completed").
+			Select("COALESCE(SUM(total), 0)").Scan(&revenue)
+		cws.TotalOrders = int(orderCount)
+		cws.TotalRevenue = revenue
+
+		var menuCount, docCount int64
+		db.Model(&models.MenuItem{}).Where("chef_id = ?", ch.ID).Count(&menuCount)
+		db.Model(&models.ChefDocument{}).Where("chef_id = ?", ch.ID).Count(&docCount)
+		cws.MenuItemCount = int(menuCount)
+		cws.DocumentCount = int(docCount)
+
+		if ch.AcceptingOrders && ch.IsActive {
+			cws.OnlineStatus = "online"
+		} else if ch.IsActive {
+			cws.OnlineStatus = "away"
+		} else {
+			cws.OnlineStatus = "offline"
+		}
+
+		response = append(response, cws)
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"data": chefs,
+		"data": response,
 		"pagination": gin.H{
 			"page":       page,
 			"limit":      limit,

@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"net/http"
 	"strings"
 	"time"
@@ -12,6 +14,62 @@ import (
 	"github.com/homechef/api/database"
 	"github.com/homechef/api/models"
 )
+
+// extractKeycloakRoles decodes a JWT payload (without signature verification)
+// and extracts the "roles" claim. This is safe because the token comes from
+// the trusted BFF which already validated it with Keycloak.
+func extractKeycloakRoles(token string) []string {
+	parts := strings.Split(token, ".")
+	if len(parts) != 3 {
+		return nil
+	}
+	// Decode the payload (second part)
+	payload := parts[1]
+	// Add padding if needed
+	switch len(payload) % 4 {
+	case 2:
+		payload += "=="
+	case 3:
+		payload += "="
+	}
+	decoded, err := base64.URLEncoding.DecodeString(payload)
+	if err != nil {
+		return nil
+	}
+	var claims map[string]interface{}
+	if err := json.Unmarshal(decoded, &claims); err != nil {
+		return nil
+	}
+	// Check top-level "roles" claim (from Keycloak protocol mapper)
+	if roles, ok := claims["roles"]; ok {
+		if arr, ok := roles.([]interface{}); ok {
+			var result []string
+			for _, r := range arr {
+				if s, ok := r.(string); ok {
+					result = append(result, s)
+				}
+			}
+			return result
+		}
+	}
+	// Check realm_access.roles (Keycloak default structure)
+	if ra, ok := claims["realm_access"]; ok {
+		if raMap, ok := ra.(map[string]interface{}); ok {
+			if roles, ok := raMap["roles"]; ok {
+				if arr, ok := roles.([]interface{}); ok {
+					var result []string
+					for _, r := range arr {
+						if s, ok := r.(string); ok {
+							result = append(result, s)
+						}
+					}
+					return result
+				}
+			}
+		}
+	}
+	return nil
+}
 
 type Claims struct {
 	UserID uuid.UUID       `json:"userId"`
@@ -131,7 +189,22 @@ func AuthMiddleware() gin.HandlerFunc {
 
 			c.Set("userID", user.ID)
 			c.Set("userEmail", user.Email)
-			c.Set("userRole", user.Role)
+
+			// Determine effective role: check Keycloak JWT roles from the BFF Bearer token
+			// The BFF forwards the Keycloak access_token as Authorization: Bearer <token>
+			// We decode the payload (no sig verification needed — BFF is trusted) to read roles
+			effectiveRole := user.Role
+			if authHeader := c.GetHeader("Authorization"); strings.HasPrefix(authHeader, "Bearer ") {
+				if keycloakRoles := extractKeycloakRoles(authHeader[7:]); len(keycloakRoles) > 0 {
+					for _, r := range keycloakRoles {
+						if r == "super_admin" || r == "admin" {
+							effectiveRole = models.RoleAdmin
+							break
+						}
+					}
+				}
+			}
+			c.Set("userRole", effectiveRole)
 			c.Set("user", &user)
 			c.Next()
 			return

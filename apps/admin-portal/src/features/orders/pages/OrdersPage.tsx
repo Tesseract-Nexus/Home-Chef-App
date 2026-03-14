@@ -37,14 +37,18 @@ export default function OrdersPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  const { data: orders, isLoading } = useQuery({
+  const { data: ordersData, isLoading } = useQuery({
     queryKey: ['admin-orders', search, statusFilter],
     queryFn: () =>
-      apiClient.get<Order[]>('/admin/orders', {
+      apiClient.get<{ data: Order[]; pagination: unknown }>('/admin/orders', {
         search: search || undefined,
         status: statusFilter !== 'all' ? statusFilter : undefined,
       }),
   });
+  const rawOrders = ordersData as unknown;
+  const orders: Order[] = Array.isArray(rawOrders)
+    ? rawOrders
+    : (rawOrders as { data: Order[] })?.data ?? [];
 
   return (
     <div className="space-y-6">

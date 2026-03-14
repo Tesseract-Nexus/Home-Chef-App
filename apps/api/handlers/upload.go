@@ -376,8 +376,12 @@ func (h *UploadHandler) GetOnboardingStatus(c *gin.Context) {
 		step = 4 // Documents done
 	}
 
-	// Consider completed when verified OR has business name + documents
-	completed := chef.IsVerified || (chef.BusinessName != "" && docCount > 0 && step >= 4)
+	// Consider completed when:
+	// - Chef is verified (admin approved), OR
+	// - Chef has submitted their profile (business name filled)
+	// The chef can access the dashboard while awaiting admin approval.
+	// Documents and verification are handled through the approval workflow.
+	completed := chef.IsVerified || chef.BusinessName != ""
 
 	c.JSON(http.StatusOK, gin.H{
 		"status":    map[bool]string{true: "completed", false: "in_progress"}[completed],

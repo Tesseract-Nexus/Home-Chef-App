@@ -65,7 +65,7 @@ function validateStep(step: number, data: ReturnType<typeof useOnboardingStore.g
 
 export default function OnboardingPage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, onboardingStatus, adminNotes } = useAuth();
   const {
     currentStep,
     data,
@@ -183,6 +183,36 @@ export default function OnboardingPage() {
       </header>
 
       <div className="mx-auto max-w-4xl px-4 py-8">
+        {/* Rejection/Info Request Banner */}
+        {onboardingStatus === 'rejected' && (
+          <div className="mb-6 rounded-xl border border-destructive/30 bg-destructive/5 p-4">
+            <h3 className="font-semibold text-destructive">Application Rejected</h3>
+            <p className="mt-1 text-sm text-destructive/80">
+              Your previous application was not approved. Please review the feedback below and re-submit.
+            </p>
+            {adminNotes && (
+              <div className="mt-3 rounded-lg bg-destructive/10 p-3">
+                <p className="text-xs font-medium text-destructive">Admin Notes:</p>
+                <p className="mt-1 text-sm text-foreground">{adminNotes}</p>
+              </div>
+            )}
+          </div>
+        )}
+        {onboardingStatus === 'info_requested' && (
+          <div className="mb-6 rounded-xl border border-warning/30 bg-warning/5 p-4">
+            <h3 className="font-semibold text-warning">More Information Needed</h3>
+            <p className="mt-1 text-sm text-warning/80">
+              The admin team needs additional information before approving your application.
+            </p>
+            {adminNotes && (
+              <div className="mt-3 rounded-lg bg-warning/10 p-3">
+                <p className="text-xs font-medium text-warning">Admin Notes:</p>
+                <p className="mt-1 text-sm text-foreground">{adminNotes}</p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Stepper */}
         <div className="mb-8 hidden sm:block">
           <Stepper currentStep={displayStep + 1} totalSteps={TOTAL_DISPLAY_STEPS + 1}>

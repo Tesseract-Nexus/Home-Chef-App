@@ -376,18 +376,49 @@ func (h *UploadHandler) GetOnboardingStatus(c *gin.Context) {
 		step = 4 // Documents done
 	}
 
-	// Consider completed when:
-	// - Chef is verified (admin approved), OR
-	// - Chef has submitted their profile (business name filled)
-	// The chef can access the dashboard while awaiting admin approval.
-	// Documents and verification are handled through the approval workflow.
-	completed := chef.IsVerified || chef.BusinessName != ""
+	// Check if there's a pending or rejected approval request
+	var latestApproval models.ApprovalRequest
+	hasApproval := false
+	approvalStatus := ""
+	approvalNotes := ""
+	if err := database.DB.Where("chef_id = ? AND type = ?", chef.ID, models.ApprovalKitchenOnboarding).
+		Order("created_at DESC").First(&latestApproval).Error; err == nil {
+		hasApproval = true
+		approvalStatus = string(latestApproval.Status)
+		approvalNotes = latestApproval.AdminNotes
+	}
+
+	// Determine onboarding completion:
+	// - Verified → completed (dashboard access)
+	// - Has business name + pending/approved approval → completed (awaiting/passed review)
+	// - Has business name + rejected approval → NOT completed (must re-submit)
+	// - Has business name + info_requested → NOT completed (must provide more info)
+	// - No business name → NOT completed (hasn't started)
+	completed := false
+	onboardingStatus := "not_started"
+	if chef.IsVerified {
+		completed = true
+		onboardingStatus = "verified"
+	} else if chef.BusinessName != "" {
+		if hasApproval && (approvalStatus == "rejected" || approvalStatus == "info_requested") {
+			completed = false
+			onboardingStatus = approvalStatus
+		} else {
+			completed = true
+			onboardingStatus = "submitted"
+			if hasApproval && approvalStatus == "pending" {
+				onboardingStatus = "pending_review"
+			}
+		}
+	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"status":    map[bool]string{true: "completed", false: "in_progress"}[completed],
-		"completed": completed,
-		"step":      step,
-		"chefId":    chef.ID,
+		"status":         onboardingStatus,
+		"completed":      completed,
+		"step":           step,
+		"chefId":         chef.ID,
+		"approvalStatus": approvalStatus,
+		"adminNotes":     approvalNotes,
 		"profile": gin.H{
 			"businessName":  chef.BusinessName,
 			"description":   chef.Description,

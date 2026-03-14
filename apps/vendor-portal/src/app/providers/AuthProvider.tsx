@@ -18,6 +18,8 @@ interface AuthContextValue {
   isLoading: boolean;
   csrfToken: string | null;
   needsOnboarding: boolean;
+  onboardingStatus: string;
+  adminNotes: string;
   login: (provider?: SocialProvider) => void;
   register: () => void;
   logout: () => Promise<void>;
@@ -38,6 +40,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   } = useAuthStore();
   const [needsOnboarding, setNeedsOnboarding] = useState(false);
   const [onboardingChecked, setOnboardingChecked] = useState(false);
+  const [onboardingStatus, setOnboardingStatus] = useState('');
+  const [adminNotes, setAdminNotes] = useState('');
 
   useEffect(() => {
     initialize();
@@ -60,6 +64,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return;
         }
         const status = await res.json();
+        setOnboardingStatus(status.status || '');
+        setAdminNotes(status.adminNotes || '');
         if (status.completed) {
           setNeedsOnboarding(false);
         } else {
@@ -133,6 +139,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
     csrfToken,
     needsOnboarding,
+    onboardingStatus,
+    adminNotes,
     login,
     register,
     logout,

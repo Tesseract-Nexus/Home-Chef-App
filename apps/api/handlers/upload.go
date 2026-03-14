@@ -464,6 +464,22 @@ func (h *UploadHandler) Onboarding(c *gin.Context) {
 		return
 	}
 
+	// Validate uniqueness: business name, email, and phone must be unique
+	if req.BusinessName != "" {
+		var existingByName models.ChefProfile
+		if err := database.DB.Where("business_name = ? AND user_id != ?", req.BusinessName, userID).First(&existingByName).Error; err == nil {
+			c.JSON(http.StatusConflict, gin.H{"error": "A kitchen with this name already exists. Please choose a different name.", "field": "businessName"})
+			return
+		}
+	}
+	if req.Phone != "" {
+		var existingByPhone models.User
+		if err := database.DB.Where("phone = ? AND id != ?", req.Phone, userID).First(&existingByPhone).Error; err == nil {
+			c.JSON(http.StatusConflict, gin.H{"error": "This phone number is already registered with another account.", "field": "phone"})
+			return
+		}
+	}
+
 	// Create chef profile
 	chef := models.ChefProfile{
 		UserID:          userID,
@@ -542,6 +558,22 @@ func (h *UploadHandler) updateOnboarding(c *gin.Context, chef *models.ChefProfil
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
+	}
+
+	// Validate uniqueness on update too
+	if req.BusinessName != "" && req.BusinessName != chef.BusinessName {
+		var existingByName models.ChefProfile
+		if err := database.DB.Where("business_name = ? AND id != ?", req.BusinessName, chef.ID).First(&existingByName).Error; err == nil {
+			c.JSON(http.StatusConflict, gin.H{"error": "A kitchen with this name already exists. Please choose a different name.", "field": "businessName"})
+			return
+		}
+	}
+	if req.Phone != "" {
+		var existingByPhone models.User
+		if err := database.DB.Where("phone = ? AND id != ?", req.Phone, chef.UserID).First(&existingByPhone).Error; err == nil {
+			c.JSON(http.StatusConflict, gin.H{"error": "This phone number is already registered with another account.", "field": "phone"})
+			return
+		}
 	}
 
 	chef.BusinessName = req.BusinessName

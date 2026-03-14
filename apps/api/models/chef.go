@@ -10,7 +10,7 @@ import (
 type ChefProfile struct {
 	ID             uuid.UUID      `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
 	UserID         uuid.UUID      `gorm:"type:uuid;uniqueIndex;not null" json:"userId"`
-	BusinessName   string         `gorm:"not null" json:"businessName"`
+	BusinessName   string         `gorm:"uniqueIndex;not null" json:"businessName"`
 	Description    string         `gorm:"type:text" json:"description"`
 	ProfileImage   string         `gorm:"" json:"profileImage"`
 	BannerImage    string         `gorm:"" json:"bannerImage"`

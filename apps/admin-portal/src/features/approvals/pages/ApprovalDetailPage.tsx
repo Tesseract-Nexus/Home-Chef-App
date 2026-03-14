@@ -409,17 +409,57 @@ function InfoRow({ icon: Icon, label, value }: { icon: typeof Mail; label: strin
 
 function SubmittedDataView({ type, data }: { type: string; data: Record<string, unknown> }) {
   if (type === 'kitchen_onboarding') {
+    const addr = data.kitchenAddress as Record<string, string> | undefined;
+    const hours = data.operatingHours as Record<string, { open: string; close: string }> | undefined;
+    const addressStr = addr ? [addr.line1, addr.line2, addr.city, addr.state, addr.postalCode].filter(Boolean).join(', ') : undefined;
+
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <DataField label="Business Name" value={data.businessName} />
-        <DataField label="Description" value={data.description} />
-        <DataField label="Cuisines" value={Array.isArray(data.cuisines) ? (data.cuisines as string[]).join(', ') : data.cuisines} />
-        <DataField label="Address" value={data.address} />
-        <DataField label="Prep Time" value={data.prepTime ? `${data.prepTime} mins` : undefined} />
-        <DataField label="Max Orders/Day" value={data.maxOrdersPerDay} />
-        <DataField label="Delivery Radius" value={data.deliveryRadius ? `${data.deliveryRadius} km` : undefined} />
-        <DataField label="FSSAI Number" value={data.fssaiNumber} />
-        {renderExtraFields(data, ['businessName', 'description', 'cuisines', 'address', 'prepTime', 'maxOrdersPerDay', 'deliveryRadius', 'fssaiNumber'])}
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <DataField label="Business Name" value={data.businessName} />
+          <DataField label="Full Name" value={data.fullName} />
+          <DataField label="Email" value={data.email} />
+          <DataField label="Phone" value={data.phone} />
+          <DataField label="Description" value={data.description} />
+          <DataField label="Kitchen Type" value={data.kitchenType} />
+          <DataField label="Cuisines" value={Array.isArray(data.cuisines) ? (data.cuisines as string[]).join(', ') : data.cuisines} />
+          <DataField label="Specialties" value={Array.isArray(data.specialties) && (data.specialties as string[]).length > 0 ? (data.specialties as string[]).join(', ') : undefined} />
+          <DataField label="Prep Time" value={data.prepTime} />
+          <DataField label="Years of Experience" value={data.yearsOfExperience} />
+          <DataField label="Meals Per Day" value={data.mealsPerDay} />
+          <DataField label="Service Radius" value={data.serviceRadius ? `${data.serviceRadius} km` : undefined} />
+          <DataField label="Minimum Order" value={data.minimumOrder ? `₹${data.minimumOrder}` : undefined} />
+          <DataField label="Delivery Fee" value={data.deliveryFee ? `₹${data.deliveryFee}` : undefined} />
+        </div>
+
+        {addressStr && (
+          <div className="rounded-lg bg-muted/50 px-4 py-3">
+            <p className="text-xs text-muted-foreground">Kitchen Address</p>
+            <p className="text-sm font-medium text-foreground mt-0.5">{addressStr}</p>
+          </div>
+        )}
+
+        {hours && Object.keys(hours).length > 0 && (
+          <div className="rounded-lg bg-muted/50 px-4 py-3">
+            <p className="text-xs text-muted-foreground mb-2">Operating Hours</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map((day) => {
+                const h = hours[day];
+                return (
+                  <div key={day} className="text-sm">
+                    <span className="font-medium text-foreground capitalize">{day.slice(0, 3)}: </span>
+                    <span className="text-muted-foreground">{h ? `${h.open} - ${h.close}` : 'Closed'}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <DataField label="Terms Accepted" value={data.acceptedTerms ? 'Yes' : 'No'} />
+          <DataField label="Hygiene Policy Accepted" value={data.acceptedHygienePolicy ? 'Yes' : 'No'} />
+        </div>
       </div>
     );
   }
@@ -474,7 +514,21 @@ function SubmittedDataView({ type, data }: { type: string; data: Record<string, 
 
 function DataField({ label, value }: { label: string; value: unknown }) {
   if (value === undefined || value === null || value === '') return null;
-  const displayValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
+  let displayValue: string;
+  if (Array.isArray(value)) {
+    displayValue = value.length > 0 ? value.join(', ') : 'None';
+  } else if (typeof value === 'boolean') {
+    displayValue = value ? 'Yes' : 'No';
+  } else if (typeof value === 'object') {
+    // Format objects nicely instead of raw JSON
+    const obj = value as Record<string, unknown>;
+    const parts = Object.entries(obj)
+      .filter(([, v]) => v !== undefined && v !== null && v !== '')
+      .map(([k, v]) => `${formatLabel(k)}: ${v}`);
+    displayValue = parts.length > 0 ? parts.join(' | ') : 'N/A';
+  } else {
+    displayValue = String(value);
+  }
   return (
     <div className="rounded-lg bg-muted/50 px-4 py-3">
       <p className="text-xs text-muted-foreground">{label}</p>

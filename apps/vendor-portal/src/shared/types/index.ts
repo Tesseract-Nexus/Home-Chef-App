@@ -187,6 +187,7 @@ export interface MenuItem {
   allergens: string[];
   prepTime: number;
   isAvailable: boolean;
+  isApproved: boolean;
   isFeatured: boolean;
   portionSize?: string;
   serves: number;

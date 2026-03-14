@@ -40,6 +40,7 @@ type MenuItem struct {
 	Serves       int            `gorm:"default:1" json:"serves"`
 	SpiceLevel   int            `gorm:"default:0" json:"spiceLevel"`
 	IsAvailable  bool           `gorm:"default:true" json:"isAvailable"`
+	IsApproved   bool           `gorm:"default:false" json:"isApproved"`
 	IsFeatured   bool           `gorm:"default:false" json:"isFeatured"`
 	TotalOrders  int            `gorm:"default:0" json:"totalOrders"`
 	Rating       float64        `gorm:"default:0" json:"rating"`

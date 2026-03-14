@@ -244,6 +244,12 @@ func (h *ApprovalHandler) ApproveRequest(c *gin.Context) {
 		database.DB.Model(&models.ChefDocument{}).
 			Where("chef_id = ? AND status = ?", approval.ChefID, models.DocStatusPending).
 			Update("status", models.DocStatusVerified)
+
+	case models.ApprovalMenuItemNew, models.ApprovalMenuItemUpdate, models.ApprovalPricingChange:
+		// Approve the menu item - make it visible to customers
+		database.DB.Model(&models.MenuItem{}).
+			Where("id = ?", approval.EntityID).
+			Update("is_approved", true)
 	}
 
 	// Publish NATS event
@@ -322,6 +328,12 @@ func (h *ApprovalHandler) RejectRequest(c *gin.Context) {
 				"status":           models.DocStatusRejected,
 				"rejection_reason": req.Notes,
 			})
+
+	case models.ApprovalMenuItemNew, models.ApprovalMenuItemUpdate, models.ApprovalPricingChange:
+		// Rejected menu items stay unapproved (not visible to customers)
+		database.DB.Model(&models.MenuItem{}).
+			Where("id = ?", approval.EntityID).
+			Update("is_approved", false)
 	}
 
 	// Publish NATS event

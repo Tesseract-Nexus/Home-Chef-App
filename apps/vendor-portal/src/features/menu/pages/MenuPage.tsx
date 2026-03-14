@@ -364,14 +364,19 @@ function MenuItemCard({
           )}
         </button>
 
-        {/* Featured badge */}
-        {item.isFeatured && (
-          <div className="absolute bottom-2 left-2">
+        {/* Approval / Featured badges */}
+        <div className="absolute bottom-2 left-2 flex gap-1">
+          {!item.isApproved && (
+            <Badge variant="destructive" size="sm">
+              Pending Approval
+            </Badge>
+          )}
+          {item.isFeatured && (
             <Badge variant="warning" size="sm">
               Featured
             </Badge>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Content */}

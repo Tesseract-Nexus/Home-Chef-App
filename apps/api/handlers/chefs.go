@@ -158,7 +158,7 @@ func (h *ChefHandler) GetChefMenu(c *gin.Context) {
 
 	category := c.Query("category")
 
-	query := database.DB.Where("chef_id = ? AND is_available = ?", chefID, true).Preload("Images")
+	query := database.DB.Where("chef_id = ? AND is_available = ? AND is_approved = ?", chefID, true, true).Preload("Images")
 
 	if category != "" {
 		query = query.Where("category_id = ?", category)

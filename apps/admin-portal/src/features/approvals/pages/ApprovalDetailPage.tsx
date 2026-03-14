@@ -45,10 +45,12 @@ interface ApprovalRequest {
 
 interface ApprovalDocument {
   id: string;
-  name: string;
+  fileName: string;
   type: string;
-  size: number;
-  url?: string;
+  fileSize: number;
+  fileUrl?: string;
+  contentType?: string;
+  status?: string;
 }
 
 interface HistoryEntry {
@@ -274,11 +276,11 @@ export default function ApprovalDetailPage() {
                       <FileText className="h-5 w-5 text-info" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">{doc.name}</p>
-                      <p className="text-xs text-muted-foreground">{doc.type} - {formatFileSize(doc.size)}</p>
+                      <p className="text-sm font-medium text-foreground truncate">{doc.fileName || doc.type}</p>
+                      <p className="text-xs text-muted-foreground">{doc.type}{doc.status ? ` - ${doc.status}` : ''}{doc.fileSize ? ` - ${formatFileSize(doc.fileSize)}` : ''}</p>
                     </div>
                     <a
-                      href={doc.url || `/bff/api/v1/admin/approvals/${id}/documents/${doc.id}`}
+                      href={doc.fileUrl || `/bff/api/v1/admin/approvals/${id}/documents/${doc.id}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
@@ -318,7 +320,7 @@ export default function ApprovalDetailPage() {
             <div className="space-y-3">
               <div className="flex items-center justify-between rounded-lg bg-muted/50 px-4 py-3">
                 <span className="text-sm text-muted-foreground">Request ID</span>
-                <code className="text-xs font-mono text-foreground">{approval.id.slice(0, 8)}...</code>
+                <code className="text-xs font-mono text-foreground">{approval.id?.slice(0, 8) || approval.id}...</code>
               </div>
               <div className="flex items-center justify-between rounded-lg bg-muted/50 px-4 py-3">
                 <span className="text-sm text-muted-foreground">Submitted</span>

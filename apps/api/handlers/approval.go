@@ -148,18 +148,34 @@ func (h *ApprovalHandler) GetApprovalRequest(c *gin.Context) {
 		return
 	}
 
-	response := gin.H{
-		"approval": approval,
-	}
+	// Fetch chef documents for review (all types benefit from seeing docs)
+	var docs []models.ChefDocument
+	database.DB.Where("chef_id = ?", approval.ChefID).Order("created_at DESC").Find(&docs)
 
-	// For document_verification type, also fetch the chef's documents
-	if approval.Type == models.ApprovalDocumentVerification {
-		var docs []models.ChefDocument
-		database.DB.Where("chef_id = ?", approval.ChefID).Order("created_at DESC").Find(&docs)
-		response["documents"] = docs
-	}
-
-	c.JSON(http.StatusOK, response)
+	// Return flat response (not nested under "approval" key)
+	// The frontend expects fields at the top level
+	c.JSON(http.StatusOK, gin.H{
+		"id":            approval.ID,
+		"type":          approval.Type,
+		"status":        approval.Status,
+		"priority":      approval.Priority,
+		"chefId":        approval.ChefID,
+		"submittedById": approval.SubmittedByID,
+		"reviewedById":  approval.ReviewedByID,
+		"entityType":    approval.EntityType,
+		"entityId":      approval.EntityID,
+		"title":         approval.Title,
+		"description":   approval.Description,
+		"submittedData": approval.SubmittedData,
+		"adminNotes":    approval.AdminNotes,
+		"reviewedAt":    approval.ReviewedAt,
+		"createdAt":     approval.CreatedAt,
+		"updatedAt":     approval.UpdatedAt,
+		"chef":          approval.Chef,
+		"submittedBy":   approval.SubmittedBy,
+		"reviewedBy":    approval.ReviewedBy,
+		"documents":     docs,
+	})
 }
 
 // ApproveRequest approves an approval request and applies side effects

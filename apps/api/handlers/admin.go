@@ -144,7 +144,7 @@ func (h *AdminHandler) GetActivities(c *gin.Context) {
 	c.JSON(http.StatusOK, activities)
 }
 
-// GetUsers returns paginated user list with filters
+// GetUsers returns paginated user list with order stats
 func (h *AdminHandler) GetUsers(c *gin.Context) {
 	db := database.DB
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
@@ -176,8 +176,40 @@ func (h *AdminHandler) GetUsers(c *gin.Context) {
 	var users []models.User
 	query.Order("created_at DESC").Offset(offset).Limit(limit).Find(&users)
 
+	// Build enriched response with order stats per user
+	type UserWithStats struct {
+		models.User
+		TotalOrders int     `json:"totalOrders"`
+		TotalSpent  float64 `json:"totalSpent"`
+		LastOrderAt *string `json:"lastOrderAt,omitempty"`
+	}
+
+	var response []UserWithStats
+	for _, u := range users {
+		uw := UserWithStats{User: u}
+
+		// Get order count and total spent
+		var orderCount int64
+		var totalSpent float64
+		db.Model(&models.Order{}).Where("customer_id = ?", u.ID).Count(&orderCount)
+		db.Model(&models.Order{}).Where("customer_id = ? AND payment_status = ?", u.ID, "completed").
+			Select("COALESCE(SUM(total), 0)").Scan(&totalSpent)
+
+		uw.TotalOrders = int(orderCount)
+		uw.TotalSpent = totalSpent
+
+		// Get last order date
+		var lastOrder models.Order
+		if err := db.Where("customer_id = ?", u.ID).Order("created_at DESC").First(&lastOrder).Error; err == nil {
+			ts := lastOrder.CreatedAt.Format("2006-01-02T15:04:05Z")
+			uw.LastOrderAt = &ts
+		}
+
+		response = append(response, uw)
+	}
+
 	c.JSON(http.StatusOK, gin.H{
-		"data": users,
+		"data": response,
 		"pagination": gin.H{
 			"page":       page,
 			"limit":      limit,

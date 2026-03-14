@@ -1,11 +1,10 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import {
   ChefHat,
   Search,
   Filter,
-  MoreHorizontal,
   Star,
   ShoppingBag,
   CheckCircle,
@@ -176,12 +175,26 @@ export default function ChefsPage() {
                     </p>
                   </div>
                 </div>
-                <ChefActionMenu
-                  chef={chef}
-                  onVerify={() => verifyMutation.mutate(chef.id)}
-                  onReject={() => rejectMutation.mutate(chef.id)}
-                  onSuspend={() => suspendMutation.mutate(chef.id)}
-                />
+                <div className="flex items-center gap-1">
+                  {!chef.verified && (
+                    <button onClick={() => verifyMutation.mutate(chef.id)} title="Verify Kitchen"
+                      className="rounded-lg p-1.5 text-muted-foreground hover:bg-success/10 hover:text-success transition-colors">
+                      <CheckCircle className="h-4 w-4" />
+                    </button>
+                  )}
+                  {!chef.verified && (
+                    <button onClick={() => rejectMutation.mutate(chef.id)} title="Reject Application"
+                      className="rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors">
+                      <XCircle className="h-4 w-4" />
+                    </button>
+                  )}
+                  {chef.isActive && chef.verified && (
+                    <button onClick={() => suspendMutation.mutate(chef.id)} title="Suspend Kitchen"
+                      className="rounded-lg p-1.5 text-muted-foreground hover:bg-warning/10 hover:text-warning transition-colors">
+                      <XCircle className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Stats Row */}
@@ -307,50 +320,3 @@ function OnlineIndicator({ status }: { status: string }) {
   );
 }
 
-function ChefActionMenu({ chef, onVerify, onReject, onSuspend }: {
-  chef: Chef;
-  onVerify: () => void;
-  onReject: () => void;
-  onSuspend: () => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
-
-  return (
-    <div className="relative" ref={ref}>
-      <button onClick={() => setOpen(!open)} className="rounded-lg p-2 hover:bg-secondary transition-colors">
-        <MoreHorizontal className="h-5 w-5 text-muted-foreground" />
-      </button>
-      {open && (
-        <div className="absolute right-0 bottom-full z-50 mb-1 w-48 rounded-lg border border-border bg-card shadow-elevated py-1">
-          {!chef.verified && (
-            <button onClick={() => { onVerify(); setOpen(false); }}
-              className="flex w-full items-center gap-2 px-4 py-2 text-sm text-success hover:bg-success/10">
-              <CheckCircle className="h-4 w-4" />Verify Kitchen
-            </button>
-          )}
-          {!chef.verified && (
-            <button onClick={() => { onReject(); setOpen(false); }}
-              className="flex w-full items-center gap-2 px-4 py-2 text-sm text-destructive hover:bg-destructive/10">
-              <XCircle className="h-4 w-4" />Reject Application
-            </button>
-          )}
-          {chef.isActive && (
-            <button onClick={() => { onSuspend(); setOpen(false); }}
-              className="flex w-full items-center gap-2 px-4 py-2 text-sm text-warning hover:bg-warning/10">
-              <XCircle className="h-4 w-4" />Suspend Kitchen
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}

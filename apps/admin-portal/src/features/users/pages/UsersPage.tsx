@@ -1,9 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Search,
   Filter,
-  MoreHorizontal,
   Mail,
   Phone,
   Loader2,
@@ -196,13 +195,24 @@ export default function UsersPage() {
                     <td className="px-6 py-4 text-sm text-muted-foreground">
                       {new Date(user.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <ActionMenu
-                        user={user}
-                        onView={() => setSelectedUser(user)}
-                        onSuspend={() => suspendMutation.mutate(user.id)}
-                        onActivate={() => activateMutation.mutate(user.id)}
-                      />
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-end gap-1">
+                        <button onClick={() => setSelectedUser(user)} title="View Details"
+                          className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors">
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        {user.isActive ? (
+                          <button onClick={() => suspendMutation.mutate(user.id)} title="Suspend User"
+                            className="rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors">
+                            <UserX className="h-4 w-4" />
+                          </button>
+                        ) : (
+                          <button onClick={() => activateMutation.mutate(user.id)} title="Activate User"
+                            className="rounded-lg p-1.5 text-muted-foreground hover:bg-success/10 hover:text-success transition-colors">
+                            <UserCheck className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -233,51 +243,6 @@ export default function UsersPage() {
       {/* User Detail Modal */}
       {selectedUser && (
         <UserDetailModal user={selectedUser} onClose={() => setSelectedUser(null)} />
-      )}
-    </div>
-  );
-}
-
-function ActionMenu({ user, onView, onSuspend, onActivate }: {
-  user: User;
-  onView: () => void;
-  onSuspend: () => void;
-  onActivate: () => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClick = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
-
-  return (
-    <div className="relative" ref={ref}>
-      <button onClick={() => setOpen(!open)} className="rounded-lg p-2 hover:bg-secondary transition-colors">
-        <MoreHorizontal className="h-4 w-4 text-muted-foreground" />
-      </button>
-      {open && (
-        <div className="absolute right-0 bottom-full z-50 mb-1 w-48 rounded-lg border border-border bg-card shadow-elevated py-1">
-          <button onClick={() => { onView(); setOpen(false); }}
-            className="flex w-full items-center gap-2 px-4 py-2 text-sm text-foreground hover:bg-secondary">
-            <Eye className="h-4 w-4" />View Details
-          </button>
-          {user.isActive ? (
-            <button onClick={() => { onSuspend(); setOpen(false); }}
-              className="flex w-full items-center gap-2 px-4 py-2 text-sm text-destructive hover:bg-destructive/10">
-              <UserX className="h-4 w-4" />Suspend User
-            </button>
-          ) : (
-            <button onClick={() => { onActivate(); setOpen(false); }}
-              className="flex w-full items-center gap-2 px-4 py-2 text-sm text-success hover:bg-success/10">
-              <UserCheck className="h-4 w-4" />Activate User
-            </button>
-          )}
-        </div>
       )}
     </div>
   );

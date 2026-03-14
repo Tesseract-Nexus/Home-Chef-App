@@ -550,6 +550,28 @@ func (s *NotificationService) subscribeToApprovalEvents() error {
 	return nil
 }
 
+// resolveChefUserID resolves a chef's UserID from a ChefProfile.ID.
+// Falls back to looking up the approval request's SubmittedByID if chef not found.
+func (s *NotificationService) resolveChefUserID(chefIDStr string, eventData map[string]interface{}) (uuid.UUID, error) {
+	chefID, err := uuid.Parse(chefIDStr)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("invalid chef_id: %v", err)
+	}
+	var chef models.ChefProfile
+	if err := database.DB.First(&chef, "id = ?", chefID).Error; err == nil {
+		return chef.UserID, nil
+	}
+	// Fallback: look up the approval request to find the submitter
+	if approvalIDStr, ok := eventData["approval_id"].(string); ok {
+		approvalID, _ := uuid.Parse(approvalIDStr)
+		var approval models.ApprovalRequest
+		if err := database.DB.First(&approval, "id = ?", approvalID).Error; err == nil {
+			return approval.SubmittedByID, nil
+		}
+	}
+	return uuid.Nil, fmt.Errorf("could not resolve user for chef_id=%s", chefIDStr)
+}
+
 func (s *NotificationService) handleApprovalApproved(event Event) {
 	log.Printf("Processing approval approved event: %s", event.ID)
 
@@ -557,17 +579,12 @@ func (s *NotificationService) handleApprovalApproved(event Event) {
 	chefIDStr, _ := event.Data["chef_id"].(string)
 	title, _ := event.Data["title"].(string)
 
-	// Find the chef's user ID
-	chefID, err := uuid.Parse(chefIDStr)
+	userID, err := s.resolveChefUserID(chefIDStr, event.Data)
 	if err != nil {
-		log.Printf("Failed to parse chef_id in approval approved event: %v", err)
+		log.Printf("Failed to resolve user for approval approved: %v", err)
 		return
 	}
-	var chef models.ChefProfile
-	if err := database.DB.First(&chef, "id = ?", chefID).Error; err != nil {
-		log.Printf("Failed to find chef for approval notification: %v", err)
-		return
-	}
+	chef := models.ChefProfile{UserID: userID} // minimal struct for notification
 
 	data, _ := json.Marshal(event.Data)
 	notification := &models.Notification{
@@ -598,16 +615,12 @@ func (s *NotificationService) handleApprovalRejected(event Event) {
 	chefIDStr, _ := event.Data["chef_id"].(string)
 	notes, _ := event.Data["notes"].(string)
 
-	chefID, err := uuid.Parse(chefIDStr)
+	userID, err := s.resolveChefUserID(chefIDStr, event.Data)
 	if err != nil {
-		log.Printf("Failed to parse chef_id in approval rejected event: %v", err)
+		log.Printf("Failed to resolve user for approval rejected: %v", err)
 		return
 	}
-	var chef models.ChefProfile
-	if err := database.DB.First(&chef, "id = ?", chefID).Error; err != nil {
-		log.Printf("Failed to find chef for approval notification: %v", err)
-		return
-	}
+	chef := models.ChefProfile{UserID: userID}
 
 	message := fmt.Sprintf("Your %s has been rejected.", approvalType)
 	if notes != "" {
@@ -642,16 +655,12 @@ func (s *NotificationService) handleApprovalInfoRequested(event Event) {
 	chefIDStr, _ := event.Data["chef_id"].(string)
 	notes, _ := event.Data["notes"].(string)
 
-	chefID, err := uuid.Parse(chefIDStr)
+	userID, err := s.resolveChefUserID(chefIDStr, event.Data)
 	if err != nil {
-		log.Printf("Failed to parse chef_id in approval info_requested event: %v", err)
+		log.Printf("Failed to resolve user for approval info_requested: %v", err)
 		return
 	}
-	var chef models.ChefProfile
-	if err := database.DB.First(&chef, "id = ?", chefID).Error; err != nil {
-		log.Printf("Failed to find chef for approval notification: %v", err)
-		return
-	}
+	chef := models.ChefProfile{UserID: userID}
 
 	message := fmt.Sprintf("Admin needs more info about your %s.", approvalType)
 	if notes != "" {

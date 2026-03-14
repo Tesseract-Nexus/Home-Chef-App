@@ -422,7 +422,7 @@ func (h *ApprovalHandler) GetApprovalHistory(c *gin.Context) {
 		Order("created_at ASC").
 		Find(&history)
 
-	c.JSON(http.StatusOK, history)
+	c.JSON(http.StatusOK, gin.H{"data": history})
 }
 
 // GetDocumentDownload returns a download URL for a document associated with an approval

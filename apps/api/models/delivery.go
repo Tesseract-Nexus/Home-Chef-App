@@ -86,6 +86,34 @@ type DeliveryPartner struct {
 	VerifiedByID       *uuid.UUID         `gorm:"type:uuid" json:"verifiedById,omitempty"`
 	RejectionReason    string             `gorm:"" json:"rejectionReason,omitempty"`
 
+	// Personal details
+	City             string     `gorm:"" json:"city"`
+	EmergencyContact string     `gorm:"" json:"emergencyContact"`
+	EmergencyPhone   string     `gorm:"" json:"emergencyPhone"`
+	DateOfBirth      *time.Time `gorm:"" json:"dateOfBirth,omitempty"`
+
+	// Extended vehicle details
+	VehicleMake  string `gorm:"" json:"vehicleMake"`
+	VehicleModel string `gorm:"" json:"vehicleModel"`
+	VehicleYear  int    `gorm:"" json:"vehicleYear"`
+	VehicleColor string `gorm:"" json:"vehicleColor"`
+
+	// Payout info
+	BankAccountNumber string `gorm:"" json:"-"`
+	BankIFSC          string `gorm:"" json:"-"`
+	BankAccountName   string `gorm:"" json:"-"`
+	UpiID             string `gorm:"" json:"-"`
+	PayoutMethod      string `gorm:"type:varchar(20)" json:"payoutMethod"` // bank_transfer, upi
+
+	// Onboarding tracking
+	OnboardingStep     int        `gorm:"default:0" json:"onboardingStep"`
+	OnboardingComplete bool       `gorm:"default:false" json:"onboardingComplete"`
+	TermsAcceptedAt    *time.Time `gorm:"" json:"termsAcceptedAt,omitempty"`
+
+	// Referral
+	ReferralCode string     `gorm:"uniqueIndex" json:"referralCode,omitempty"`
+	ReferredByID *uuid.UUID `gorm:"type:uuid" json:"referredById,omitempty"`
+
 	// Bank/Payout Info
 	StripeAccountID string `gorm:"" json:"-"`
 
@@ -126,7 +154,8 @@ const (
 	PartnerDocInsurance      PartnerDocType = "insurance"
 	PartnerDocAadhaar        PartnerDocType = "aadhaar"
 	PartnerDocPanCard        PartnerDocType = "pan_card"
-	PartnerDocPhoto          PartnerDocType = "photo"
+	PartnerDocPhoto              PartnerDocType = "photo"
+	PartnerDocPoliceVerification PartnerDocType = "police_verification"
 )
 
 type PartnerDocumentResponse struct {
@@ -282,6 +311,19 @@ type DeliveryPartnerDetailResponse struct {
 	VerificationStatus VerificationStatus `json:"verificationStatus"`
 	RejectionReason    string             `json:"rejectionReason,omitempty"`
 	Documents          []PartnerDocumentResponse `json:"documents,omitempty"`
+
+	// Onboarding fields
+	City               string `json:"city,omitempty"`
+	EmergencyContact   string `json:"emergencyContact,omitempty"`
+	EmergencyPhone     string `json:"emergencyPhone,omitempty"`
+	VehicleMake        string `json:"vehicleMake,omitempty"`
+	VehicleModel       string `json:"vehicleModel,omitempty"`
+	VehicleYear        int    `json:"vehicleYear,omitempty"`
+	VehicleColor       string `json:"vehicleColor,omitempty"`
+	PayoutMethod       string `json:"payoutMethod,omitempty"`
+	OnboardingStep     int    `json:"onboardingStep"`
+	OnboardingComplete bool   `json:"onboardingComplete"`
+	ReferralCode       string `json:"referralCode,omitempty"`
 }
 
 func (p *DeliveryPartner) ToDetailResponse() DeliveryPartnerDetailResponse {
@@ -312,6 +354,17 @@ func (p *DeliveryPartner) ToDetailResponse() DeliveryPartnerDetailResponse {
 		CompletedOnTime:    p.CompletedOnTime,
 		VerificationStatus: p.VerificationStatus,
 		RejectionReason:    p.RejectionReason,
+		City:               p.City,
+		EmergencyContact:   p.EmergencyContact,
+		EmergencyPhone:     p.EmergencyPhone,
+		VehicleMake:        p.VehicleMake,
+		VehicleModel:       p.VehicleModel,
+		VehicleYear:        p.VehicleYear,
+		VehicleColor:       p.VehicleColor,
+		PayoutMethod:       p.PayoutMethod,
+		OnboardingStep:     p.OnboardingStep,
+		OnboardingComplete: p.OnboardingComplete,
+		ReferralCode:       p.ReferralCode,
 	}
 	if p.User.ID != uuid.Nil {
 		resp.Name = p.User.FirstName + " " + p.User.LastName
@@ -326,4 +379,31 @@ func (p *DeliveryPartner) ToDetailResponse() DeliveryPartnerDetailResponse {
 		}
 	}
 	return resp
+}
+
+// Referral types
+
+type ReferralStatus string
+
+const (
+	ReferralPending   ReferralStatus = "pending"
+	ReferralCompleted ReferralStatus = "completed"
+	ReferralPaid      ReferralStatus = "paid"
+	ReferralExpired   ReferralStatus = "expired"
+)
+
+type DriverReferral struct {
+	ID           uuid.UUID      `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	ReferrerID   uuid.UUID      `gorm:"type:uuid;not null;index" json:"referrerId"`
+	RefereeID    uuid.UUID      `gorm:"type:uuid;not null;index" json:"refereeId"`
+	ReferralCode string         `gorm:"not null" json:"referralCode"`
+	Status       ReferralStatus `gorm:"type:varchar(20);default:'pending'" json:"status"`
+	BonusAmount  float64        `gorm:"default:0" json:"bonusAmount"`
+	PaidAt       *time.Time     `gorm:"" json:"paidAt,omitempty"`
+	ExpiresAt    time.Time      `gorm:"not null" json:"expiresAt"`
+	CreatedAt    time.Time      `gorm:"autoCreateTime" json:"createdAt"`
+	UpdatedAt    time.Time      `gorm:"autoUpdateTime" json:"updatedAt"`
+
+	Referrer DeliveryPartner `gorm:"foreignKey:ReferrerID" json:"referrer,omitempty"`
+	Referee  DeliveryPartner `gorm:"foreignKey:RefereeID" json:"referee,omitempty"`
 }

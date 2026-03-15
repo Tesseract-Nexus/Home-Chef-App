@@ -1,111 +1,143 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Truck, Bike, Car } from 'lucide-react';
+import { Truck, Loader2 } from 'lucide-react';
 import { apiClient } from '@/shared/services/api-client';
-import { toast } from 'sonner';
+import { StepProgress } from '../components/StepProgress';
+import { StepPersonalInfo } from '../components/StepPersonalInfo';
+import { StepVehicleDetails } from '../components/StepVehicleDetails';
+import { StepDocuments } from '../components/StepDocuments';
+import { StepPayoutDetails } from '../components/StepPayoutDetails';
+import { StepReview } from '../components/StepReview';
 
-const vehicleTypes = [
-  { value: 'bike', label: 'Bicycle', icon: Bike },
-  { value: 'scooter', label: 'Scooter/Motorcycle', icon: Bike },
-  { value: 'car', label: 'Car', icon: Car },
-];
+interface OnboardingStatusResponse {
+  step: number;
+  status: string;
+  profile?: Record<string, unknown>;
+  documentCount?: number;
+  payoutMethodSet?: boolean;
+}
 
 export default function OnboardingPage() {
   const navigate = useNavigate();
-  const [vehicleType, setVehicleType] = useState('');
-  const [vehicleNumber, setVehicleNumber] = useState('');
-  const [licenseNumber, setLicenseNumber] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [profileData, setProfileData] = useState<Record<string, unknown>>({});
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!vehicleType || !vehicleNumber || !licenseNumber) {
-      toast.error('Please fill in all fields');
-      return;
-    }
+  useEffect(() => {
+    const checkStatus = async () => {
+      try {
+        const status = await apiClient.get<OnboardingStatusResponse>(
+          '/driver/onboarding/status'
+        );
 
-    setSubmitting(true);
-    try {
-      await apiClient.post('/delivery/onboarding', {
-        vehicleType,
-        vehicleNumber,
-        licenseNumber,
-      });
-      toast.success('Profile created! Pending verification.');
-      navigate('/dashboard', { replace: true });
-    } catch {
-      toast.error('Failed to submit. Please try again.');
-    } finally {
-      setSubmitting(false);
+        if (status.status === 'approved') {
+          navigate('/dashboard', { replace: true });
+          return;
+        }
+
+        if (status.status === 'submitted' || status.status === 'in_review' || status.status === 'rejected') {
+          navigate('/onboarding/status', { replace: true });
+          return;
+        }
+
+        // Resume from current step
+        if (status.step && status.step > 0) {
+          setCurrentStep(Math.min(status.step, 5));
+        }
+
+        if (status.profile) {
+          setProfileData(status.profile);
+        }
+      } catch {
+        // Not started — stay at step 1
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkStatus();
+  }, [navigate]);
+
+  const goToStep = (step: number) => {
+    setCurrentStep(step);
+  };
+
+  const handleStepComplete = () => {
+    if (currentStep < 5) {
+      setCurrentStep((prev) => prev + 1);
     }
   };
 
+  const handleSubmitComplete = () => {
+    navigate('/onboarding/status', { replace: true });
+  };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="w-full max-w-lg">
-        <div className="text-center mb-8">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary">
-            <Truck className="h-8 w-8 text-primary-foreground" />
+    <div className="flex min-h-screen flex-col bg-background">
+      {/* Header */}
+      <header className="border-b border-border bg-card px-4 py-4">
+        <div className="mx-auto flex max-w-2xl items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
+            <Truck className="h-5 w-5 text-primary-foreground" />
           </div>
-          <h1 className="mt-4 text-2xl font-bold text-foreground">Become a Delivery Partner</h1>
-          <p className="mt-2 text-muted-foreground">Tell us about your vehicle to get started</p>
+          <div>
+            <h1 className="text-lg font-bold text-foreground">Become a Delivery Partner</h1>
+            <p className="text-xs text-muted-foreground">Complete your profile to start delivering</p>
+          </div>
+        </div>
+      </header>
+
+      {/* Content */}
+      <div className="mx-auto w-full max-w-2xl flex-1 px-4 py-6">
+        {/* Step Progress */}
+        <div className="mb-8">
+          <StepProgress currentStep={currentStep} />
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6 rounded-2xl border border-border bg-card p-6">
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-3">Vehicle Type</label>
-            <div className="grid grid-cols-3 gap-3">
-              {vehicleTypes.map((type) => {
-                const Icon = type.icon;
-                return (
-                  <button
-                    key={type.value}
-                    type="button"
-                    onClick={() => setVehicleType(type.value)}
-                    className={`flex flex-col items-center gap-2 rounded-xl border-2 p-4 transition-all ${
-                      vehicleType === type.value
-                        ? 'border-primary bg-primary/5 text-primary'
-                        : 'border-border hover:border-primary/30'
-                    }`}
-                  >
-                    <Icon className="h-6 w-6" />
-                    <span className="text-xs font-medium">{type.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Vehicle Number</label>
-            <input
-              type="text"
-              value={vehicleNumber}
-              onChange={(e) => setVehicleNumber(e.target.value)}
-              placeholder="e.g., KA01AB1234"
-              className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+        {/* Step Content */}
+        <div className="rounded-2xl border border-border bg-card p-6">
+          {currentStep === 1 && (
+            <StepPersonalInfo
+              initialData={profileData as Record<string, string>}
+              onComplete={handleStepComplete}
             />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">License Number</label>
-            <input
-              type="text"
-              value={licenseNumber}
-              onChange={(e) => setLicenseNumber(e.target.value)}
-              placeholder="e.g., DL1234567890"
-              className="w-full rounded-lg border border-input bg-background px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          )}
+          {currentStep === 2 && (
+            <StepVehicleDetails
+              initialData={profileData as Record<string, string>}
+              onComplete={handleStepComplete}
+              onBack={() => goToStep(1)}
             />
-          </div>
-
-          <button
-            type="submit"
-            disabled={submitting || !vehicleType || !vehicleNumber || !licenseNumber}
-            className="w-full rounded-xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 disabled:opacity-50"
-          >
-            {submitting ? 'Submitting...' : 'Submit for Verification'}
-          </button>
-        </form>
+          )}
+          {currentStep === 3 && (
+            <StepDocuments
+              onComplete={handleStepComplete}
+              onBack={() => goToStep(2)}
+            />
+          )}
+          {currentStep === 4 && (
+            <StepPayoutDetails
+              initialData={profileData as Record<string, string>}
+              onComplete={handleStepComplete}
+              onBack={() => goToStep(3)}
+            />
+          )}
+          {currentStep === 5 && (
+            <StepReview
+              onComplete={handleSubmitComplete}
+              onBack={() => goToStep(4)}
+              onGoToStep={goToStep}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

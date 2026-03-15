@@ -15,6 +15,8 @@ const (
 	ApprovalDocumentVerification ApprovalRequestType = "document_verification"
 	ApprovalPricingChange        ApprovalRequestType = "pricing_change"
 	ApprovalKitchenUpdate        ApprovalRequestType = "kitchen_update"
+	ApprovalDriverOnboarding     ApprovalRequestType = "driver_onboarding"
+	ApprovalDriverDocument       ApprovalRequestType = "driver_document"
 )
 
 type ApprovalRequestStatus string
@@ -32,7 +34,8 @@ type ApprovalRequest struct {
 	Type          ApprovalRequestType   `gorm:"type:varchar(50);not null;index" json:"type"`
 	Status        ApprovalRequestStatus `gorm:"type:varchar(30);default:'pending';index" json:"status"`
 	Priority      string                `gorm:"type:varchar(20);default:'normal'" json:"priority"` // low, normal, high, urgent
-	ChefID        uuid.UUID             `gorm:"type:uuid;not null;index" json:"chefId"`
+	ChefID        *uuid.UUID            `gorm:"type:uuid;index" json:"chefId,omitempty"`
+	PartnerID     *uuid.UUID            `gorm:"type:uuid;index" json:"partnerId,omitempty"`
 	SubmittedByID uuid.UUID             `gorm:"type:uuid;not null" json:"submittedById"`
 	ReviewedByID  *uuid.UUID            `gorm:"type:uuid" json:"reviewedById,omitempty"`
 	EntityType    string                `gorm:"type:varchar(50)" json:"entityType"` // chef_profile, menu_item, chef_document
@@ -47,9 +50,10 @@ type ApprovalRequest struct {
 	UpdatedAt     time.Time             `gorm:"autoUpdateTime" json:"updatedAt"`
 
 	// Relations
-	Chef        ChefProfile `gorm:"foreignKey:ChefID" json:"chef,omitempty"`
-	SubmittedBy User        `gorm:"foreignKey:SubmittedByID" json:"submittedBy,omitempty"`
-	ReviewedBy  *User       `gorm:"foreignKey:ReviewedByID" json:"reviewedBy,omitempty"`
+	Chef        ChefProfile     `gorm:"foreignKey:ChefID" json:"chef,omitempty"`
+	Partner     DeliveryPartner `gorm:"foreignKey:PartnerID" json:"partner,omitempty"`
+	SubmittedBy User            `gorm:"foreignKey:SubmittedByID" json:"submittedBy,omitempty"`
+	ReviewedBy  *User           `gorm:"foreignKey:ReviewedByID" json:"reviewedBy,omitempty"`
 }
 
 // ApprovalRequestHistory tracks state transitions

@@ -256,7 +256,7 @@ func (h *ApprovalHandler) ApproveRequest(c *gin.Context) {
 	if err := services.PublishEvent(services.SubjectApprovalApproved, "approval.approved", adminUserID, map[string]interface{}{
 		"approval_id": approval.ID.String(),
 		"type":        string(approval.Type),
-		"chef_id":     approval.ChefID.String(),
+		"chef_id":     approval.ChefID,
 		"title":       approval.Title,
 		"notes":       req.Notes,
 	}); err != nil {
@@ -340,7 +340,7 @@ func (h *ApprovalHandler) RejectRequest(c *gin.Context) {
 	if err := services.PublishEvent(services.SubjectApprovalRejected, "approval.rejected", adminUserID, map[string]interface{}{
 		"approval_id": approval.ID.String(),
 		"type":        string(approval.Type),
-		"chef_id":     approval.ChefID.String(),
+		"chef_id":     approval.ChefID,
 		"title":       approval.Title,
 		"notes":       req.Notes,
 	}); err != nil {
@@ -402,7 +402,7 @@ func (h *ApprovalHandler) RequestMoreInfo(c *gin.Context) {
 	if err := services.PublishEvent(services.SubjectApprovalInfoRequested, "approval.info_requested", adminUserID, map[string]interface{}{
 		"approval_id": approval.ID.String(),
 		"type":        string(approval.Type),
-		"chef_id":     approval.ChefID.String(),
+		"chef_id":     approval.ChefID,
 		"title":       approval.Title,
 		"notes":       req.Notes,
 	}); err != nil {

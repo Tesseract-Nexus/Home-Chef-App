@@ -37,6 +37,8 @@ const (
 	SubjectApprovalApproved      = "approvals.approved"
 	SubjectApprovalRejected      = "approvals.rejected"
 	SubjectApprovalInfoRequested = "approvals.info_requested"
+
+	SubjectDriverOnboardingSubmitted = "driver.onboarding.submitted"
 )
 
 // Event represents a generic event message

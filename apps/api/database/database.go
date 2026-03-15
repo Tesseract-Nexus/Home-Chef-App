@@ -95,6 +95,7 @@ func Migrate() error {
 		&models.Delivery{},
 		&models.DeliveryPartnerDocument{},
 		&models.DeliveryZone{},
+		&models.DriverReferral{},
 
 		// Reviews
 		&models.Review{},

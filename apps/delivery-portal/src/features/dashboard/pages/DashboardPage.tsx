@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/shared/services/api-client';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Navigation,
   Package,
@@ -20,6 +20,7 @@ import {
 import type { DashboardStats } from '@/shared/types';
 import { toast } from 'sonner';
 import { PageLoader } from '@/shared/components/LoadingScreen';
+import { useEffect } from 'react';
 
 interface StaffProfile {
   id: string;
@@ -37,6 +38,11 @@ interface FleetOverview {
   verifiedPartners: number;
   pendingVerification: number;
   todayEarnings: number;
+}
+
+interface OnboardingStatusResponse {
+  step: number;
+  status: string;
 }
 
 // Fleet manager / staff dashboard
@@ -323,6 +329,8 @@ function PartnerDashboard() {
 }
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
+
   // Check if user is a staff member (fleet_manager, delivery_ops, super_admin)
   const { data: staffProfile, isLoading: staffLoading } = useQuery({
     queryKey: ['delivery-staff-me'],
@@ -331,13 +339,48 @@ export default function DashboardPage() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const isStaff = !!staffProfile?.id;
+
+  // Check onboarding status for non-staff users
+  const { data: onboardingStatus, isLoading: onboardingLoading } = useQuery({
+    queryKey: ['onboarding-status'],
+    queryFn: () => apiClient.get<OnboardingStatusResponse>('/driver/onboarding/status'),
+    enabled: !staffLoading && !isStaff,
+    retry: false,
+    staleTime: 60 * 1000,
+  });
+
+  // Redirect non-staff users based on onboarding status
+  useEffect(() => {
+    if (staffLoading || isStaff) return;
+    if (onboardingLoading || !onboardingStatus) return;
+
+    const status = onboardingStatus.status;
+
+    if (status === 'not_started' || status === 'in_progress') {
+      navigate('/onboarding', { replace: true });
+    } else if (status === 'submitted' || status === 'in_review' || status === 'rejected') {
+      navigate('/onboarding/status', { replace: true });
+    }
+    // If approved, stay on dashboard
+  }, [staffLoading, isStaff, onboardingLoading, onboardingStatus, navigate]);
+
   // While checking staff status, show loader briefly
   if (staffLoading) return <PageLoader />;
 
-  const isStaff = !!staffProfile?.id;
-
   if (isStaff) {
     return <StaffDashboard staffProfile={staffProfile} />;
+  }
+
+  // While checking onboarding status for non-staff, show loader
+  if (onboardingLoading) return <PageLoader />;
+
+  // If status requires redirect, show loader while navigating
+  if (onboardingStatus) {
+    const status = onboardingStatus.status;
+    if (status !== 'approved') {
+      return <PageLoader />;
+    }
   }
 
   return <PartnerDashboard />;

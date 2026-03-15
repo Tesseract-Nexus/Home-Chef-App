@@ -23,6 +23,10 @@ function lazyWithRetry(factory: () => Promise<{ default: React.ComponentType }>)
 // Auth pages (login only - no registration, uses internal Keycloak realm)
 const LoginPage = lazyWithRetry(() => import('@/features/auth/pages/LoginPage'));
 
+// Onboarding pages (outside DeliveryLayout)
+const OnboardingPage = lazyWithRetry(() => import('@/features/onboarding/pages/OnboardingPage'));
+const OnboardingStatusPage = lazyWithRetry(() => import('@/features/onboarding/pages/OnboardingStatusPage'));
+
 // Feature pages
 const DashboardPage = lazyWithRetry(() => import('@/features/dashboard/pages/DashboardPage'));
 const ActiveDeliveryPage = lazyWithRetry(() => import('@/features/deliveries/pages/ActiveDeliveryPage'));
@@ -70,6 +74,10 @@ export function AppRoutes() {
       <Routes>
         {/* Public routes - login only, no registration */}
         <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+
+        {/* Onboarding routes - outside DeliveryLayout (own minimal layout) */}
+        <Route path="onboarding" element={<ProtectedRoute><OnboardingPage /></ProtectedRoute>} />
+        <Route path="onboarding/status" element={<ProtectedRoute><OnboardingStatusPage /></ProtectedRoute>} />
 
         {/* Protected delivery routes */}
         <Route

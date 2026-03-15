@@ -57,6 +57,7 @@ func SetupRouter() *gin.Engine {
 	approvalHandler := handlers.NewApprovalHandler()
 	notificationHandler := handlers.NewNotificationHandler()
 	deliveryHandler := handlers.NewDeliveryHandler()
+	driverHandler := handlers.NewDriverOnboardingHandler()
 	staffHandler := handlers.NewStaffHandler()
 
 	// Health check endpoints
@@ -250,6 +251,28 @@ func SetupRouter() *gin.Engine {
 		{
 			deliveryOnboarding.GET("/onboarding/status", deliveryHandler.GetOnboardingStatus)
 			deliveryOnboarding.POST("/onboarding", deliveryHandler.Onboarding)
+		}
+
+		// Driver onboarding (authenticated, no role required — user is becoming a driver)
+		driverOnboarding := v1.Group("/driver")
+		driverOnboarding.Use(middleware.AuthMiddleware())
+		{
+			driverOnboarding.GET("/onboarding/status", driverHandler.GetDriverOnboardingStatus)
+			driverOnboarding.POST("/onboarding/personal", driverHandler.DriverOnboardingPersonal)
+			driverOnboarding.POST("/onboarding/vehicle", driverHandler.DriverOnboardingVehicle)
+			driverOnboarding.POST("/onboarding/documents", deliveryHandler.UploadPartnerDocument)
+			driverOnboarding.GET("/onboarding/documents", deliveryHandler.GetPartnerDocuments)
+			driverOnboarding.POST("/onboarding/payout", driverHandler.DriverOnboardingPayout)
+			driverOnboarding.POST("/onboarding/submit", driverHandler.DriverOnboardingSubmit)
+			driverOnboarding.POST("/referral/validate", driverHandler.ValidateReferralCode)
+		}
+
+		// Driver referral routes (delivery role required)
+		driverReferral := v1.Group("/driver/referral")
+		driverReferral.Use(middleware.AuthMiddleware(), middleware.RequireDelivery())
+		{
+			driverReferral.GET("/code", driverHandler.GetReferralCode)
+			driverReferral.GET("/stats", driverHandler.GetReferralStats)
 		}
 
 		// Delivery staff routes (accessible by fleet managers via delivery portal)

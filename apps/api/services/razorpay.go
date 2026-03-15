@@ -252,6 +252,12 @@ func (c *RazorpayClient) GetKeyID() string {
 	return c.keyID
 }
 
+// HealthCheck validates Razorpay credentials by making a lightweight API call
+func (c *RazorpayClient) HealthCheck() error {
+	_, err := c.doRequest("GET", "/payments?count=0", nil)
+	return err
+}
+
 // --- Helpers ---
 
 // ToPaise converts a float amount (e.g. 499.00 INR) to paise (49900)

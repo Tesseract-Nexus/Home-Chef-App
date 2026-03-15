@@ -188,6 +188,8 @@ func SetupRouter() *gin.Engine {
 			chefDashboard.GET("/settings", chefHandler.GetChefSettings)
 			chefDashboard.PUT("/settings", chefHandler.UpdateChefSettings)
 			chefDashboard.GET("/analytics", chefHandler.GetChefAnalytics)
+			chefDashboard.GET("/payout", chefHandler.GetPayoutDetails)
+			chefDashboard.POST("/payout", chefHandler.SavePayoutDetails)
 			chefDashboard.GET("/admin-requests", approvalHandler.GetChefApprovalRequests)
 			chefDashboard.PUT("/admin-requests/:id/respond", approvalHandler.RespondToApprovalRequest)
 		}
@@ -445,6 +447,9 @@ func SetupRouter() *gin.Engine {
 			admin.GET("/staff/invitations", middleware.RequireStaffPermission(models.SPViewStaff), staffHandler.ListInvitations)
 			admin.PUT("/staff/invitations/:id/revoke", middleware.RequireStaffPermission(models.SPManageStaff), staffHandler.RevokeInvitation)
 			admin.PUT("/staff/invitations/:id/resend", middleware.RequireStaffPermission(models.SPManageStaff), staffHandler.ResendInvitation)
+
+			// Payment gateway
+			admin.GET("/payment-gateway/status", adminHandler.GetPaymentGatewayStatus)
 
 			// Settings
 			admin.GET("/settings", adminHandler.GetSettings)

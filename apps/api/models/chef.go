@@ -46,6 +46,13 @@ type ChefProfile struct {
 	StripeAccountID    string `gorm:"" json:"-"`
 	RazorpayAccountID  string `gorm:"" json:"-"` // Razorpay Route linked account ID
 
+	// Payout details
+	PayoutMethod      string `gorm:"default:''" json:"-"`
+	BankAccountNumber string `gorm:"default:''" json:"-"`
+	BankIFSC          string `gorm:"default:''" json:"-"`
+	BankAccountName   string `gorm:"default:''" json:"-"`
+	UpiID             string `gorm:"default:''" json:"-"`
+
 	CreatedAt time.Time `gorm:"autoCreateTime" json:"createdAt"`
 	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updatedAt"`
 

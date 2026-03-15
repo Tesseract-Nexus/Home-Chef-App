@@ -3,16 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useMutation } from '@tanstack/react-query';
 import {
   MapPin,
-  CreditCard,
   Clock,
   ChevronRight,
-  Plus,
   Check,
   Loader2,
-  Wallet,
+  Shield,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCartStore } from '@/app/store/cart-store';
@@ -59,11 +56,6 @@ const SAVED_ADDRESSES: Address[] = [
   },
 ];
 
-const PAYMENT_METHODS = [
-  { id: 'card_1', type: 'card', label: 'Visa ending in 4242', icon: CreditCard },
-  { id: 'wallet', type: 'wallet', label: 'Digital Wallet', icon: Wallet },
-];
-
 export default function CheckoutPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -71,10 +63,10 @@ export default function CheckoutPage() {
   const fp = useFormatPrice();
   const [selectedAddress, setSelectedAddress] = useState<string>(SAVED_ADDRESSES[0]?.id || '');
   const [showNewAddress, setShowNewAddress] = useState(false);
-  const [selectedPayment, setSelectedPayment] = useState<string>(PAYMENT_METHODS[0]?.id || '');
   const [scheduledTime, setScheduledTime] = useState<string>('asap');
   const [tip, setTip] = useState<number>(0);
   const [specialInstructions, setSpecialInstructions] = useState('');
+  const [isProcessing, setIsProcessing] = useState<boolean>(false);
 
   const subtotal = cart.getSubtotal();
   const deliveryFee = cart.chef?.deliveryFee || 0;
@@ -91,41 +83,83 @@ export default function CheckoutPage() {
     resolver: zodResolver(addressSchema),
   });
 
-  const createOrderMutation = useMutation({
-    mutationFn: (orderData: {
-      items: typeof cart.items;
-      chefId: string;
-      deliveryAddressId: string;
-      paymentMethodId: string;
-      tip: number;
-      specialInstructions?: string;
-      scheduledFor?: string;
-    }) => apiClient.post<Order>('/orders', orderData),
-    onSuccess: (order) => {
-      cart.clearCart();
-      toast.success('Order placed successfully!');
-      navigate(`/orders/${order.id}`);
-    },
-    onError: () => {
-      toast.error('Failed to place order. Please try again.');
-    },
-  });
-
-  const handlePlaceOrder = () => {
-    if (!cart.chefId || !selectedAddress || !selectedPayment) {
-      toast.error('Please complete all required fields');
+  const handlePlaceOrder = async () => {
+    if (!cart.chefId || !selectedAddress) {
+      toast.error('Please select a delivery address');
       return;
     }
 
-    createOrderMutation.mutate({
-      items: cart.items,
-      chefId: cart.chefId,
-      deliveryAddressId: selectedAddress,
-      paymentMethodId: selectedPayment,
-      tip,
-      specialInstructions: specialInstructions || undefined,
-      scheduledFor: scheduledTime !== 'asap' ? scheduledTime : undefined,
-    });
+    if (!window.Razorpay) {
+      toast.error('Payment gateway is loading. Please try again.');
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      // Step 1: Create order
+      const order = await apiClient.post<Order>('/orders', {
+        items: cart.items,
+        chefId: cart.chefId,
+        deliveryAddressId: selectedAddress,
+        paymentMethodId: 'razorpay',
+        tip,
+        specialInstructions: specialInstructions || undefined,
+        scheduledFor: scheduledTime !== 'asap' ? scheduledTime : undefined,
+      });
+
+      // Step 2: Create Razorpay payment order
+      const paymentData = await apiClient.post<{
+        razorpayOrderId: string;
+        razorpayKeyId: string;
+        amount: number;
+        currency: string;
+      }>(`/payments/order/${order.id}/create`, {});
+
+      // Step 3: Open Razorpay checkout
+      const options: RazorpayOptions = {
+        key: paymentData.razorpayKeyId,
+        amount: paymentData.amount,
+        currency: paymentData.currency,
+        name: 'Fe3dr',
+        description: `Order from ${cart.chef?.businessName || 'Home Chef'}`,
+        order_id: paymentData.razorpayOrderId,
+        prefill: {
+          name: user?.name || '',
+          email: user?.email || '',
+        },
+        theme: {
+          color: '#C2410C',
+        },
+        handler: async (response) => {
+          try {
+            // Step 4: Verify payment
+            await apiClient.post(`/payments/order/${order.id}/verify`, {
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpayOrderId: response.razorpay_order_id,
+              razorpaySignature: response.razorpay_signature,
+            });
+            cart.clearCart();
+            toast.success('Payment successful!');
+            navigate(`/orders/${order.id}`);
+          } catch {
+            toast.error('Payment verification failed. Please contact support.');
+          }
+        },
+        modal: {
+          ondismiss: () => {
+            toast.error('Payment cancelled');
+          },
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch {
+      toast.error('Failed to initiate payment. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const onAddressSubmit = (data: AddressFormData) => {
@@ -352,42 +386,24 @@ export default function CheckoutPage() {
               </div>
             </section>
 
-            {/* Payment Method */}
+            {/* Payment */}
             <section className="rounded-xl bg-white p-6 shadow-sm">
               <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-900">
-                <CreditCard className="h-5 w-5 text-brand-500" />
-                Payment Method
+                <Shield className="h-5 w-5 text-brand-500" />
+                Payment
               </h2>
-
-              <div className="mt-4 space-y-3">
-                {PAYMENT_METHODS.map((method) => (
-                  <label
-                    key={method.id}
-                    className={`flex cursor-pointer items-center gap-3 rounded-lg border p-4 ${
-                      selectedPayment === method.id
-                        ? 'border-brand-500 bg-brand-50'
-                        : 'border-gray-200 hover:bg-gray-50'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="payment"
-                      value={method.id}
-                      checked={selectedPayment === method.id}
-                      onChange={(e) => setSelectedPayment(e.target.value)}
-                      className="h-4 w-4 text-brand-600 focus:ring-brand-500"
-                    />
-                    <method.icon className="h-5 w-5 text-gray-400" />
-                    <span className="font-medium text-gray-900">{method.label}</span>
-                    {selectedPayment === method.id && (
-                      <Check className="ml-auto h-5 w-5 text-brand-500" />
-                    )}
-                  </label>
-                ))}
-                <button className="flex items-center gap-2 text-sm text-brand-600 hover:text-brand-700">
-                  <Plus className="h-4 w-4" />
-                  Add new payment method
-                </button>
+              <div className="mt-4 flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                <img
+                  src="https://razorpay.com/assets/razorpay-glyph.svg"
+                  alt="Razorpay"
+                  className="h-6 w-6"
+                />
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Powered by Razorpay</p>
+                  <p className="text-xs text-gray-500">
+                    Pay securely via UPI, cards, net banking, or wallets
+                  </p>
+                </div>
               </div>
             </section>
 
@@ -500,10 +516,10 @@ export default function CheckoutPage() {
 
               <button
                 onClick={handlePlaceOrder}
-                disabled={createOrderMutation.isPending || !selectedAddress || !selectedPayment}
+                disabled={isProcessing || !selectedAddress}
                 className="btn-primary mt-6 w-full py-4 disabled:opacity-50"
               >
-                {createOrderMutation.isPending ? (
+                {isProcessing ? (
                   <>
                     <Loader2 className="h-5 w-5 animate-spin" />
                     Placing Order...

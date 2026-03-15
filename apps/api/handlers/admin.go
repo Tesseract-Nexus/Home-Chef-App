@@ -4,12 +4,15 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/homechef/api/config"
 	"github.com/homechef/api/database"
 	"github.com/homechef/api/models"
+	"github.com/homechef/api/services"
 )
 
 type AdminHandler struct{}
@@ -598,6 +601,55 @@ func (h *AdminHandler) GetSettings(c *gin.Context) {
 	var settings []models.PlatformSettings
 	database.DB.Find(&settings)
 	c.JSON(http.StatusOK, settings)
+}
+
+// GetPaymentGatewayStatus returns the Razorpay payment gateway configuration status
+func (h *AdminHandler) GetPaymentGatewayStatus(c *gin.Context) {
+	cfg := config.AppConfig
+
+	configured := cfg.RazorpayKeyID != "" && cfg.RazorpayKeySecret != ""
+
+	mode := "unknown"
+	keyPrefix := ""
+	if cfg.RazorpayKeyID != "" {
+		if strings.HasPrefix(cfg.RazorpayKeyID, "rzp_test_") {
+			mode = "test"
+		} else if strings.HasPrefix(cfg.RazorpayKeyID, "rzp_live_") {
+			mode = "live"
+		}
+		// Show first 12 chars + "..."
+		if len(cfg.RazorpayKeyID) > 12 {
+			keyPrefix = cfg.RazorpayKeyID[:12] + "..."
+		} else {
+			keyPrefix = cfg.RazorpayKeyID
+		}
+	}
+
+	webhookSecretSet := cfg.RazorpayWebhookSecret != ""
+	webhookURL := "https://api.fe3dr.com/webhooks/razorpay"
+
+	var healthErr string
+	if configured {
+		client := services.GetRazorpay()
+		if client != nil {
+			if err := client.HealthCheck(); err != nil {
+				healthErr = err.Error()
+				configured = false
+			}
+		} else {
+			healthErr = "Razorpay client not initialized"
+			configured = false
+		}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"configured":       configured,
+		"mode":             mode,
+		"webhookUrl":       webhookURL,
+		"webhookSecretSet": webhookSecretSet,
+		"keyPrefix":        keyPrefix,
+		"error":            healthErr,
+	})
 }
 
 // UpdateSettings updates platform settings

@@ -1,4 +1,16 @@
-import { Settings, Shield, Bell, Globe, Database } from 'lucide-react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { apiClient } from '@/shared/services/api-client';
+import { Settings, Shield, Bell, Globe, Database, CreditCard, RefreshCw, Copy, CheckCircle2 } from 'lucide-react';
+
+interface PaymentGatewayStatus {
+  configured: boolean;
+  mode: string;
+  webhookUrl: string;
+  webhookSecretSet: boolean;
+  keyPrefix: string;
+  error: string;
+}
 
 export default function SettingsPage() {
   return (
@@ -9,6 +21,7 @@ export default function SettingsPage() {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
+        <PaymentGatewayCard />
         <SettingsCard
           icon={Shield}
           title="Security"
@@ -33,6 +46,156 @@ export default function SettingsPage() {
           description="Data management and report exports"
           items={['Export user data', 'Order reports', 'Revenue reports', 'Audit logs']}
         />
+      </div>
+    </div>
+  );
+}
+
+function PaymentGatewayCard() {
+  const [copied, setCopied] = useState(false);
+
+  const { data, isLoading, isError, refetch, isFetching } = useQuery({
+    queryKey: ['payment-gateway-status'],
+    queryFn: () => apiClient.get<PaymentGatewayStatus>('/admin/payment-gateway/status'),
+  });
+
+  const copyWebhookUrl = async () => {
+    if (!data?.webhookUrl) return;
+    await navigator.clipboard.writeText(data.webhookUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-6 shadow-card">
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+          <CreditCard className="h-5 w-5 text-primary" />
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold text-foreground">Payment Gateway</h3>
+            {data && (
+              <span
+                className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                  data.configured
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-red-100 text-red-700'
+                }`}
+              >
+                {data.configured ? 'Connected' : 'Disconnected'}
+              </span>
+            )}
+          </div>
+          <p className="text-sm text-muted-foreground">Razorpay integration status</p>
+        </div>
+      </div>
+
+      <div className="mt-4 space-y-2">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-6 text-sm text-muted-foreground">
+            Loading...
+          </div>
+        ) : isError ? (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            Failed to fetch payment gateway status
+          </div>
+        ) : data ? (
+          <>
+            {/* Mode */}
+            <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 px-4 py-3 text-sm">
+              <span className="text-foreground">Mode</span>
+              <span
+                className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                  data.mode === 'live'
+                    ? 'bg-green-100 text-green-700'
+                    : 'bg-yellow-100 text-yellow-700'
+                }`}
+              >
+                {data.mode === 'live' ? 'Live Mode' : 'Test Mode'}
+              </span>
+            </div>
+
+            {/* Key Prefix */}
+            <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 px-4 py-3 text-sm">
+              <span className="text-foreground">Key Prefix</span>
+              <code className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">
+                {data.keyPrefix}
+              </code>
+            </div>
+
+            {/* Webhook URL */}
+            <div className="flex items-center justify-between gap-2 rounded-lg border border-border bg-secondary/30 px-4 py-3 text-sm">
+              <span className="shrink-0 text-foreground">Webhook URL</span>
+              <div className="flex items-center gap-1">
+                <code className="truncate rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground max-w-[180px]">
+                  {data.webhookUrl}
+                </code>
+                <button
+                  onClick={copyWebhookUrl}
+                  className="shrink-0 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  title="Copy webhook URL"
+                >
+                  {copied ? (
+                    <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Webhook Secret */}
+            <div className="flex items-center justify-between rounded-lg border border-border bg-secondary/30 px-4 py-3 text-sm">
+              <span className="text-foreground">Webhook Secret</span>
+              {data.webhookSecretSet ? (
+                <span className="flex items-center gap-1 text-xs text-green-600">
+                  <CheckCircle2 className="h-3.5 w-3.5" /> Configured
+                </span>
+              ) : (
+                <span className="flex items-center gap-1 text-xs text-red-600">
+                  ✕ Not configured
+                </span>
+              )}
+            </div>
+
+            {/* Error */}
+            {data.error && (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {data.error}
+              </div>
+            )}
+
+            {/* Test Connection */}
+            <button
+              onClick={() => refetch()}
+              disabled={isFetching}
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-secondary/50 px-4 py-2.5 text-sm font-medium text-foreground hover:bg-secondary disabled:opacity-50"
+            >
+              <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+              {isFetching ? 'Testing...' : 'Test Connection'}
+            </button>
+
+            {/* Test Cards Reference */}
+            <div className="mt-3 rounded-lg border border-dashed border-border px-4 py-3">
+              <p className="mb-2 text-xs font-medium text-muted-foreground">Test Cards</p>
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Visa</span>
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-muted-foreground">
+                    4111 1111 1111 1111
+                  </code>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Mastercard</span>
+                  <code className="rounded bg-muted px-1.5 py-0.5 text-muted-foreground">
+                    5267 3181 8797 5449
+                  </code>
+                </div>
+              </div>
+            </div>
+          </>
+        ) : null}
       </div>
     </div>
   );

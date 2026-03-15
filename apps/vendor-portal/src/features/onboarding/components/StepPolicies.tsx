@@ -1,5 +1,4 @@
 import { useOnboardingStore } from '@/app/store/onboarding-store';
-import { Input } from '@/shared/components/ui/Input';
 import { Card } from '@/shared/components/ui/Card';
 import {
   Shield,
@@ -131,41 +130,16 @@ export function StepPolicies({ errors }: Props) {
         )}
       </Card>
 
-      {/* Bank Details (Optional) */}
+      {/* Payout Info */}
       <Card>
         <div className="flex items-center gap-2">
           <Banknote className="h-5 w-5 text-muted-foreground" />
-          <h3 className="text-lg font-semibold text-foreground">
-            Payout Details
-            <span className="ml-2 text-sm font-normal text-muted-foreground">(Optional)</span>
-          </h3>
+          <h3 className="text-lg font-semibold text-foreground">Payout Details</h3>
         </div>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Add your bank details to receive weekly payouts. You can add this later from Settings.
+        <p className="mt-2 text-sm text-muted-foreground">
+          You can set up your bank account or UPI details for receiving payouts from{' '}
+          <span className="font-medium text-foreground">Settings</span> after your kitchen is approved.
         </p>
-
-        <div className="mt-6 space-y-4">
-          <Input
-            label="Account Holder Name"
-            placeholder="Name as on bank account"
-            value={data.bankAccountName || ''}
-            onChange={(e) => updateData({ bankAccountName: e.target.value })}
-          />
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Input
-              label="Account Number"
-              placeholder="Enter account number"
-              value={data.bankAccountNumber || ''}
-              onChange={(e) => updateData({ bankAccountNumber: e.target.value })}
-            />
-            <Input
-              label="IFSC Code"
-              placeholder="e.g. SBIN0001234"
-              value={data.bankIfscCode || ''}
-              onChange={(e) => updateData({ bankIfscCode: e.target.value.toUpperCase() })}
-            />
-          </div>
-        </div>
       </Card>
 
       {/* Summary */}

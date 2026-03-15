@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Bell, Power, Lock, Trash2 } from 'lucide-react';
+import { Bell, Power, Lock, Trash2, Banknote } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { apiClient } from '@/shared/services/api-client';
@@ -21,6 +21,14 @@ interface SettingsData {
   authProvider?: string;
 }
 
+interface PayoutData {
+  payoutMethod: string;
+  bankAccountName: string;
+  bankAccountNumber: string;
+  bankIFSC: string;
+  upiId: string;
+}
+
 export default function SettingsPage() {
   const queryClient = useQueryClient();
 
@@ -29,11 +37,37 @@ export default function SettingsPage() {
     queryFn: () => apiClient.get<SettingsData>('/chef/settings'),
   });
 
+  const { data: payoutData, isLoading: payoutLoading } = useQuery({
+    queryKey: ['chef-payout'],
+    queryFn: () => apiClient.get<PayoutData>('/chef/payout'),
+  });
+
   const [localSettings, setLocalSettings] = useState<SettingsData | null>(null);
+
+  const [payoutForm, setPayoutForm] = useState({
+    payoutMethod: 'bank_transfer' as 'bank_transfer' | 'upi',
+    bankAccountName: '',
+    bankAccountNumber: '',
+    bankIFSC: '',
+    upiId: '',
+  });
+  const [payoutEditing, setPayoutEditing] = useState(false);
 
   useEffect(() => {
     if (settings) setLocalSettings(settings);
   }, [settings]);
+
+  useEffect(() => {
+    if (payoutData) {
+      setPayoutForm({
+        payoutMethod: (payoutData.payoutMethod || 'bank_transfer') as 'bank_transfer' | 'upi',
+        bankAccountName: payoutData.bankAccountName || '',
+        bankAccountNumber: '',  // Don't populate masked value
+        bankIFSC: payoutData.bankIFSC || '',
+        upiId: '',  // Don't populate masked value
+      });
+    }
+  }, [payoutData]);
 
   const saveMutation = useMutation({
     mutationFn: (data: SettingsData) => apiClient.put('/chef/settings', data),
@@ -42,6 +76,16 @@ export default function SettingsPage() {
       toast.success('Settings saved');
     },
     onError: () => toast.error('Failed to save settings'),
+  });
+
+  const payoutMutation = useMutation({
+    mutationFn: (data: typeof payoutForm) => apiClient.post('/chef/payout', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chef-payout'] });
+      toast.success('Payout details saved');
+      setPayoutEditing(false);
+    },
+    onError: () => toast.error('Failed to save payout details'),
   });
 
   const [passwordForm, setPasswordForm] = useState({
@@ -167,6 +211,174 @@ export default function SettingsPage() {
             onChange={() => toggleNotification('smsNewOrder')}
           />
         </div>
+      </motion.div>
+
+      {/* Payout Details */}
+      <motion.div variants={fadeInUp} className="rounded-xl border border-gray-200 bg-white p-6">
+        <div className="flex items-center gap-3">
+          <Banknote className="h-5 w-5 text-brand-500" />
+          <h2 className="text-lg font-semibold text-gray-900">Payout Details</h2>
+        </div>
+
+        {payoutLoading ? (
+          <div className="mt-4 flex items-center justify-center py-8">
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+          </div>
+        ) : !payoutEditing && payoutData?.payoutMethod ? (
+          <div className="mt-4 space-y-3">
+            {payoutData.payoutMethod === 'bank_transfer' ? (
+              <>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Method</span>
+                  <span className="font-medium text-gray-900">Bank Transfer</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Account Holder</span>
+                  <span className="font-medium text-gray-900">{payoutData.bankAccountName}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Account Number</span>
+                  <span className="font-medium text-gray-900">{payoutData.bankAccountNumber}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">IFSC Code</span>
+                  <span className="font-medium text-gray-900">{payoutData.bankIFSC}</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">Method</span>
+                  <span className="font-medium text-gray-900">UPI</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-500">UPI ID</span>
+                  <span className="font-medium text-gray-900">{payoutData.upiId}</span>
+                </div>
+              </>
+            )}
+            <Button
+              size="sm"
+              variant="outline"
+              className="mt-2"
+              onClick={() => setPayoutEditing(true)}
+            >
+              Edit
+            </Button>
+          </div>
+        ) : !payoutEditing ? (
+          <div className="mt-4">
+            <p className="text-sm text-gray-500">No payout details configured yet.</p>
+            <Button
+              size="sm"
+              className="mt-3"
+              onClick={() => setPayoutEditing(true)}
+            >
+              Set Up Payouts
+            </Button>
+          </div>
+        ) : (
+          <div className="mt-4 max-w-md space-y-4">
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setPayoutForm({ ...payoutForm, payoutMethod: 'bank_transfer' })}
+                className={`relative inline-flex items-center rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                  payoutForm.payoutMethod === 'bank_transfer'
+                    ? 'bg-brand-500 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                Bank Transfer
+              </button>
+              <button
+                type="button"
+                onClick={() => setPayoutForm({ ...payoutForm, payoutMethod: 'upi' })}
+                className={`relative inline-flex items-center rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                  payoutForm.payoutMethod === 'upi'
+                    ? 'bg-brand-500 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                UPI
+              </button>
+            </div>
+
+            {payoutForm.payoutMethod === 'bank_transfer' ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Account Holder Name</label>
+                  <input
+                    type="text"
+                    value={payoutForm.bankAccountName}
+                    onChange={(e) => setPayoutForm({ ...payoutForm, bankAccountName: e.target.value })}
+                    placeholder="Name as on bank account"
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Account Number</label>
+                  <input
+                    type="text"
+                    value={payoutForm.bankAccountNumber}
+                    onChange={(e) => setPayoutForm({ ...payoutForm, bankAccountNumber: e.target.value })}
+                    placeholder="Enter account number"
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">IFSC Code</label>
+                  <input
+                    type="text"
+                    value={payoutForm.bankIFSC}
+                    onChange={(e) => setPayoutForm({ ...payoutForm, bankIFSC: e.target.value.toUpperCase() })}
+                    placeholder="e.g. SBIN0001234"
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div>
+                <label className="block text-sm font-medium text-gray-700">UPI ID</label>
+                <input
+                  type="text"
+                  value={payoutForm.upiId}
+                  onChange={(e) => setPayoutForm({ ...payoutForm, upiId: e.target.value })}
+                  placeholder="yourname@upi"
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                />
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                onClick={() => payoutMutation.mutate(payoutForm)}
+                isLoading={payoutMutation.isPending}
+              >
+                Save
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setPayoutEditing(false);
+                  if (payoutData) {
+                    setPayoutForm({
+                      payoutMethod: (payoutData.payoutMethod || 'bank_transfer') as 'bank_transfer' | 'upi',
+                      bankAccountName: payoutData.bankAccountName || '',
+                      bankAccountNumber: '',
+                      bankIFSC: payoutData.bankIFSC || '',
+                      upiId: '',
+                    });
+                  }
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        )}
       </motion.div>
 
       {/* Change Password — only for email/password accounts, not social logins */}

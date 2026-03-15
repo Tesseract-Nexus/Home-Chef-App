@@ -742,6 +742,87 @@ func (h *ChefHandler) UpdateChefSettings(c *gin.Context) {
 	})
 }
 
+// GetPayoutDetails returns the chef's payout configuration with masked bank details
+func (h *ChefHandler) GetPayoutDetails(c *gin.Context) {
+	userID, _ := middleware.GetUserID(c)
+
+	var chef models.ChefProfile
+	if err := database.DB.Where("user_id = ?", userID).First(&chef).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Chef profile not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"payoutMethod":      chef.PayoutMethod,
+		"bankAccountName":   chef.BankAccountName,
+		"bankAccountNumber": maskBankAccount(chef.BankAccountNumber),
+		"bankIFSC":          chef.BankIFSC,
+		"upiId":             maskEmail(chef.UpiID),
+	})
+}
+
+// SavePayoutDetails saves the chef's payout information
+func (h *ChefHandler) SavePayoutDetails(c *gin.Context) {
+	userID, _ := middleware.GetUserID(c)
+
+	var req struct {
+		PayoutMethod      string `json:"payoutMethod" binding:"required"`
+		BankAccountNumber string `json:"bankAccountNumber"`
+		BankIFSC          string `json:"bankIFSC"`
+		BankAccountName   string `json:"bankAccountName"`
+		UpiID             string `json:"upiId"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if req.PayoutMethod != "bank_transfer" && req.PayoutMethod != "upi" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "payoutMethod must be 'bank_transfer' or 'upi'"})
+		return
+	}
+
+	if req.PayoutMethod == "bank_transfer" {
+		if req.BankAccountNumber == "" || req.BankIFSC == "" || req.BankAccountName == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "bankAccountNumber, bankIFSC, and bankAccountName are required for bank_transfer"})
+			return
+		}
+	}
+
+	if req.PayoutMethod == "upi" {
+		if req.UpiID == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "upiId is required for upi payout method"})
+			return
+		}
+	}
+
+	var chef models.ChefProfile
+	if err := database.DB.Where("user_id = ?", userID).First(&chef).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Chef profile not found"})
+		return
+	}
+
+	chef.PayoutMethod = req.PayoutMethod
+	chef.BankAccountNumber = req.BankAccountNumber
+	chef.BankIFSC = req.BankIFSC
+	chef.BankAccountName = req.BankAccountName
+	chef.UpiID = req.UpiID
+
+	if err := database.DB.Save(&chef).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save payout details"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":           "Payout details saved",
+		"payoutMethod":      chef.PayoutMethod,
+		"bankAccountName":   chef.BankAccountName,
+		"bankAccountNumber": maskBankAccount(chef.BankAccountNumber),
+		"bankIFSC":          chef.BankIFSC,
+		"upiId":             maskEmail(chef.UpiID),
+	})
+}
+
 // GetChefAnalytics returns analytics data for the authenticated chef
 func (h *ChefHandler) GetChefAnalytics(c *gin.Context) {
 	userID, _ := middleware.GetUserID(c)

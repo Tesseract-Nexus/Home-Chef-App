@@ -39,6 +39,14 @@ const (
 	SubjectApprovalInfoRequested = "approvals.info_requested"
 
 	SubjectDriverOnboardingSubmitted = "driver.onboarding.submitted"
+
+	SubjectSubscriptionCreated        = "subscription.created"
+	SubjectSubscriptionActivated      = "subscription.activated"
+	SubjectSubscriptionPastDue        = "subscription.past_due"
+	SubjectSubscriptionSuspended      = "subscription.suspended"
+	SubjectSubscriptionCancelled      = "subscription.cancelled"
+	SubjectSubscriptionInvoiceCreated = "subscription.invoice.created"
+	SubjectEarningsThresholdMet       = "subscription.earnings.threshold_met"
 )
 
 // Event represents a generic event message
@@ -265,6 +273,20 @@ func (n *NATSClient) setupStreams() error {
 	})
 	if err != nil {
 		log.Printf("Failed to create APPROVALS stream: %v", err)
+	}
+
+	// Subscriptions stream
+	_, err = n.js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
+		Name:        "SUBSCRIPTIONS",
+		Description: "Subscription billing events stream",
+		Subjects:    []string{"subscription.*", "subscription.*.*"},
+		Retention:   jetstream.WorkQueuePolicy,
+		MaxAge:      30 * 24 * time.Hour,
+		Storage:     jetstream.FileStorage,
+		Replicas:    1,
+	})
+	if err != nil {
+		log.Printf("Failed to create SUBSCRIPTIONS stream: %v", err)
 	}
 
 	log.Println("NATS JetStream streams configured")

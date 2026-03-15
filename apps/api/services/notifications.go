@@ -279,10 +279,48 @@ func (s *NotificationService) subscribeToDeliveryEvents() error {
 	}
 	s.subscriptions = append(s.subscriptions, sub)
 
+	// Driver onboarding submitted - notify admins
+	sub, err = s.nats.QueueSubscribe(SubjectDriverOnboardingSubmitted, "notification-workers", func(msg *nats.Msg) {
+		var event Event
+		if err := json.Unmarshal(msg.Data, &event); err != nil {
+			log.Printf("Failed to unmarshal driver onboarding submitted event: %v", err)
+			return
+		}
+		s.handleDriverOnboardingSubmitted(event)
+	})
+	if err != nil {
+		return err
+	}
+	s.subscriptions = append(s.subscriptions, sub)
+
 	return nil
 }
 
 // Event handlers
+
+func (s *NotificationService) handleDriverOnboardingSubmitted(event Event) {
+	log.Printf("Processing driver onboarding submitted event: %s", event.ID)
+
+	city, _ := event.Data["city"].(string)
+
+	// Notify all admin users about new driver application
+	var admins []models.User
+	database.DB.Where("role = ?", models.RoleAdmin).Find(&admins)
+
+	data, _ := json.Marshal(event.Data)
+	for _, admin := range admins {
+		notification := &models.Notification{
+			UserID:  admin.ID,
+			Type:    "driver_onboarding_submitted",
+			Title:   "New Driver Application",
+			Message: fmt.Sprintf("A new driver from %s has submitted their onboarding application for review.", city),
+			Data:    string(data),
+		}
+		if err := s.saveNotification(notification); err != nil {
+			log.Printf("Failed to save driver onboarding notification for admin %s: %v", admin.ID, err)
+		}
+	}
+}
 
 func (s *NotificationService) handleOrderCreated(event OrderEvent) {
 	log.Printf("Processing order created event: Order #%s", event.OrderID.String())
@@ -572,23 +610,55 @@ func (s *NotificationService) resolveChefUserID(chefIDStr string, eventData map[
 	return uuid.Nil, fmt.Errorf("could not resolve user for chef_id=%s", chefIDStr)
 }
 
+// resolveApprovalUserID resolves the user ID for an approval event.
+// Handles both chef-based and driver/partner-based approvals.
+func (s *NotificationService) resolveApprovalUserID(event Event) (uuid.UUID, error) {
+	// Try partner_id first (driver approvals)
+	if partnerIDStr, ok := event.Data["partner_id"].(string); ok && partnerIDStr != "" {
+		partnerID, err := uuid.Parse(partnerIDStr)
+		if err == nil {
+			var partner models.DeliveryPartner
+			if err := database.DB.First(&partner, "id = ?", partnerID).Error; err == nil {
+				return partner.UserID, nil
+			}
+		}
+	}
+
+	// Try chef_id (chef approvals)
+	if chefIDStr, ok := event.Data["chef_id"].(string); ok && chefIDStr != "" {
+		userID, err := s.resolveChefUserID(chefIDStr, event.Data)
+		if err == nil {
+			return userID, nil
+		}
+	}
+
+	// Fallback: look up the approval request to find the submitter
+	if approvalIDStr, ok := event.Data["approval_id"].(string); ok {
+		approvalID, _ := uuid.Parse(approvalIDStr)
+		var approval models.ApprovalRequest
+		if err := database.DB.First(&approval, "id = ?", approvalID).Error; err == nil {
+			return approval.SubmittedByID, nil
+		}
+	}
+
+	return uuid.Nil, fmt.Errorf("could not resolve user for approval event")
+}
+
 func (s *NotificationService) handleApprovalApproved(event Event) {
 	log.Printf("Processing approval approved event: %s", event.ID)
 
 	approvalType, _ := event.Data["type"].(string)
-	chefIDStr, _ := event.Data["chef_id"].(string)
 	title, _ := event.Data["title"].(string)
 
-	userID, err := s.resolveChefUserID(chefIDStr, event.Data)
+	userID, err := s.resolveApprovalUserID(event)
 	if err != nil {
 		log.Printf("Failed to resolve user for approval approved: %v", err)
 		return
 	}
-	chef := models.ChefProfile{UserID: userID} // minimal struct for notification
 
 	data, _ := json.Marshal(event.Data)
 	notification := &models.Notification{
-		UserID:  chef.UserID,
+		UserID:  userID,
 		Type:    "approval_approved",
 		Title:   "Request Approved",
 		Message: fmt.Sprintf("Your %s has been approved: %s", approvalType, title),
@@ -600,7 +670,7 @@ func (s *NotificationService) handleApprovalApproved(event Event) {
 
 	// Send push notification
 	PublishNotification(NotificationEvent{
-		UserID:  chef.UserID,
+		UserID:  userID,
 		Type:    "push",
 		Title:   "Request Approved!",
 		Message: fmt.Sprintf("Your %s has been approved", approvalType),
@@ -612,15 +682,13 @@ func (s *NotificationService) handleApprovalRejected(event Event) {
 	log.Printf("Processing approval rejected event: %s", event.ID)
 
 	approvalType, _ := event.Data["type"].(string)
-	chefIDStr, _ := event.Data["chef_id"].(string)
 	notes, _ := event.Data["notes"].(string)
 
-	userID, err := s.resolveChefUserID(chefIDStr, event.Data)
+	userID, err := s.resolveApprovalUserID(event)
 	if err != nil {
 		log.Printf("Failed to resolve user for approval rejected: %v", err)
 		return
 	}
-	chef := models.ChefProfile{UserID: userID}
 
 	message := fmt.Sprintf("Your %s has been rejected.", approvalType)
 	if notes != "" {
@@ -629,7 +697,7 @@ func (s *NotificationService) handleApprovalRejected(event Event) {
 
 	data, _ := json.Marshal(event.Data)
 	notification := &models.Notification{
-		UserID:  chef.UserID,
+		UserID:  userID,
 		Type:    "approval_rejected",
 		Title:   "Request Rejected",
 		Message: message,
@@ -640,7 +708,7 @@ func (s *NotificationService) handleApprovalRejected(event Event) {
 	}
 
 	PublishNotification(NotificationEvent{
-		UserID:  chef.UserID,
+		UserID:  userID,
 		Type:    "push",
 		Title:   "Request Rejected",
 		Message: message,
@@ -652,15 +720,13 @@ func (s *NotificationService) handleApprovalInfoRequested(event Event) {
 	log.Printf("Processing approval info_requested event: %s", event.ID)
 
 	approvalType, _ := event.Data["type"].(string)
-	chefIDStr, _ := event.Data["chef_id"].(string)
 	notes, _ := event.Data["notes"].(string)
 
-	userID, err := s.resolveChefUserID(chefIDStr, event.Data)
+	userID, err := s.resolveApprovalUserID(event)
 	if err != nil {
 		log.Printf("Failed to resolve user for approval info_requested: %v", err)
 		return
 	}
-	chef := models.ChefProfile{UserID: userID}
 
 	message := fmt.Sprintf("Admin needs more info about your %s.", approvalType)
 	if notes != "" {
@@ -669,7 +735,7 @@ func (s *NotificationService) handleApprovalInfoRequested(event Event) {
 
 	data, _ := json.Marshal(event.Data)
 	notification := &models.Notification{
-		UserID:  chef.UserID,
+		UserID:  userID,
 		Type:    "approval_info_requested",
 		Title:   "More Information Needed",
 		Message: message,
@@ -680,7 +746,7 @@ func (s *NotificationService) handleApprovalInfoRequested(event Event) {
 	}
 
 	PublishNotification(NotificationEvent{
-		UserID:  chef.UserID,
+		UserID:  userID,
 		Type:    "push",
 		Title:   "More Information Needed",
 		Message: message,

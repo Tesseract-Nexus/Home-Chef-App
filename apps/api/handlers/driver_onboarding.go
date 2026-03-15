@@ -45,21 +45,43 @@ func (h *DriverOnboardingHandler) GetDriverOnboardingStatus(c *gin.Context) {
 
 	payoutSet := partner.PayoutMethod != ""
 
+	// Map verification status to a simple status field the frontend expects
+	status := "in_progress"
+	switch partner.VerificationStatus {
+	case models.VerificationInReview:
+		if partner.OnboardingComplete {
+			status = "in_review"
+		} else {
+			status = "submitted"
+		}
+	case models.VerificationApproved:
+		status = "approved"
+	case models.VerificationRejected:
+		status = "rejected"
+	default:
+		if partner.OnboardingComplete {
+			status = "submitted"
+		}
+	}
+
 	c.JSON(http.StatusOK, gin.H{
 		"step":               partner.OnboardingStep,
+		"status":             status,
 		"onboardingComplete": partner.OnboardingComplete,
 		"verificationStatus": partner.VerificationStatus,
+		"rejectionReason":    partner.RejectionReason,
 		"profile": gin.H{
-			"city":             partner.City,
-			"emergencyContact": partner.EmergencyContact,
-			"emergencyPhone":   partner.EmergencyPhone,
-			"vehicleType":      partner.VehicleType,
-			"vehicleMake":      partner.VehicleMake,
-			"vehicleModel":     partner.VehicleModel,
-			"vehicleYear":      partner.VehicleYear,
-			"vehicleColor":     partner.VehicleColor,
-			"vehicleNumber":    partner.VehicleNumber,
-			"licenseNumber":    partner.LicenseNumber,
+			"city":                partner.City,
+			"emergencyContact":    partner.EmergencyContact,
+			"emergencyPhone":      partner.EmergencyPhone,
+			"vehicleType":         partner.VehicleType,
+			"vehicleMake":         partner.VehicleMake,
+			"vehicleModel":        partner.VehicleModel,
+			"vehicleYear":         partner.VehicleYear,
+			"vehicleColor":        partner.VehicleColor,
+			"vehicleNumber":       partner.VehicleNumber,
+			"licenseNumber":       partner.LicenseNumber,
+			"hasDeliveryBoxSpace": partner.HasDeliveryBoxSpace,
 		},
 		"documentCount": docCount,
 		"payoutSet":     payoutSet,
@@ -190,17 +212,35 @@ func (h *DriverOnboardingHandler) DriverOnboardingVehicle(c *gin.Context) {
 	userID, _ := middleware.GetUserID(c)
 
 	var req struct {
-		VehicleType   string `json:"vehicleType" binding:"required"`
-		VehicleMake   string `json:"vehicleMake" binding:"required"`
-		VehicleModel  string `json:"vehicleModel" binding:"required"`
-		VehicleYear   int    `json:"vehicleYear" binding:"required"`
-		VehicleColor  string `json:"vehicleColor" binding:"required"`
-		VehicleNumber string `json:"vehicleNumber" binding:"required"`
-		LicenseNumber string `json:"licenseNumber" binding:"required"`
+		VehicleType         string `json:"vehicleType" binding:"required"`
+		VehicleMake         string `json:"vehicleMake"`
+		VehicleModel        string `json:"vehicleModel"`
+		VehicleYear         int    `json:"vehicleYear"`
+		VehicleColor        string `json:"vehicleColor"`
+		VehicleNumber       string `json:"vehicleNumber"`
+		LicenseNumber       string `json:"licenseNumber"`
+		HasDeliveryBoxSpace *bool  `json:"hasDeliveryBoxSpace"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
+	}
+
+	// Validate required fields based on vehicle type
+	if req.VehicleType == "bicycle" {
+		if req.HasDeliveryBoxSpace == nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Please indicate if your bicycle can carry a delivery box"})
+			return
+		}
+	} else {
+		if strings.TrimSpace(req.VehicleNumber) == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Vehicle registration number is required"})
+			return
+		}
+		if strings.TrimSpace(req.LicenseNumber) == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Driving license number is required"})
+			return
+		}
 	}
 
 	var partner models.DeliveryPartner
@@ -214,8 +254,17 @@ func (h *DriverOnboardingHandler) DriverOnboardingVehicle(c *gin.Context) {
 	partner.VehicleModel = req.VehicleModel
 	partner.VehicleYear = req.VehicleYear
 	partner.VehicleColor = req.VehicleColor
-	partner.VehicleNumber = req.VehicleNumber
-	partner.LicenseNumber = req.LicenseNumber
+
+	if req.VehicleType == "bicycle" {
+		partner.VehicleNumber = ""
+		partner.LicenseNumber = ""
+		if req.HasDeliveryBoxSpace != nil {
+			partner.HasDeliveryBoxSpace = *req.HasDeliveryBoxSpace
+		}
+	} else {
+		partner.VehicleNumber = req.VehicleNumber
+		partner.LicenseNumber = req.LicenseNumber
+	}
 
 	if partner.OnboardingStep < 2 {
 		partner.OnboardingStep = 2

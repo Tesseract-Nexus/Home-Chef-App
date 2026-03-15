@@ -59,6 +59,7 @@ func SetupRouter() *gin.Engine {
 	deliveryHandler := handlers.NewDeliveryHandler()
 	driverHandler := handlers.NewDriverOnboardingHandler()
 	staffHandler := handlers.NewStaffHandler()
+	subscriptionHandler := handlers.NewSubscriptionHandler()
 
 	// Health check endpoints
 	r.GET("/health", healthHandler.Health)
@@ -315,6 +316,32 @@ func SetupRouter() *gin.Engine {
 			delivery.GET("/documents", deliveryHandler.GetPartnerDocuments)
 		}
 
+		// Chef subscription routes (chef role required)
+		chefSubscription := v1.Group("/chef/subscription")
+		chefSubscription.Use(middleware.AuthMiddleware(), middleware.RequireChef())
+		{
+			chefSubscription.GET("", subscriptionHandler.GetSubscription)
+			chefSubscription.GET("/plans", subscriptionHandler.GetAvailablePlans)
+			chefSubscription.POST("/choose-plan", subscriptionHandler.ChoosePlan)
+			chefSubscription.POST("/cancel", subscriptionHandler.CancelSubscription)
+			chefSubscription.PUT("/change-plan", subscriptionHandler.ChangePlan)
+			chefSubscription.GET("/invoices", subscriptionHandler.GetInvoices)
+			chefSubscription.GET("/earnings", subscriptionHandler.GetEarningsSummary)
+		}
+
+		// Driver subscription routes (delivery role required)
+		driverSubscription := v1.Group("/driver/subscription")
+		driverSubscription.Use(middleware.AuthMiddleware(), middleware.RequireDelivery())
+		{
+			driverSubscription.GET("", subscriptionHandler.GetSubscription)
+			driverSubscription.GET("/plans", subscriptionHandler.GetAvailablePlans)
+			driverSubscription.POST("/choose-plan", subscriptionHandler.ChoosePlan)
+			driverSubscription.POST("/cancel", subscriptionHandler.CancelSubscription)
+			driverSubscription.PUT("/change-plan", subscriptionHandler.ChangePlan)
+			driverSubscription.GET("/invoices", subscriptionHandler.GetInvoices)
+			driverSubscription.GET("/earnings", subscriptionHandler.GetEarningsSummary)
+		}
+
 		// Admin routes
 		admin := v1.Group("/admin")
 		admin.Use(middleware.AuthMiddleware(), middleware.RequireAdmin())
@@ -342,6 +369,7 @@ func SetupRouter() *gin.Engine {
 
 			// Delivery management
 			admin.GET("/delivery/stats", deliveryHandler.AdminGetDeliveryStats)
+			admin.GET("/delivery/list", deliveryHandler.AdminListDeliveries)
 			admin.GET("/delivery/partners", deliveryHandler.AdminGetDeliveryPartners)
 			admin.GET("/delivery/partners/:id", deliveryHandler.GetPartnerDetail)
 			admin.PUT("/delivery/partners/:id/verify", deliveryHandler.AdminVerifyPartner)
@@ -379,6 +407,11 @@ func SetupRouter() *gin.Engine {
 			admin.PUT("/approvals/:id/request-info", approvalHandler.RequestMoreInfo)
 			admin.GET("/approvals/:id/history", approvalHandler.GetApprovalHistory)
 			admin.GET("/approvals/:id/documents/:docId", approvalHandler.GetDocumentDownload)
+
+			// Subscription management
+			admin.GET("/subscriptions", subscriptionHandler.AdminGetSubscriptions)
+			admin.GET("/subscriptions/stats", subscriptionHandler.AdminGetSubscriptionStats)
+			admin.GET("/subscriptions/:id", subscriptionHandler.AdminGetSubscription)
 		}
 
 		// Addresses

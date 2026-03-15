@@ -146,6 +146,11 @@ func Migrate() error {
 		// Staff & Invitations
 		&models.StaffMember{},
 		&models.StaffInvitation{},
+
+		// Subscriptions & Billing
+		&models.Subscription{},
+		&models.SubscriptionInvoice{},
+		&models.EarningsLedger{},
 	)
 
 	if err != nil {

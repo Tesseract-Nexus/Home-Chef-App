@@ -562,6 +562,36 @@ func (h *DeliveryHandler) UpdateDeliveryStatus(c *gin.Context) {
 			})
 		}()
 
+		// Record earnings for subscription billing (driver)
+		go func() {
+			var sub models.Subscription
+			if err := database.DB.Where("user_id = ? AND subscriber_type = ? AND status IN ?",
+				partner.UserID, models.SubscriberDriver,
+				[]models.SubscriptionStatus{models.SubStatusTrial, models.SubStatusActive}).
+				First(&sub).Error; err == nil {
+				services.RecordEarning(partner.UserID, sub.ID, models.EarningDeliveryFee, delivery.DeliveryFee, "INR", nil, &delivery.ID)
+				if delivery.Tip > 0 {
+					services.RecordEarning(partner.UserID, sub.ID, models.EarningTip, delivery.Tip, "INR", nil, &delivery.ID)
+				}
+				services.CheckEarningsThreshold(sub.ID)
+			}
+		}()
+
+		// Record chef earnings for subscription billing
+		go func() {
+			var order models.Order
+			if err := database.DB.Preload("Chef").First(&order, delivery.OrderID).Error; err == nil {
+				var chefSub models.Subscription
+				if err := database.DB.Where("user_id = ? AND subscriber_type = ? AND status IN ?",
+					order.Chef.UserID, models.SubscriberChef,
+					[]models.SubscriptionStatus{models.SubStatusTrial, models.SubStatusActive}).
+					First(&chefSub).Error; err == nil {
+					services.RecordEarning(order.Chef.UserID, chefSub.ID, models.EarningOrderRevenue, order.Subtotal, "INR", &order.ID, nil)
+					services.CheckEarningsThreshold(chefSub.ID)
+				}
+			}
+		}()
+
 	case models.DeliveryCancelled:
 		delivery.CancelledAt = &now
 		delivery.CancelReason = req.CancelReason
@@ -866,9 +896,13 @@ func (h *DeliveryHandler) AdminVerifyPartner(c *gin.Context) {
 		return
 	}
 
+	adminUserID, _ := middleware.GetUserID(c)
+
 	now := time.Now()
 	partner.IsVerified = true
 	partner.VerifiedAt = &now
+	partner.VerificationStatus = models.VerificationApproved
+	partner.VerifiedByID = &adminUserID
 
 	if err := database.DB.Save(&partner).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to verify partner"})
@@ -935,6 +969,88 @@ func (h *DeliveryHandler) AdminGetDeliveryStats(c *gin.Context) {
 		"activeDeliveries": activeDeliveries,
 		"todayDeliveries":  todayDeliveries,
 		"todayEarnings":    todayEarnings,
+	})
+}
+
+// AdminListDeliveries returns paginated delivery records for admin dashboard
+func (h *DeliveryHandler) AdminListDeliveries(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	statusFilter := c.Query("status")
+
+	if page < 1 {
+		page = 1
+	}
+	if limit > 100 {
+		limit = 100
+	}
+	offset := (page - 1) * limit
+
+	query := database.DB.Model(&models.Delivery{}).
+		Preload("Order").
+		Preload("Order.Chef").
+		Preload("DeliveryPartner.User")
+
+	if statusFilter != "" {
+		query = query.Where("status = ?", statusFilter)
+	}
+
+	var total int64
+	query.Count(&total)
+
+	var deliveries []models.Delivery
+	query.Order("assigned_at DESC").Offset(offset).Limit(limit).Find(&deliveries)
+
+	responses := make([]gin.H, len(deliveries))
+	for i, d := range deliveries {
+		resp := gin.H{
+			"id":        d.ID,
+			"orderId":   d.OrderID,
+			"status":    d.Status,
+			"distance":  d.Distance,
+			"pickup": gin.H{
+				"address": d.PickupAddressLine1,
+				"city":    d.PickupAddressCity,
+			},
+			"dropoff": gin.H{
+				"address": d.DropoffAddressLine1,
+				"city":    d.DropoffAddressCity,
+			},
+			"deliveryFee":  d.DeliveryFee,
+			"tip":          d.Tip,
+			"totalPayout":  d.TotalPayout,
+			"assignedAt":   d.AssignedAt,
+			"pickedUpAt":   d.PickedUpAt,
+			"deliveredAt":  d.DeliveredAt,
+			"cancelledAt":  d.CancelledAt,
+			"cancelReason": d.CancelReason,
+		}
+		if d.Order.ID != uuid.Nil {
+			resp["orderNumber"] = d.Order.OrderNumber
+			resp["orderTotal"] = d.Order.Total
+			resp["orderStatus"] = d.Order.Status
+			if d.Order.Chef.ID != uuid.Nil {
+				resp["chefName"] = d.Order.Chef.BusinessName
+			}
+		}
+		if d.DeliveryPartner.ID != uuid.Nil {
+			resp["driverName"] = d.DeliveryPartner.User.FirstName + " " + d.DeliveryPartner.User.LastName
+			resp["driverPhone"] = d.DeliveryPartner.User.Phone
+			resp["vehicleType"] = d.DeliveryPartner.VehicleType
+		}
+		responses[i] = resp
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": responses,
+		"pagination": gin.H{
+			"page":       page,
+			"limit":      limit,
+			"total":      total,
+			"totalPages": (total + int64(limit) - 1) / int64(limit),
+			"hasNext":    int64(offset+limit) < total,
+			"hasPrev":    page > 1,
+		},
 	})
 }
 

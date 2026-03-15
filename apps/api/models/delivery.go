@@ -93,10 +93,11 @@ type DeliveryPartner struct {
 	DateOfBirth      *time.Time `gorm:"" json:"dateOfBirth,omitempty"`
 
 	// Extended vehicle details
-	VehicleMake  string `gorm:"" json:"vehicleMake"`
-	VehicleModel string `gorm:"" json:"vehicleModel"`
-	VehicleYear  int    `gorm:"" json:"vehicleYear"`
-	VehicleColor string `gorm:"" json:"vehicleColor"`
+	VehicleMake         string `gorm:"" json:"vehicleMake"`
+	VehicleModel        string `gorm:"" json:"vehicleModel"`
+	VehicleYear         int    `gorm:"" json:"vehicleYear"`
+	VehicleColor        string `gorm:"" json:"vehicleColor"`
+	HasDeliveryBoxSpace bool   `gorm:"default:false" json:"hasDeliveryBoxSpace"` // For bicycle partners
 
 	// Payout info
 	BankAccountNumber string `gorm:"" json:"-"`
@@ -316,11 +317,12 @@ type DeliveryPartnerDetailResponse struct {
 	City               string `json:"city,omitempty"`
 	EmergencyContact   string `json:"emergencyContact,omitempty"`
 	EmergencyPhone     string `json:"emergencyPhone,omitempty"`
-	VehicleMake        string `json:"vehicleMake,omitempty"`
-	VehicleModel       string `json:"vehicleModel,omitempty"`
-	VehicleYear        int    `json:"vehicleYear,omitempty"`
-	VehicleColor       string `json:"vehicleColor,omitempty"`
-	PayoutMethod       string `json:"payoutMethod,omitempty"`
+	VehicleMake         string `json:"vehicleMake,omitempty"`
+	VehicleModel        string `json:"vehicleModel,omitempty"`
+	VehicleYear         int    `json:"vehicleYear,omitempty"`
+	VehicleColor        string `json:"vehicleColor,omitempty"`
+	HasDeliveryBoxSpace bool   `json:"hasDeliveryBoxSpace,omitempty"`
+	PayoutMethod        string `json:"payoutMethod,omitempty"`
 	OnboardingStep     int    `json:"onboardingStep"`
 	OnboardingComplete bool   `json:"onboardingComplete"`
 	ReferralCode       string `json:"referralCode,omitempty"`
@@ -360,8 +362,9 @@ func (p *DeliveryPartner) ToDetailResponse() DeliveryPartnerDetailResponse {
 		VehicleMake:        p.VehicleMake,
 		VehicleModel:       p.VehicleModel,
 		VehicleYear:        p.VehicleYear,
-		VehicleColor:       p.VehicleColor,
-		PayoutMethod:       p.PayoutMethod,
+		VehicleColor:        p.VehicleColor,
+		HasDeliveryBoxSpace: p.HasDeliveryBoxSpace,
+		PayoutMethod:        p.PayoutMethod,
 		OnboardingStep:     p.OnboardingStep,
 		OnboardingComplete: p.OnboardingComplete,
 		ReferralCode:       p.ReferralCode,

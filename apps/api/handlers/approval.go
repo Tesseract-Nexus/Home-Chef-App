@@ -167,18 +167,14 @@ func (h *ApprovalHandler) GetApprovalRequest(c *gin.Context) {
 		return
 	}
 
-	// Fetch chef documents for review (all types benefit from seeing docs)
-	var docs []models.ChefDocument
-	database.DB.Where("chef_id = ?", approval.ChefID).Order("created_at DESC").Find(&docs)
-
-	// Return flat response (not nested under "approval" key)
-	// The frontend expects fields at the top level
-	c.JSON(http.StatusOK, gin.H{
+	// Fetch documents based on approval type
+	response := gin.H{
 		"id":            approval.ID,
 		"type":          approval.Type,
 		"status":        approval.Status,
 		"priority":      approval.Priority,
 		"chefId":        approval.ChefID,
+		"partnerId":     approval.PartnerID,
 		"submittedById": approval.SubmittedByID,
 		"reviewedById":  approval.ReviewedByID,
 		"entityType":    approval.EntityType,
@@ -191,10 +187,38 @@ func (h *ApprovalHandler) GetApprovalRequest(c *gin.Context) {
 		"createdAt":     approval.CreatedAt,
 		"updatedAt":     approval.UpdatedAt,
 		"chef":          approval.Chef,
+		"partner":       approval.Partner,
 		"submittedBy":   approval.SubmittedBy,
 		"reviewedBy":    approval.ReviewedBy,
-		"documents":     docs,
-	})
+	}
+
+	// Fetch appropriate documents based on approval type
+	if approval.Type == models.ApprovalDriverOnboarding || approval.Type == models.ApprovalDriverDocument {
+		// Fetch partner (driver) documents
+		var partnerDocs []models.DeliveryPartnerDocument
+		database.DB.Where("partner_id = ?", approval.PartnerID).Order("created_at DESC").Find(&partnerDocs)
+		docResponses := make([]map[string]interface{}, len(partnerDocs))
+		for i, d := range partnerDocs {
+			docResponses[i] = map[string]interface{}{
+				"id":              d.ID,
+				"type":            d.Type,
+				"fileName":        d.FileName,
+				"contentType":     d.ContentType,
+				"fileSize":        d.FileSize,
+				"status":          d.Status,
+				"rejectionReason": d.RejectionReason,
+				"createdAt":       d.CreatedAt,
+			}
+		}
+		response["documents"] = docResponses
+	} else {
+		// Fetch chef documents
+		var docs []models.ChefDocument
+		database.DB.Where("chef_id = ?", approval.ChefID).Order("created_at DESC").Find(&docs)
+		response["documents"] = docs
+	}
+
+	c.JSON(http.StatusOK, response)
 }
 
 // ApproveRequest approves an approval request and applies side effects
@@ -269,16 +293,43 @@ func (h *ApprovalHandler) ApproveRequest(c *gin.Context) {
 		database.DB.Model(&models.MenuItem{}).
 			Where("id = ?", approval.EntityID).
 			Update("is_approved", true)
+
+	case models.ApprovalDriverOnboarding:
+		if approval.PartnerID != nil {
+			database.DB.Model(&models.DeliveryPartner{}).Where("id = ?", *approval.PartnerID).Updates(map[string]interface{}{
+				"verification_status": models.VerificationApproved,
+				"is_verified":         true,
+				"verified_at":         &now,
+				"verified_by_id":      adminUserID,
+			})
+			// Approve all pending partner documents
+			database.DB.Model(&models.DeliveryPartnerDocument{}).
+				Where("partner_id = ? AND status = ?", *approval.PartnerID, "pending").
+				Update("status", "verified")
+		}
+
+	case models.ApprovalDriverDocument:
+		if approval.PartnerID != nil {
+			database.DB.Model(&models.DeliveryPartnerDocument{}).
+				Where("partner_id = ? AND status = ?", *approval.PartnerID, "pending").
+				Update("status", "verified")
+		}
 	}
 
-	// Publish NATS event
-	if err := services.PublishEvent(services.SubjectApprovalApproved, "approval.approved", adminUserID, map[string]interface{}{
+	// Publish NATS event — include partner_id for driver approvals
+	eventData := map[string]interface{}{
 		"approval_id": approval.ID.String(),
 		"type":        string(approval.Type),
-		"chef_id":     approval.ChefID,
 		"title":       approval.Title,
 		"notes":       req.Notes,
-	}); err != nil {
+	}
+	if approval.ChefID != nil {
+		eventData["chef_id"] = approval.ChefID.String()
+	}
+	if approval.PartnerID != nil {
+		eventData["partner_id"] = approval.PartnerID.String()
+	}
+	if err := services.PublishEvent(services.SubjectApprovalApproved, "approval.approved", adminUserID, eventData); err != nil {
 		log.Printf("Failed to publish approval approved event: %v", err)
 	}
 
@@ -353,16 +404,41 @@ func (h *ApprovalHandler) RejectRequest(c *gin.Context) {
 		database.DB.Model(&models.MenuItem{}).
 			Where("id = ?", approval.EntityID).
 			Update("is_approved", false)
+
+	case models.ApprovalDriverOnboarding:
+		if approval.PartnerID != nil {
+			database.DB.Model(&models.DeliveryPartner{}).Where("id = ?", *approval.PartnerID).Updates(map[string]interface{}{
+				"verification_status": models.VerificationRejected,
+				"rejection_reason":    req.Notes,
+				"is_verified":         false,
+			})
+		}
+
+	case models.ApprovalDriverDocument:
+		if approval.PartnerID != nil {
+			database.DB.Model(&models.DeliveryPartnerDocument{}).
+				Where("partner_id = ? AND status = ?", *approval.PartnerID, "pending").
+				Updates(map[string]interface{}{
+					"status":           "rejected",
+					"rejection_reason": req.Notes,
+				})
+		}
 	}
 
-	// Publish NATS event
-	if err := services.PublishEvent(services.SubjectApprovalRejected, "approval.rejected", adminUserID, map[string]interface{}{
+	// Publish NATS event — include partner_id for driver approvals
+	eventData := map[string]interface{}{
 		"approval_id": approval.ID.String(),
 		"type":        string(approval.Type),
-		"chef_id":     approval.ChefID,
 		"title":       approval.Title,
 		"notes":       req.Notes,
-	}); err != nil {
+	}
+	if approval.ChefID != nil {
+		eventData["chef_id"] = approval.ChefID.String()
+	}
+	if approval.PartnerID != nil {
+		eventData["partner_id"] = approval.PartnerID.String()
+	}
+	if err := services.PublishEvent(services.SubjectApprovalRejected, "approval.rejected", adminUserID, eventData); err != nil {
 		log.Printf("Failed to publish approval rejected event: %v", err)
 	}
 

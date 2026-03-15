@@ -4,7 +4,7 @@ const steps = [
   { number: 1, label: 'Personal Info' },
   { number: 2, label: 'Vehicle Details' },
   { number: 3, label: 'Documents' },
-  { number: 4, label: 'Payout' },
+  { number: 4, label: 'Plan' },
   { number: 5, label: 'Review' },
 ];
 

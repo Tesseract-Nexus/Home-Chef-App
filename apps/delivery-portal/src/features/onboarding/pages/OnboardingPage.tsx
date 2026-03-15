@@ -7,7 +7,7 @@ import { StepProgress } from '../components/StepProgress';
 import { StepPersonalInfo } from '../components/StepPersonalInfo';
 import { StepVehicleDetails } from '../components/StepVehicleDetails';
 import { StepDocuments } from '../components/StepDocuments';
-import { StepPayoutDetails } from '../components/StepPayoutDetails';
+import { StepSubscriptionPlan } from '../components/StepSubscriptionPlan';
 import { StepReview } from '../components/StepReview';
 
 interface OnboardingStatusResponse {
@@ -158,8 +158,7 @@ export default function OnboardingPage() {
             />
           )}
           {currentStep === 4 && (
-            <StepPayoutDetails
-              initialData={profileData as Record<string, string>}
+            <StepSubscriptionPlan
               onComplete={() => handleStepComplete(4)}
               onBack={() => goToStep(3)}
             />

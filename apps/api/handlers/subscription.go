@@ -149,6 +149,14 @@ func (h *SubscriptionHandler) ChoosePlan(c *gin.Context) {
 			newSub.BillingInterval = interval
 			newSub.PlanAmount = planAmount
 		}
+
+		// Update onboarding step for driver subscribers
+		if subType == "driver" {
+			database.DB.Model(&models.DeliveryPartner{}).
+				Where("user_id = ? AND onboarding_step < ?", userID, 4).
+				Update("onboarding_step", 4)
+		}
+
 		c.JSON(http.StatusCreated, gin.H{"subscription": newSub.ToResponse()})
 		return
 	}
@@ -160,6 +168,13 @@ func (h *SubscriptionHandler) ChoosePlan(c *gin.Context) {
 	})
 	sub.BillingInterval = interval
 	sub.PlanAmount = planAmount
+
+	// Update onboarding step for driver subscribers
+	if subType == "driver" {
+		database.DB.Model(&models.DeliveryPartner{}).
+			Where("user_id = ? AND onboarding_step < ?", userID, 4).
+			Update("onboarding_step", 4)
+	}
 
 	c.JSON(http.StatusOK, gin.H{"subscription": sub.ToResponse()})
 }

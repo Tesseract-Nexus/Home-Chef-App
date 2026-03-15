@@ -259,12 +259,12 @@ export function StepReview({ onComplete, onBack, onGoToStep }: StepReviewProps) 
         </div>
       </div>
 
-      {/* Payout Section */}
+      {/* Subscription Plan Section */}
       <div className="rounded-xl border border-border bg-card p-5">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Wallet className="h-4 w-4 text-primary" />
-            <h3 className="text-sm font-semibold text-foreground">Payout Details</h3>
+            <h3 className="text-sm font-semibold text-foreground">Subscription Plan</h3>
           </div>
           <button
             type="button"
@@ -272,41 +272,16 @@ export function StepReview({ onComplete, onBack, onGoToStep }: StepReviewProps) 
             className="flex items-center gap-1 text-xs font-medium text-primary hover:text-primary/80"
           >
             <Pencil className="h-3 w-3" />
-            Edit
+            Change
           </button>
         </div>
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <div>
-            <p className="text-muted-foreground">Method</p>
-            <p className="font-medium text-foreground capitalize">
-              {profile?.payoutMethod?.replace('_', ' ') || '-'}
-            </p>
-          </div>
-          {profile?.payoutMethod === 'bank_transfer' ? (
-            <>
-              <div>
-                <p className="text-muted-foreground">Account Holder</p>
-                <p className="font-medium text-foreground">{profile?.bankAccountName || '-'}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Account Number</p>
-                <p className="font-medium text-foreground">
-                  {profile?.bankAccountNumber
-                    ? `****${profile.bankAccountNumber.slice(-4)}`
-                    : '-'}
-                </p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">IFSC</p>
-                <p className="font-medium text-foreground">{profile?.bankIFSC || '-'}</p>
-              </div>
-            </>
-          ) : profile?.payoutMethod === 'upi' ? (
-            <div>
-              <p className="text-muted-foreground">UPI ID</p>
-              <p className="font-medium text-foreground">{profile?.upiId || '-'}</p>
-            </div>
-          ) : null}
+        <div className="text-sm">
+          <p className="text-muted-foreground">
+            Plan selected. Payments handled securely via Razorpay.
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Billing starts only after you reach the minimum earnings threshold.
+          </p>
         </div>
       </div>
 

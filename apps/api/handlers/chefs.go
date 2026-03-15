@@ -747,7 +747,7 @@ func (h *ChefHandler) GetPayoutDetails(c *gin.Context) {
 	userID, _ := middleware.GetUserID(c)
 
 	var chef models.ChefProfile
-	if err := database.DB.Where("user_id = ?", userID).First(&chef).Error; err != nil {
+	if err := database.DB.Preload("User").Where("user_id = ?", userID).First(&chef).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Chef profile not found"})
 		return
 	}
@@ -758,10 +758,13 @@ func (h *ChefHandler) GetPayoutDetails(c *gin.Context) {
 		"bankAccountNumber": maskBankAccount(chef.BankAccountNumber),
 		"bankIFSC":          chef.BankIFSC,
 		"upiId":             maskEmail(chef.UpiID),
+		"razorpayConnected": chef.RazorpayAccountID != "",
+		"razorpayAccountId": maskID(chef.RazorpayAccountID),
 	})
 }
 
-// SavePayoutDetails saves the chef's payout information
+// SavePayoutDetails saves the chef's payout information and creates/updates
+// a Razorpay Route linked account so payments can be split directly to the chef.
 func (h *ChefHandler) SavePayoutDetails(c *gin.Context) {
 	userID, _ := middleware.GetUserID(c)
 
@@ -797,11 +800,12 @@ func (h *ChefHandler) SavePayoutDetails(c *gin.Context) {
 	}
 
 	var chef models.ChefProfile
-	if err := database.DB.Where("user_id = ?", userID).First(&chef).Error; err != nil {
+	if err := database.DB.Preload("User").Where("user_id = ?", userID).First(&chef).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Chef profile not found"})
 		return
 	}
 
+	// Save payout details to DB
 	chef.PayoutMethod = req.PayoutMethod
 	chef.BankAccountNumber = req.BankAccountNumber
 	chef.BankIFSC = req.BankIFSC
@@ -813,14 +817,50 @@ func (h *ChefHandler) SavePayoutDetails(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
+	// Create Razorpay Route linked account if not already created
+	razorpayConnected := chef.RazorpayAccountID != ""
+	var razorpayError string
+
+	if !razorpayConnected {
+		rz := services.GetRazorpay()
+		if rz != nil {
+			contactName := chef.User.FirstName + " " + chef.User.LastName
+			linkedAcct, err := rz.CreateLinkedAccount(&services.LinkedAccountRequest{
+				Email:        chef.User.Email,
+				Phone:        chef.User.Phone,
+				LegalName:    chef.BusinessName,
+				BusinessType: "individual",
+				ContactName:  contactName,
+			})
+			if err != nil {
+				log.Printf("Failed to create Razorpay linked account for chef %s: %v", chef.ID, err)
+				razorpayError = fmt.Sprintf("Payout details saved, but Razorpay account creation failed: %v", err)
+			} else {
+				chef.RazorpayAccountID = linkedAcct.ID
+				database.DB.Model(&chef).Update("razorpay_account_id", linkedAcct.ID)
+				razorpayConnected = true
+				log.Printf("Created Razorpay linked account %s for chef %s", linkedAcct.ID, chef.ID)
+			}
+		} else {
+			razorpayError = "Payout details saved. Razorpay gateway not configured — linked account will be created when gateway is available."
+		}
+	}
+
+	resp := gin.H{
 		"message":           "Payout details saved",
 		"payoutMethod":      chef.PayoutMethod,
 		"bankAccountName":   chef.BankAccountName,
 		"bankAccountNumber": maskBankAccount(chef.BankAccountNumber),
 		"bankIFSC":          chef.BankIFSC,
 		"upiId":             maskEmail(chef.UpiID),
-	})
+		"razorpayConnected": razorpayConnected,
+		"razorpayAccountId": maskID(chef.RazorpayAccountID),
+	}
+	if razorpayError != "" {
+		resp["razorpayError"] = razorpayError
+	}
+
+	c.JSON(http.StatusOK, resp)
 }
 
 // GetChefAnalytics returns analytics data for the authenticated chef

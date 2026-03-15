@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Bell, Power, Lock, Trash2, Banknote } from 'lucide-react';
+import { Bell, Power, Lock, Trash2, Banknote, CheckCircle2, XCircle } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { apiClient } from '@/shared/services/api-client';
@@ -27,6 +27,8 @@ interface PayoutData {
   bankAccountNumber: string;
   bankIFSC: string;
   upiId: string;
+  razorpayConnected: boolean;
+  razorpayAccountId: string;
 }
 
 export default function SettingsPage() {
@@ -215,10 +217,28 @@ export default function SettingsPage() {
 
       {/* Payout Details */}
       <motion.div variants={fadeInUp} className="rounded-xl border border-gray-200 bg-white p-6">
-        <div className="flex items-center gap-3">
-          <Banknote className="h-5 w-5 text-brand-500" />
-          <h2 className="text-lg font-semibold text-gray-900">Payout Details</h2>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Banknote className="h-5 w-5 text-brand-500" />
+            <h2 className="text-lg font-semibold text-gray-900">Payout Details</h2>
+          </div>
+          {payoutData?.razorpayConnected ? (
+            <span className="flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              Razorpay Connected
+            </span>
+          ) : payoutData?.payoutMethod ? (
+            <span className="flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-xs font-medium text-amber-700">
+              <XCircle className="h-3.5 w-3.5" />
+              Razorpay Pending
+            </span>
+          ) : null}
         </div>
+        {payoutData?.razorpayConnected && payoutData.razorpayAccountId && (
+          <p className="mt-2 text-xs text-gray-400">
+            Linked Account: {payoutData.razorpayAccountId}
+          </p>
+        )}
 
         {payoutLoading ? (
           <div className="mt-4 flex items-center justify-center py-8">

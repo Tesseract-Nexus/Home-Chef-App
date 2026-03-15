@@ -1,7 +1,6 @@
-import { useAuth } from '@/app/providers/AuthProvider';
+import { Navigate } from 'react-router-dom';
 
+// Registration is not available - redirect to login
 export default function RegisterPage() {
-  const { register } = useAuth();
-  register();
-  return null;
+  return <Navigate to="/login" replace />;
 }

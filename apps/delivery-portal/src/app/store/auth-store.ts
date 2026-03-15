@@ -32,6 +32,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const session = await authService.getSession();
 
       if (session?.authenticated && session.user) {
+        // Verify the user has an authorized role for delivery portal
+        // Uses internal Keycloak realm (same users as admin portal)
+        const roles = session.user.roles || [];
+        const isAuthorized =
+          roles.includes('admin') ||
+          roles.includes('super_admin') ||
+          roles.includes('delivery') ||
+          roles.includes('fleet_manager');
+
+        if (!isAuthorized) {
+          set({ user: null, isAuthenticated: false, isLoading: false });
+          return;
+        }
+
         set({
           user: session.user,
           isAuthenticated: true,

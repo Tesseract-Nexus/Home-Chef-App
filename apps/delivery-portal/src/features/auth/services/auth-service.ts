@@ -1,21 +1,30 @@
-import type { SessionResponse, SocialProvider } from '@/shared/types/auth';
+import type { SessionResponse } from '@/shared/types/auth';
 
-const BFF_URL = import.meta.env.VITE_BFF_URL || 'https://identity.fe3dr.com';
+/**
+ * Delivery portal auth service — uses same-origin /bff/ proxy to the auth BFF.
+ * In production, Istio VirtualService on delivery.fe3dr.com routes /bff/* to the
+ * auth-bff service with x-auth-context: admin, which makes the BFF use the
+ * internal Keycloak realm (tesserix-internal) for authentication.
+ * This limits access to the same 3 users as the admin portal.
+ */
+const BFF_URL = (() => {
+  const env = import.meta.env.VITE_BFF_URL;
+  if (env) return env;
+  // In production, use same-origin /bff/ proxy
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    return `${window.location.origin}/bff`;
+  }
+  // In development, proxy through vite dev server
+  return '/bff';
+})();
 
 export const authService = {
-  getLoginUrl(options?: { provider?: SocialProvider; returnTo?: string }): string {
+  getLoginUrl(options?: { provider?: 'google' | 'facebook'; returnTo?: string }): string {
     const params = new URLSearchParams();
     params.set('returnTo', options?.returnTo || `${window.location.origin}/dashboard`);
     if (options?.provider) {
       params.set('kc_idp_hint', options.provider);
     }
-    return `${BFF_URL}/auth/login?${params.toString()}`;
-  },
-
-  getRegisterUrl(returnTo?: string): string {
-    const params = new URLSearchParams();
-    params.set('returnTo', returnTo || `${window.location.origin}/dashboard`);
-    params.set('kc_action', 'register');
     return `${BFF_URL}/auth/login?${params.toString()}`;
   },
 
@@ -50,7 +59,20 @@ export const authService = {
         credentials: 'include',
       });
     } catch {
-      // Ignore
+      // Ignore errors - clear local state regardless
+    }
+  },
+
+  async getCsrfToken(): Promise<string | null> {
+    try {
+      const res = await fetch(`${BFF_URL}/auth/csrf`, {
+        credentials: 'include',
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      return data.csrfToken || null;
+    } catch {
+      return null;
     }
   },
 };

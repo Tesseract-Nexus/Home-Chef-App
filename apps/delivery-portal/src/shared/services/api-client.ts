@@ -1,6 +1,14 @@
 import type { ApiError } from '@/shared/types';
 
-const BFF_URL = import.meta.env.VITE_BFF_URL || 'https://identity.fe3dr.com';
+// Same-origin /bff/ proxy — matches auth-service pattern (internal Keycloak realm)
+const BFF_URL = (() => {
+  const env = import.meta.env.VITE_BFF_URL;
+  if (env) return env;
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    return `${window.location.origin}/bff`;
+  }
+  return '/bff';
+})();
 const API_URL = `${BFF_URL}/api/v1`;
 
 interface RequestOptions extends RequestInit {

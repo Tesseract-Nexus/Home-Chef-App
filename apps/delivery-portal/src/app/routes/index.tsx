@@ -20,12 +20,8 @@ function lazyWithRetry(factory: () => Promise<{ default: React.ComponentType }>)
   );
 }
 
-// Auth pages
+// Auth pages (login only - no registration, uses internal Keycloak realm)
 const LoginPage = lazyWithRetry(() => import('@/features/auth/pages/LoginPage'));
-const RegisterPage = lazyWithRetry(() => import('@/features/auth/pages/RegisterPage'));
-
-// Onboarding
-const OnboardingPage = lazyWithRetry(() => import('@/features/onboarding/pages/OnboardingPage'));
 
 // Feature pages
 const DashboardPage = lazyWithRetry(() => import('@/features/dashboard/pages/DashboardPage'));
@@ -68,19 +64,8 @@ export function AppRoutes() {
   return (
     <Suspense fallback={<LoadingScreen />}>
       <Routes>
-        {/* Public routes */}
+        {/* Public routes - login only, no registration */}
         <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
-        <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
-
-        {/* Onboarding */}
-        <Route
-          path="/onboarding"
-          element={
-            <ProtectedRoute>
-              <OnboardingPage />
-            </ProtectedRoute>
-          }
-        />
 
         {/* Protected delivery routes */}
         <Route

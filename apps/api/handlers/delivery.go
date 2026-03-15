@@ -1354,9 +1354,15 @@ func (h *DeliveryHandler) UploadPartnerDocument(c *gin.Context) {
 		models.PartnerDocPanCard:             true,
 		models.PartnerDocPhoto:               true,
 		models.PartnerDocPoliceVerification:  true,
+		models.PartnerDocVehicleFront:        true,
+		models.PartnerDocVehicleBack:         true,
+		models.PartnerDocVehicleLeft:         true,
+		models.PartnerDocVehicleRight:        true,
+		models.PartnerDocVehicleTop:          true,
+		models.PartnerDocVehicleNumberPlate:  true,
 	}
 	if !validTypes[docType] {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid document type. Allowed: driving_license, vehicle_rc, insurance, aadhaar, pan_card, photo, police_verification"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid document type"})
 		return
 	}
 
@@ -1367,7 +1373,7 @@ func (h *DeliveryHandler) UploadPartnerDocument(c *gin.Context) {
 	}
 	defer file.Close()
 
-	isPhoto := docType == models.PartnerDocPhoto
+	isPhoto := docType == models.PartnerDocPhoto || models.IsVehiclePhoto(docType)
 
 	// File size limits: 5MB for profile photo, 10MB for documents
 	maxSize := int64(10 * 1024 * 1024) // 10MB for documents

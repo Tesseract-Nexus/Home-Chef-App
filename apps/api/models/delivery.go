@@ -151,14 +151,31 @@ type DeliveryPartnerDocument struct {
 type PartnerDocType string
 
 const (
-	PartnerDocDrivingLicense PartnerDocType = "driving_license"
-	PartnerDocVehicleRC      PartnerDocType = "vehicle_rc"
-	PartnerDocInsurance      PartnerDocType = "insurance"
-	PartnerDocAadhaar        PartnerDocType = "aadhaar"
-	PartnerDocPanCard        PartnerDocType = "pan_card"
-	PartnerDocPhoto              PartnerDocType = "photo"
-	PartnerDocPoliceVerification PartnerDocType = "police_verification"
+	PartnerDocDrivingLicense      PartnerDocType = "driving_license"
+	PartnerDocVehicleRC           PartnerDocType = "vehicle_rc"
+	PartnerDocInsurance           PartnerDocType = "insurance"
+	PartnerDocAadhaar             PartnerDocType = "aadhaar"
+	PartnerDocPanCard             PartnerDocType = "pan_card"
+	PartnerDocPhoto               PartnerDocType = "photo"
+	PartnerDocPoliceVerification  PartnerDocType = "police_verification"
+	PartnerDocVehicleFront        PartnerDocType = "vehicle_front"
+	PartnerDocVehicleBack         PartnerDocType = "vehicle_back"
+	PartnerDocVehicleLeft         PartnerDocType = "vehicle_left"
+	PartnerDocVehicleRight        PartnerDocType = "vehicle_right"
+	PartnerDocVehicleTop          PartnerDocType = "vehicle_top"
+	PartnerDocVehicleNumberPlate  PartnerDocType = "vehicle_number_plate"
 )
+
+// IsVehiclePhoto returns true for vehicle photo types (stored in public bucket like profile photo)
+func IsVehiclePhoto(docType PartnerDocType) bool {
+	switch docType {
+	case PartnerDocVehicleFront, PartnerDocVehicleBack, PartnerDocVehicleLeft,
+		PartnerDocVehicleRight, PartnerDocVehicleTop, PartnerDocVehicleNumberPlate:
+		return true
+	default:
+		return false
+	}
+}
 
 type PartnerDocumentResponse struct {
 	ID              uuid.UUID      `json:"id"`

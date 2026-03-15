@@ -272,6 +272,9 @@ func SetupRouter() *gin.Engine {
 			driverOnboarding.POST("/onboarding/payout", driverHandler.DriverOnboardingPayout)
 			driverOnboarding.POST("/onboarding/submit", driverHandler.DriverOnboardingSubmit)
 			driverOnboarding.POST("/referral/validate", driverHandler.ValidateReferralCode)
+			// Subscription plan selection during onboarding (no delivery role needed yet)
+			driverOnboarding.GET("/subscription/plans", subscriptionHandler.GetAvailablePlans)
+			driverOnboarding.POST("/subscription/plan", subscriptionHandler.ChoosePlan)
 		}
 
 		// Driver referral routes (delivery role required)

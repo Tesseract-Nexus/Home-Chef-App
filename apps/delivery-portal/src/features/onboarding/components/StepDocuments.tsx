@@ -13,8 +13,7 @@ interface DocumentSlot {
   maxSizeMB: number;  // max file size in MB
 }
 
-const photoSlot: DocumentSlot = {
-  type: 'photo', label: 'Profile Photo', required: true,
+const photoDefaults = {
   accept: 'image/jpeg,image/png,.jpg,.jpeg,.png',
   hint: 'JPEG or PNG only, max 5MB',
   maxSizeMB: 5,
@@ -26,20 +25,43 @@ const docSlotDefaults = {
   maxSizeMB: 10,
 };
 
+const vehiclePhotoSlots: DocumentSlot[] = [
+  { type: 'vehicle_front', label: 'Vehicle — Front View', required: true, ...photoDefaults },
+  { type: 'vehicle_back', label: 'Vehicle — Back View', required: true, ...photoDefaults },
+  { type: 'vehicle_left', label: 'Vehicle — Left Side', required: true, ...photoDefaults },
+  { type: 'vehicle_right', label: 'Vehicle — Right Side', required: true, ...photoDefaults },
+  { type: 'vehicle_number_plate', label: 'Number Plate (clear photo)', required: true, ...photoDefaults },
+];
+
+const vehiclePhotoWithTopSlots: DocumentSlot[] = [
+  ...vehiclePhotoSlots,
+  { type: 'vehicle_top', label: 'Vehicle — Top View', required: false, ...photoDefaults },
+];
+
 const motorVehicleDocSlots: DocumentSlot[] = [
+  // Personal documents
+  { type: 'photo', label: 'Profile Photo', required: true, ...photoDefaults },
   { type: 'driving_license', label: 'Driving License', required: true, ...docSlotDefaults },
-  { type: 'vehicle_rc', label: 'Vehicle RC', required: true, ...docSlotDefaults },
-  { type: 'insurance', label: 'Insurance', required: true, ...docSlotDefaults },
   { type: 'aadhaar', label: 'Aadhaar Card', required: true, ...docSlotDefaults },
   { type: 'pan_card', label: 'PAN Card', required: false, ...docSlotDefaults },
-  photoSlot,
+  // Vehicle documents
+  { type: 'vehicle_rc', label: 'Vehicle RC', required: true, ...docSlotDefaults },
+  { type: 'insurance', label: 'Insurance', required: true, ...docSlotDefaults },
+  // Vehicle photos (all angles + number plate)
+  ...vehiclePhotoWithTopSlots,
+  // Optional
   { type: 'police_verification', label: 'Police Verification', required: false, ...docSlotDefaults },
 ];
 
 const bicycleDocSlots: DocumentSlot[] = [
+  { type: 'photo', label: 'Profile Photo', required: true, ...photoDefaults },
   { type: 'aadhaar', label: 'Aadhaar Card', required: true, ...docSlotDefaults },
-  photoSlot,
   { type: 'pan_card', label: 'PAN Card', required: false, ...docSlotDefaults },
+  // Bicycle photos (all angles, number plate not required)
+  { type: 'vehicle_front', label: 'Bicycle — Front View', required: true, ...photoDefaults },
+  { type: 'vehicle_back', label: 'Bicycle — Back View', required: true, ...photoDefaults },
+  { type: 'vehicle_left', label: 'Bicycle — Left Side', required: false, ...photoDefaults },
+  { type: 'vehicle_right', label: 'Bicycle — Right Side', required: false, ...photoDefaults },
   { type: 'police_verification', label: 'Police Verification', required: false, ...docSlotDefaults },
 ];
 
@@ -148,22 +170,75 @@ export function StepDocuments({ vehicleType, onComplete, onBack }: StepDocuments
     );
   }
 
+  // Group slots by category for section headers
+  const isVehiclePhotoType = (type: string) =>
+    ['vehicle_front', 'vehicle_back', 'vehicle_left', 'vehicle_right', 'vehicle_top', 'vehicle_number_plate'].includes(type);
+  const isPersonalDoc = (type: string) =>
+    ['photo', 'driving_license', 'aadhaar', 'pan_card'].includes(type);
+  const isVehicleDoc = (type: string) =>
+    ['vehicle_rc', 'insurance'].includes(type);
+
+  const getSectionLabel = (type: string, prevType?: string) => {
+    if (isPersonalDoc(type) && (!prevType || !isPersonalDoc(prevType))) return 'Personal Documents';
+    if (isVehicleDoc(type) && (!prevType || !isVehicleDoc(prevType))) return 'Vehicle Documents';
+    if (isVehiclePhotoType(type) && (!prevType || !isVehiclePhotoType(prevType))) return 'Vehicle Photos — All Angles';
+    if (type === 'police_verification' && prevType !== 'police_verification') return 'Optional';
+    return null;
+  };
+
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-foreground">Documents</h2>
+        <h2 className="text-xl font-semibold text-foreground">Documents & Photos</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Upload required documents for verification
+          Upload your documents and vehicle photos for verification
         </p>
         {isBicycle && (
           <p className="mt-1 text-xs text-muted-foreground">
-            Since you're using a bicycle, driving license and vehicle RC are not required.
+            Since you're using a bicycle, driving license, vehicle RC, and insurance are not required.
           </p>
         )}
       </div>
 
       <div className="space-y-3">
-        {documentSlots.map((slot) => {
+        {documentSlots.map((slot, idx) => {
+          const prevType = idx > 0 ? documentSlots[idx - 1]?.type : undefined;
+          const sectionLabel = getSectionLabel(slot.type, prevType);
+
+          return (
+            <div key={slot.type}>
+              {sectionLabel && (
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mt-4 mb-2 first:mt-0">
+                  {sectionLabel}
+                </p>
+              )}
+              {renderSlot(slot)}
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="flex gap-3">
+        <button
+          type="button"
+          onClick={onBack}
+          className="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-secondary"
+        >
+          Back
+        </button>
+        <button
+          type="button"
+          onClick={onComplete}
+          disabled={!allRequiredUploaded}
+          className="flex-1 rounded-xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+        >
+          Continue
+        </button>
+      </div>
+    </div>
+  );
+
+  function renderSlot(slot: DocumentSlot) {
           const uploaded = getDocForType(slot.type);
           const isUploading = uploading === slot.type;
 
@@ -226,32 +301,5 @@ export function StepDocuments({ vehicleType, onComplete, onBack }: StepDocuments
               </div>
             </div>
           );
-        })}
-      </div>
-
-      {!allRequiredUploaded && (
-        <p className="text-sm text-muted-foreground">
-          Upload all required documents (marked with *) to continue.
-        </p>
-      )}
-
-      <div className="flex gap-3">
-        <button
-          type="button"
-          onClick={onBack}
-          className="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground hover:bg-secondary"
-        >
-          Back
-        </button>
-        <button
-          type="button"
-          onClick={onComplete}
-          disabled={!allRequiredUploaded}
-          className="flex-1 rounded-xl bg-primary px-4 py-3 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
-        >
-          Continue
-        </button>
-      </div>
-    </div>
-  );
+  }
 }

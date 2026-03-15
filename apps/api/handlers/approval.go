@@ -42,7 +42,25 @@ func (h *ApprovalHandler) GetApprovalRequests(c *gin.Context) {
 	}
 	offset := (page - 1) * limit
 
-	query := db.Model(&models.ApprovalRequest{}).Preload("Chef.User").Preload("SubmittedBy")
+	query := db.Model(&models.ApprovalRequest{}).Preload("Chef.User").Preload("Partner.User").Preload("SubmittedBy")
+
+	// Category filter: "chef" for chef/vendor requests, "driver" for driver requests
+	category := c.Query("category")
+	if category == "chef" {
+		query = query.Where("type IN ?", []string{
+			string(models.ApprovalKitchenOnboarding),
+			string(models.ApprovalDocumentVerification),
+			string(models.ApprovalMenuItemNew),
+			string(models.ApprovalMenuItemUpdate),
+			string(models.ApprovalPricingChange),
+			string(models.ApprovalKitchenUpdate),
+		})
+	} else if category == "driver" {
+		query = query.Where("type IN ?", []string{
+			string(models.ApprovalDriverOnboarding),
+			string(models.ApprovalDriverDocument),
+		})
+	}
 
 	if filterType != "" {
 		query = query.Where("type = ?", filterType)
@@ -141,6 +159,7 @@ func (h *ApprovalHandler) GetApprovalRequest(c *gin.Context) {
 	var approval models.ApprovalRequest
 	if err := database.DB.
 		Preload("Chef.User").
+		Preload("Partner.User").
 		Preload("SubmittedBy").
 		Preload("ReviewedBy").
 		First(&approval, "id = ?", id).Error; err != nil {

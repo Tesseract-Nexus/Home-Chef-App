@@ -27,7 +27,8 @@ interface ApprovalRequest {
   priority: string;
   title: string;
   description: string;
-  chefId: string;
+  chefId?: string;
+  partnerId?: string;
   entityType: string;
   entityId: string;
   adminNotes?: string;
@@ -39,6 +40,13 @@ interface ApprovalRequest {
     businessName: string;
     phone?: string;
     user?: { firstName: string; lastName: string; email: string };
+  };
+  partner?: {
+    vehicleType: string;
+    vehicleNumber: string;
+    city: string;
+    verificationStatus: string;
+    user?: { firstName: string; lastName: string; email: string; phone: string };
   };
   submittedBy?: { firstName: string; lastName: string; email: string };
 }
@@ -72,6 +80,8 @@ const typeConfig: Record<string, { icon: typeof ChefHat; label: string; style: s
   document_verification: { icon: FileText, label: 'Document Verification', style: 'bg-info/10 text-info' },
   menu_item_new: { icon: UtensilsCrossed, label: 'New Menu Item', style: 'bg-success/10 text-success' },
   pricing_change: { icon: IndianRupee, label: 'Pricing Change', style: 'bg-warning/10 text-warning' },
+  driver_onboarding: { icon: FileText, label: 'Driver Onboarding', style: 'bg-info/10 text-info' },
+  driver_document: { icon: FileText, label: 'Driver Document', style: 'bg-info/10 text-info' },
 };
 
 const priorityStyles: Record<string, string> = {

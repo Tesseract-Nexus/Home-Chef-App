@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/homechef/api/config"
 	"github.com/homechef/api/database"
 	"github.com/homechef/api/middleware"
 	"github.com/homechef/api/models"
@@ -1256,11 +1257,18 @@ func (h *DeliveryHandler) UploadPartnerDocument(c *gin.Context) {
 		return
 	}
 
-	// Upload to storage
-	bucket := "homechef-private-docs"
-	filePath := fmt.Sprintf("delivery-partners/%s/%s/%s", partner.ID, docType, header.Filename)
+	// Upload to storage — photos go to public bucket, verification docs to private
+	folder := fmt.Sprintf("delivery-partners/%s/%s", partner.ID, docType)
+	var uploadedPath string
+	var bucket string
 
-	uploadedPath, err := services.UploadFile(c.Request.Context(), bucket, filePath, file, contentType)
+	if docType == models.PartnerDocPhoto {
+		bucket = config.AppConfig.GCSPublicBucket
+		uploadedPath, err = services.UploadPublicFile(c.Request.Context(), folder, header.Filename, file, contentType)
+	} else {
+		bucket = config.AppConfig.GCSPrivateBucket
+		uploadedPath, err = services.UploadPrivateFile(c.Request.Context(), folder, header.Filename, file, contentType)
+	}
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload file"})
 		return

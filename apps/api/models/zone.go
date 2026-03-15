@@ -12,6 +12,7 @@ type DeliveryZone struct {
 	Name  string    `gorm:"type:varchar(100);not null" json:"name"`
 	City  string    `gorm:"type:varchar(100);not null;index" json:"city"`
 	State string    `gorm:"type:varchar(100)" json:"state"`
+	Tier  string    `gorm:"type:varchar(20);default:'standard'" json:"tier"` // metro, mid_tier, standard, regional
 
 	// Bounding box for quick filtering
 	MinLatitude  float64 `gorm:"" json:"minLatitude"`
@@ -39,6 +40,7 @@ type DeliveryZoneResponse struct {
 	Name            string    `json:"name"`
 	City            string    `json:"city"`
 	State           string    `json:"state"`
+	Tier            string    `json:"tier"`
 	MinLatitude     float64   `json:"minLatitude"`
 	MaxLatitude     float64   `json:"maxLatitude"`
 	MinLongitude    float64   `json:"minLongitude"`
@@ -57,6 +59,7 @@ func (z *DeliveryZone) ToResponse() DeliveryZoneResponse {
 		Name:            z.Name,
 		City:            z.City,
 		State:           z.State,
+		Tier:            z.Tier,
 		MinLatitude:     z.MinLatitude,
 		MaxLatitude:     z.MaxLatitude,
 		MinLongitude:    z.MinLongitude,

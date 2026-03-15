@@ -1334,18 +1334,26 @@ func (h *DeliveryHandler) GetPartnerDocuments(c *gin.Context) {
 // ListZones returns all delivery zones
 func (h *DeliveryHandler) ListZones(c *gin.Context) {
 	city := c.Query("city")
+	country := c.Query("country")
+	tier := c.Query("tier")
 	activeOnly := c.DefaultQuery("active", "true")
 
 	query := database.DB.Model(&models.DeliveryZone{})
 	if city != "" {
 		query = query.Where("city ILIKE ?", "%"+city+"%")
 	}
+	if country != "" {
+		query = query.Where("country = ?", country)
+	}
+	if tier != "" {
+		query = query.Where("tier = ?", tier)
+	}
 	if activeOnly == "true" {
 		query = query.Where("is_active = ?", true)
 	}
 
 	var zones []models.DeliveryZone
-	if err := query.Order("city, name").Find(&zones).Error; err != nil {
+	if err := query.Order("country, state, city, name").Find(&zones).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch zones"})
 		return
 	}
@@ -1361,37 +1369,64 @@ func (h *DeliveryHandler) ListZones(c *gin.Context) {
 // CreateZone creates a new delivery zone
 func (h *DeliveryHandler) CreateZone(c *gin.Context) {
 	var req struct {
-		Name         string  `json:"name" binding:"required"`
-		City         string  `json:"city" binding:"required"`
-		State        string  `json:"state"`
-		MinLatitude  float64 `json:"minLatitude"`
-		MaxLatitude  float64 `json:"maxLatitude"`
-		MinLongitude float64 `json:"minLongitude"`
-		MaxLongitude float64 `json:"maxLongitude"`
-		Boundary     string  `json:"boundary"`
-		BaseFare     float64 `json:"baseFare"`
-		PerKmRate    float64 `json:"perKmRate"`
-		MinimumFare  float64 `json:"minimumFare"`
+		Name              string  `json:"name" binding:"required"`
+		City              string  `json:"city" binding:"required"`
+		State             string  `json:"state"`
+		Country           string  `json:"country"`
+		Tier              string  `json:"tier"`
+		MinLatitude       float64 `json:"minLatitude"`
+		MaxLatitude       float64 `json:"maxLatitude"`
+		MinLongitude      float64 `json:"minLongitude"`
+		MaxLongitude      float64 `json:"maxLongitude"`
+		Boundary          string  `json:"boundary"`
+		Currency          string  `json:"currency"`
+		BaseFare          float64 `json:"baseFare"`
+		PerKmRate         float64 `json:"perKmRate"`
+		MinimumFare       float64 `json:"minimumFare"`
+		TipEnabled        *bool   `json:"tipEnabled"`
+		DefaultTipPercent float64 `json:"defaultTipPercent"`
+		MaxTipAmount      float64 `json:"maxTipAmount"`
+		DriverPayoutPercent float64 `json:"driverPayoutPercent"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
+	country := req.Country
+	if country == "" { country = "IN" }
+	currency := req.Currency
+	if currency == "" { currency = "INR" }
+	tier := req.Tier
+	if tier == "" { tier = "standard" }
+	tipEnabled := true
+	if req.TipEnabled != nil { tipEnabled = *req.TipEnabled }
+	defaultTip := req.DefaultTipPercent
+	if defaultTip == 0 { defaultTip = 10 }
+	driverPayout := req.DriverPayoutPercent
+	if driverPayout == 0 { driverPayout = 80 }
+
 	zone := models.DeliveryZone{
-		Name:            req.Name,
-		City:            req.City,
-		State:           req.State,
-		MinLatitude:     req.MinLatitude,
-		MaxLatitude:     req.MaxLatitude,
-		MinLongitude:    req.MinLongitude,
-		MaxLongitude:    req.MaxLongitude,
-		Boundary:        req.Boundary,
-		BaseFare:        req.BaseFare,
-		PerKmRate:       req.PerKmRate,
-		MinimumFare:     req.MinimumFare,
-		SurgeMultiplier: 1.0,
-		IsActive:        true,
+		Name:                req.Name,
+		City:                req.City,
+		State:               req.State,
+		Country:             country,
+		Tier:                tier,
+		MinLatitude:         req.MinLatitude,
+		MaxLatitude:         req.MaxLatitude,
+		MinLongitude:        req.MinLongitude,
+		MaxLongitude:        req.MaxLongitude,
+		Boundary:            req.Boundary,
+		Currency:            currency,
+		BaseFare:            req.BaseFare,
+		PerKmRate:           req.PerKmRate,
+		MinimumFare:         req.MinimumFare,
+		SurgeMultiplier:     1.0,
+		TipEnabled:          tipEnabled,
+		DefaultTipPercent:   defaultTip,
+		MaxTipAmount:        req.MaxTipAmount,
+		DriverPayoutPercent: driverPayout,
+		IsActive:            true,
 	}
 
 	if err := database.DB.Create(&zone).Error; err != nil {
@@ -1413,19 +1448,26 @@ func (h *DeliveryHandler) UpdateZone(c *gin.Context) {
 	}
 
 	var req struct {
-		Name            *string  `json:"name"`
-		City            *string  `json:"city"`
-		State           *string  `json:"state"`
-		MinLatitude     *float64 `json:"minLatitude"`
-		MaxLatitude     *float64 `json:"maxLatitude"`
-		MinLongitude    *float64 `json:"minLongitude"`
-		MaxLongitude    *float64 `json:"maxLongitude"`
-		Boundary        *string  `json:"boundary"`
-		BaseFare        *float64 `json:"baseFare"`
-		PerKmRate       *float64 `json:"perKmRate"`
-		MinimumFare     *float64 `json:"minimumFare"`
-		SurgeMultiplier *float64 `json:"surgeMultiplier"`
-		IsActive        *bool    `json:"isActive"`
+		Name              *string  `json:"name"`
+		City              *string  `json:"city"`
+		State             *string  `json:"state"`
+		Country           *string  `json:"country"`
+		Tier              *string  `json:"tier"`
+		MinLatitude       *float64 `json:"minLatitude"`
+		MaxLatitude       *float64 `json:"maxLatitude"`
+		MinLongitude      *float64 `json:"minLongitude"`
+		MaxLongitude      *float64 `json:"maxLongitude"`
+		Boundary          *string  `json:"boundary"`
+		Currency          *string  `json:"currency"`
+		BaseFare          *float64 `json:"baseFare"`
+		PerKmRate         *float64 `json:"perKmRate"`
+		MinimumFare       *float64 `json:"minimumFare"`
+		SurgeMultiplier   *float64 `json:"surgeMultiplier"`
+		TipEnabled        *bool    `json:"tipEnabled"`
+		DefaultTipPercent *float64 `json:"defaultTipPercent"`
+		MaxTipAmount      *float64 `json:"maxTipAmount"`
+		DriverPayoutPercent *float64 `json:"driverPayoutPercent"`
+		IsActive          *bool    `json:"isActive"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -1435,15 +1477,22 @@ func (h *DeliveryHandler) UpdateZone(c *gin.Context) {
 	if req.Name != nil { zone.Name = *req.Name }
 	if req.City != nil { zone.City = *req.City }
 	if req.State != nil { zone.State = *req.State }
+	if req.Country != nil { zone.Country = *req.Country }
+	if req.Tier != nil { zone.Tier = *req.Tier }
 	if req.MinLatitude != nil { zone.MinLatitude = *req.MinLatitude }
 	if req.MaxLatitude != nil { zone.MaxLatitude = *req.MaxLatitude }
 	if req.MinLongitude != nil { zone.MinLongitude = *req.MinLongitude }
 	if req.MaxLongitude != nil { zone.MaxLongitude = *req.MaxLongitude }
 	if req.Boundary != nil { zone.Boundary = *req.Boundary }
+	if req.Currency != nil { zone.Currency = *req.Currency }
 	if req.BaseFare != nil { zone.BaseFare = *req.BaseFare }
 	if req.PerKmRate != nil { zone.PerKmRate = *req.PerKmRate }
 	if req.MinimumFare != nil { zone.MinimumFare = *req.MinimumFare }
 	if req.SurgeMultiplier != nil { zone.SurgeMultiplier = *req.SurgeMultiplier }
+	if req.TipEnabled != nil { zone.TipEnabled = *req.TipEnabled }
+	if req.DefaultTipPercent != nil { zone.DefaultTipPercent = *req.DefaultTipPercent }
+	if req.MaxTipAmount != nil { zone.MaxTipAmount = *req.MaxTipAmount }
+	if req.DriverPayoutPercent != nil { zone.DriverPayoutPercent = *req.DriverPayoutPercent }
 	if req.IsActive != nil { zone.IsActive = *req.IsActive }
 
 	if err := database.DB.Save(&zone).Error; err != nil {

@@ -339,6 +339,7 @@ func SetupRouter() *gin.Engine {
 			chefSubscription.GET("", subscriptionHandler.GetSubscription)
 			chefSubscription.GET("/plans", subscriptionHandler.GetAvailablePlans)
 			chefSubscription.POST("/choose-plan", subscriptionHandler.ChoosePlan)
+			chefSubscription.POST("/plan", subscriptionHandler.ChoosePlan) // Alias
 			chefSubscription.POST("/cancel", subscriptionHandler.CancelSubscription)
 			chefSubscription.PUT("/change-plan", subscriptionHandler.ChangePlan)
 			chefSubscription.GET("/invoices", subscriptionHandler.GetInvoices)
@@ -352,6 +353,7 @@ func SetupRouter() *gin.Engine {
 			driverSubscription.GET("", subscriptionHandler.GetSubscription)
 			driverSubscription.GET("/plans", subscriptionHandler.GetAvailablePlans)
 			driverSubscription.POST("/choose-plan", subscriptionHandler.ChoosePlan)
+			driverSubscription.POST("/plan", subscriptionHandler.ChoosePlan) // Alias used by delivery portal
 			driverSubscription.POST("/cancel", subscriptionHandler.CancelSubscription)
 			driverSubscription.PUT("/change-plan", subscriptionHandler.ChangePlan)
 			driverSubscription.GET("/invoices", subscriptionHandler.GetInvoices)

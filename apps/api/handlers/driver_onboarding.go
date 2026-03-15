@@ -83,10 +83,10 @@ func (h *DriverOnboardingHandler) GetDriverOnboardingStatus(c *gin.Context) {
 			"licenseNumber":       partner.LicenseNumber,
 			"hasDeliveryBoxSpace": partner.HasDeliveryBoxSpace,
 			"payoutMethod":        partner.PayoutMethod,
-			"bankAccountName":     partner.BankAccountName,
-			"bankAccountNumber":   maskBankAccount(partner.BankAccountNumber),
-			"bankIFSC":            partner.BankIFSC,
-			"upiId":               maskEmail(partner.UpiID),
+			"bankAccountName":     func() string { v, _ := services.GetDriverSecret(c.Request.Context(), partner.ID.String(), "bank-account-name"); return v }(),
+			"bankAccountNumber":   func() string { v, _ := services.GetDriverSecret(c.Request.Context(), partner.ID.String(), "bank-account-number"); return maskBankAccount(v) }(),
+			"bankIFSC":            func() string { v, _ := services.GetDriverSecret(c.Request.Context(), partner.ID.String(), "bank-ifsc"); return v }(),
+			"upiId":               func() string { v, _ := services.GetDriverSecret(c.Request.Context(), partner.ID.String(), "upi-id"); return maskEmail(v) }(),
 		},
 		"documentCount": docCount,
 		"payoutSet":     payoutSet,
@@ -354,12 +354,12 @@ func (h *DriverOnboardingHandler) DriverOnboardingPayout(c *gin.Context) {
 		}
 	}
 
-	// DB stores only payout method + masked values for display
+	// DB stores ONLY payout method (non-sensitive). All sensitive data in Secret Manager.
 	partner.PayoutMethod = req.PayoutMethod
-	partner.BankAccountNumber = maskBankAccount(req.BankAccountNumber)
-	partner.BankIFSC = req.BankIFSC // IFSC is a public routing code
-	partner.BankAccountName = req.BankAccountName
-	partner.UpiID = maskEmail(req.UpiID)
+	partner.BankAccountNumber = ""
+	partner.BankIFSC = ""
+	partner.BankAccountName = ""
+	partner.UpiID = ""
 
 	if partner.OnboardingStep < 4 {
 		partner.OnboardingStep = 4

@@ -82,22 +82,26 @@ func (h *ChefHandler) ListChefs(c *gin.Context) {
 	var total int64
 	query.Count(&total)
 
-	// Apply sorting
+	// Apply sorting — featured chefs always appear first
 	dir := "DESC"
 	if sortOrder == "asc" {
 		dir = "ASC"
 	}
+
+	// Featured chefs ranked first: active featured status (is_featured=true AND featured_until > now)
+	featuredOrder := "CASE WHEN is_featured = true AND featured_until > NOW() THEN 0 ELSE 1 END ASC"
+
 	switch sortBy {
 	case "rating":
-		query = query.Order("rating " + dir)
+		query = query.Order(featuredOrder + ", rating " + dir)
 	case "orders":
-		query = query.Order("total_orders " + dir)
+		query = query.Order(featuredOrder + ", total_orders " + dir)
 	case "newest":
-		query = query.Order("created_at " + dir)
+		query = query.Order(featuredOrder + ", created_at " + dir)
 	case "price":
-		query = query.Order("minimum_order " + dir)
+		query = query.Order(featuredOrder + ", minimum_order " + dir)
 	default:
-		query = query.Order("rating " + dir)
+		query = query.Order(featuredOrder + ", rating " + dir)
 	}
 
 	// Get chefs

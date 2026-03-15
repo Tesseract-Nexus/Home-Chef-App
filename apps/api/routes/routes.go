@@ -61,6 +61,7 @@ func SetupRouter() *gin.Engine {
 	staffHandler := handlers.NewStaffHandler()
 	subscriptionHandler := handlers.NewSubscriptionHandler()
 	paymentHandler := handlers.NewPaymentHandler()
+	promotionHandler := handlers.NewPromotionHandler()
 
 	// Health check endpoints
 	r.GET("/health", healthHandler.Health)
@@ -321,6 +322,16 @@ func SetupRouter() *gin.Engine {
 			delivery.GET("/documents", deliveryHandler.GetPartnerDocuments)
 		}
 
+		// Chef promotion routes (featured ads)
+		chefPromotion := v1.Group("/chef/promotion")
+		chefPromotion.Use(middleware.AuthMiddleware(), middleware.RequireChef())
+		{
+			chefPromotion.GET("/pricing", promotionHandler.GetFeaturedAdPricing)
+			chefPromotion.POST("/purchase", promotionHandler.PurchaseFeaturedAd)
+			chefPromotion.POST("/confirm", promotionHandler.ConfirmFeaturedAd)
+			chefPromotion.GET("/history", promotionHandler.GetMyPromotions)
+		}
+
 		// Chef subscription routes (chef role required)
 		chefSubscription := v1.Group("/chef/subscription")
 		chefSubscription.Use(middleware.AuthMiddleware(), middleware.RequireChef())
@@ -380,6 +391,10 @@ func SetupRouter() *gin.Engine {
 			// Order management
 			admin.GET("/orders", adminHandler.GetAllOrders)
 			admin.GET("/orders/:id", adminHandler.GetOrderDetails)
+
+			// Promotions (featured ads)
+			admin.GET("/promotions", promotionHandler.AdminListPromotions)
+			admin.GET("/promotions/stats", promotionHandler.AdminGetPromotionStats)
 
 			// Delivery management
 			admin.GET("/delivery/stats", deliveryHandler.AdminGetDeliveryStats)

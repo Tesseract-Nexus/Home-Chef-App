@@ -38,6 +38,10 @@ type ChefProfile struct {
 	Latitude     float64 `gorm:"" json:"latitude"`
 	Longitude    float64 `gorm:"" json:"longitude"`
 
+	// Featured/Promoted
+	IsFeatured    bool       `gorm:"default:false" json:"isFeatured"`
+	FeaturedUntil *time.Time `gorm:"" json:"featuredUntil,omitempty"`
+
 	// Payment gateway linked accounts
 	StripeAccountID    string `gorm:"" json:"-"`
 	RazorpayAccountID  string `gorm:"" json:"-"` // Razorpay Route linked account ID
@@ -103,6 +107,7 @@ type ChefProfileResponse struct {
 	TotalReviews    int                    `json:"totalReviews"`
 	TotalOrders     int                    `json:"totalOrders"`
 	IsVerified      bool                   `json:"verified"`
+	IsFeatured      bool                   `json:"isFeatured"`
 	IsOnline        bool                   `json:"isOnline"`
 	AcceptingOrders bool                   `json:"acceptingOrders"`
 	KitchenPhotos   []string               `json:"kitchenPhotos"`
@@ -161,6 +166,7 @@ func (c *ChefProfile) ToResponse() ChefProfileResponse {
 		TotalReviews:    c.TotalReviews,
 		TotalOrders:     c.TotalOrders,
 		IsVerified:      c.IsVerified,
+		IsFeatured:      c.IsFeatured && c.FeaturedUntil != nil && c.FeaturedUntil.After(time.Now()),
 		IsOnline:        c.AcceptingOrders,
 		AcceptingOrders: c.AcceptingOrders,
 		KitchenPhotos:   kitchenPhotos,

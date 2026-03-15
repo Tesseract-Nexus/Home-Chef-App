@@ -97,6 +97,9 @@ func Migrate() error {
 		&models.DeliveryZone{},
 		&models.DriverReferral{},
 
+		// Promotions
+		&models.ChefPromotion{},
+
 		// Reviews
 		&models.Review{},
 

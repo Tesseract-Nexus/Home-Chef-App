@@ -47,6 +47,10 @@ const (
 	SubjectSubscriptionCancelled      = "subscription.cancelled"
 	SubjectSubscriptionInvoiceCreated = "subscription.invoice.created"
 	SubjectEarningsThresholdMet       = "subscription.earnings.threshold_met"
+
+	SubjectProviderDeliveryCreated = "provider.delivery.created"
+	SubjectProviderDeliveryUpdated = "provider.delivery.updated"
+	SubjectProviderDeliveryFailed  = "provider.delivery.failed"
 )
 
 // Event represents a generic event message
@@ -287,6 +291,20 @@ func (n *NATSClient) setupStreams() error {
 	})
 	if err != nil {
 		log.Printf("Failed to create SUBSCRIPTIONS stream: %v", err)
+	}
+
+	// Provider delivery stream
+	_, err = n.js.CreateOrUpdateStream(ctx, jetstream.StreamConfig{
+		Name:        "PROVIDER",
+		Description: "Third-party delivery provider events stream",
+		Subjects:    []string{"provider.*", "provider.*.*"},
+		Retention:   jetstream.WorkQueuePolicy,
+		MaxAge:      30 * 24 * time.Hour,
+		Storage:     jetstream.FileStorage,
+		Replicas:    1,
+	})
+	if err != nil {
+		log.Printf("Failed to create PROVIDER stream: %v", err)
 	}
 
 	log.Println("NATS JetStream streams configured")

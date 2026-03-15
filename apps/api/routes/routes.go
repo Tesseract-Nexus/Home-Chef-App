@@ -62,6 +62,7 @@ func SetupRouter() *gin.Engine {
 	subscriptionHandler := handlers.NewSubscriptionHandler()
 	paymentHandler := handlers.NewPaymentHandler()
 	promotionHandler := handlers.NewPromotionHandler()
+	providerHandler := handlers.NewDeliveryProviderHandler()
 
 	// Health check endpoints
 	r.GET("/health", healthHandler.Health)
@@ -74,6 +75,9 @@ func SetupRouter() *gin.Engine {
 
 	// Razorpay webhook (no auth — uses HMAC signature verification)
 	r.POST("/webhooks/razorpay", paymentHandler.RazorpayWebhook)
+
+	// Provider webhooks (public, verified by webhook secret)
+	r.POST("/webhooks/delivery/:provider", providerHandler.HandleWebhook)
 
 	// API v1 routes
 	v1 := r.Group("/api/v1")
@@ -297,6 +301,10 @@ func SetupRouter() *gin.Engine {
 			deliveryStaff.PUT("/invitations/:id/revoke", staffHandler.RevokeInvitation)
 			deliveryStaff.PUT("/invitations/:id/resend", staffHandler.ResendInvitation)
 
+			// Fleet management — third-party providers
+			deliveryStaff.GET("/fleet/providers", providerHandler.ListProviders)
+			deliveryStaff.GET("/fleet/providers/:id", providerHandler.GetProvider)
+
 			// Fleet management
 			deliveryStaff.GET("/fleet/overview", deliveryHandler.FleetOverview)
 			deliveryStaff.GET("/fleet/partners", deliveryHandler.AdminGetDeliveryPartners)
@@ -408,6 +416,16 @@ func SetupRouter() *gin.Engine {
 			admin.GET("/delivery/partners/:id", deliveryHandler.GetPartnerDetail)
 			admin.PUT("/delivery/partners/:id/verify", deliveryHandler.AdminVerifyPartner)
 			admin.PUT("/delivery/partners/:id/suspend", deliveryHandler.AdminSuspendPartner)
+
+			// Delivery provider management
+			admin.GET("/delivery/providers", providerHandler.ListProviders)
+			admin.GET("/delivery/providers/:id", providerHandler.GetProvider)
+			admin.POST("/delivery/providers", providerHandler.CreateProvider)
+			admin.PUT("/delivery/providers/:id", providerHandler.UpdateProvider)
+			admin.DELETE("/delivery/providers/:id", providerHandler.DeleteProvider)
+			admin.PUT("/delivery/providers/:id/toggle", providerHandler.ToggleProvider)
+			admin.POST("/delivery/providers/:id/test", providerHandler.TestConnection)
+			admin.GET("/delivery/providers/:id/stats", providerHandler.GetProviderStats)
 
 			// Delivery zone management
 			admin.GET("/delivery/zones", deliveryHandler.ListZones)

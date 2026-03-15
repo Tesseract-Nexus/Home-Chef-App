@@ -232,6 +232,13 @@ type Delivery struct {
 	AssignedByID   *uuid.UUID     `gorm:"type:uuid" json:"assignedById,omitempty"`
 	OfferExpiresAt *time.Time     `gorm:"" json:"offerExpiresAt,omitempty"`
 
+	// Third-party provider fields (only set when AssignmentType = "third_party")
+	ProviderID          *uuid.UUID `gorm:"type:uuid" json:"providerId,omitempty"`
+	ExternalDeliveryID  string     `gorm:"" json:"externalDeliveryId,omitempty"`
+	ExternalTrackingID  string     `gorm:"" json:"externalTrackingId,omitempty"`
+	ExternalTrackingURL string     `gorm:"" json:"externalTrackingUrl,omitempty"`
+	ProviderCost        float64    `gorm:"default:0" json:"providerCost"` // what Fe3dr pays the provider
+
 	// Earnings
 	DeliveryFee float64 `gorm:"default:0" json:"deliveryFee"`
 	Tip         float64 `gorm:"default:0" json:"tip"`
@@ -246,8 +253,9 @@ type Delivery struct {
 
 	// Relationships
 	Order           Order           `gorm:"foreignKey:OrderID" json:"order,omitempty"`
-	DeliveryPartner DeliveryPartner `gorm:"foreignKey:DeliveryPartnerID" json:"deliveryPartner,omitempty"`
-	AssignedBy      *User           `gorm:"foreignKey:AssignedByID" json:"assignedBy,omitempty"`
+	DeliveryPartner DeliveryPartner  `gorm:"foreignKey:DeliveryPartnerID" json:"deliveryPartner,omitempty"`
+	AssignedBy      *User            `gorm:"foreignKey:AssignedByID" json:"assignedBy,omitempty"`
+	Provider        *DeliveryProvider `gorm:"foreignKey:ProviderID" json:"provider,omitempty"`
 }
 
 // DTOs

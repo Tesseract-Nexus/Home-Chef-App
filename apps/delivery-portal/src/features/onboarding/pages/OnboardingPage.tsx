@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Truck, Loader2 } from 'lucide-react';
 import { apiClient } from '@/shared/services/api-client';
+import { clearAllFormCache } from '@/shared/utils/form-cache';
 import { StepProgress } from '../components/StepProgress';
 import { StepPersonalInfo } from '../components/StepPersonalInfo';
 import { StepVehicleDetails } from '../components/StepVehicleDetails';
@@ -31,11 +32,13 @@ export default function OnboardingPage() {
         );
 
         if (status.status === 'approved') {
+          clearAllFormCache();
           navigate('/dashboard', { replace: true });
           return;
         }
 
         if (status.status === 'submitted' || status.status === 'in_review' || status.status === 'rejected') {
+          clearAllFormCache();
           navigate('/onboarding/status', { replace: true });
           return;
         }
@@ -69,6 +72,7 @@ export default function OnboardingPage() {
   };
 
   const handleSubmitComplete = () => {
+    clearAllFormCache();
     navigate('/onboarding/status', { replace: true });
   };
 
@@ -79,6 +83,8 @@ export default function OnboardingPage() {
       </div>
     );
   }
+
+  const vehicleType = (profileData as Record<string, string>)?.vehicleType ?? '';
 
   return (
     <div className="flex min-h-screen flex-col bg-background">
@@ -119,6 +125,7 @@ export default function OnboardingPage() {
           )}
           {currentStep === 3 && (
             <StepDocuments
+              vehicleType={vehicleType}
               onComplete={handleStepComplete}
               onBack={() => goToStep(2)}
             />

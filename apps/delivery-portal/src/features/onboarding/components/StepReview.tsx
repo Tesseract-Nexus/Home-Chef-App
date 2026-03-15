@@ -27,6 +27,7 @@ interface OnboardingStatus {
     vehicleColor?: string;
     vehicleNumber?: string;
     licenseNumber?: string;
+    hasDeliveryBoxSpace?: boolean;
     payoutMethod?: string;
     bankAccountName?: string;
     bankAccountNumber?: string;
@@ -182,25 +183,42 @@ export function StepReview({ onComplete, onBack, onGoToStep }: StepReviewProps) 
         </div>
         <div className="grid grid-cols-2 gap-3 text-sm">
           <div>
-            <p className="text-muted-foreground">Make & Model</p>
+            <p className="text-muted-foreground">{profile?.vehicleType === 'bicycle' ? 'Brand & Model' : 'Make & Model'}</p>
             <p className="font-medium text-foreground">
               {[profile?.vehicleMake, profile?.vehicleModel].filter(Boolean).join(' ') || '-'}
             </p>
           </div>
-          <div>
-            <p className="text-muted-foreground">Year & Color</p>
-            <p className="font-medium text-foreground">
-              {[profile?.vehicleYear, profile?.vehicleColor].filter(Boolean).join(', ') || '-'}
-            </p>
-          </div>
-          <div>
-            <p className="text-muted-foreground">Registration Number</p>
-            <p className="font-medium text-foreground">{profile?.vehicleNumber || '-'}</p>
-          </div>
-          <div>
-            <p className="text-muted-foreground">License Number</p>
-            <p className="font-medium text-foreground">{profile?.licenseNumber || '-'}</p>
-          </div>
+          {profile?.vehicleType === 'bicycle' ? (
+            <div>
+              <p className="text-muted-foreground">Delivery Box Space</p>
+              <p className="font-medium text-foreground">
+                {profile?.hasDeliveryBoxSpace ? 'Yes' : 'No'}
+              </p>
+            </div>
+          ) : (
+            <>
+              <div>
+                <p className="text-muted-foreground">Year & Color</p>
+                <p className="font-medium text-foreground">
+                  {[profile?.vehicleYear, profile?.vehicleColor].filter(Boolean).join(', ') || '-'}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Registration Number</p>
+                <p className="font-medium text-foreground">{profile?.vehicleNumber || '-'}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">License Number</p>
+                <p className="font-medium text-foreground">{profile?.licenseNumber || '-'}</p>
+              </div>
+            </>
+          )}
+          {profile?.vehicleColor && profile?.vehicleType === 'bicycle' && (
+            <div>
+              <p className="text-muted-foreground">Color</p>
+              <p className="font-medium text-foreground">{profile.vehicleColor}</p>
+            </div>
+          )}
         </div>
       </div>
 

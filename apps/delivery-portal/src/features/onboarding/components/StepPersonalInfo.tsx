@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Bike, Car, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { apiClient } from '@/shared/services/api-client';
 import { toast } from 'sonner';
+import { getCachedFormData, setCachedFormData, clearStepCache } from '@/shared/utils/form-cache';
 
 const vehicleTypes = [
   { value: 'bicycle', label: 'Bicycle', icon: Bike },
@@ -24,17 +25,24 @@ interface StepPersonalInfoProps {
 }
 
 export function StepPersonalInfo({ initialData, onComplete }: StepPersonalInfoProps) {
+  const cached = getCachedFormData('personal');
+
   const [form, setForm] = useState<PersonalInfoData>({
-    city: initialData?.city ?? '',
-    emergencyContact: initialData?.emergencyContact ?? '',
-    emergencyPhone: initialData?.emergencyPhone ?? '',
-    dateOfBirth: initialData?.dateOfBirth ?? '',
-    vehicleType: initialData?.vehicleType ?? '',
-    referralCode: initialData?.referralCode ?? '',
+    city: cached?.city ?? initialData?.city ?? '',
+    emergencyContact: cached?.emergencyContact ?? initialData?.emergencyContact ?? '',
+    emergencyPhone: cached?.emergencyPhone ?? initialData?.emergencyPhone ?? '',
+    dateOfBirth: cached?.dateOfBirth ?? initialData?.dateOfBirth ?? '',
+    vehicleType: cached?.vehicleType ?? initialData?.vehicleType ?? '',
+    referralCode: cached?.referralCode ?? initialData?.referralCode ?? '',
   });
   const [submitting, setSubmitting] = useState(false);
   const [referralStatus, setReferralStatus] = useState<'idle' | 'validating' | 'valid' | 'invalid'>('idle');
   const [referrerName, setReferrerName] = useState('');
+
+  // Cache form data on every change
+  useEffect(() => {
+    setCachedFormData('personal', form as unknown as Record<string, string>);
+  }, [form]);
 
   const updateField = (field: keyof PersonalInfoData, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -79,6 +87,7 @@ export function StepPersonalInfo({ initialData, onComplete }: StepPersonalInfoPr
         vehicleType: form.vehicleType,
         referralCode: form.referralCode || undefined,
       });
+      clearStepCache('personal');
       toast.success('Personal info saved');
       onComplete();
     } catch {

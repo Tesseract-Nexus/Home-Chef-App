@@ -33,6 +33,7 @@ const SettingsPage = lazyWithRetry(() => import('@/features/settings/pages/Setti
 const UserDetailPage = lazyWithRetry(() => import('@/features/users/pages/UserDetailPage'));
 const ApprovalsPage = lazyWithRetry(() => import('@/features/approvals/pages/ApprovalsPage'));
 const ApprovalDetailPage = lazyWithRetry(() => import('@/features/approvals/pages/ApprovalDetailPage'));
+const DeliveryPage = lazyWithRetry(() => import('@/features/delivery/pages/DeliveryPage'));
 const StaffPage = lazyWithRetry(() => import('@/features/staff/pages/StaffPage'));
 const StaffDetailPage = lazyWithRetry(() => import('@/features/staff/pages/StaffDetailPage'));
 
@@ -87,7 +88,7 @@ export function AppRoutes() {
           <Route path="orders" element={<OrdersPage />} />
           <Route path="approvals" element={<ApprovalsPage />} />
           <Route path="approvals/:id" element={<ApprovalDetailPage />} />
-          <Route path="delivery" element={<DashboardPage />} />
+          <Route path="delivery" element={<DeliveryPage />} />
           <Route path="staff" element={<StaffPage />} />
           <Route path="staff/:id" element={<StaffDetailPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />

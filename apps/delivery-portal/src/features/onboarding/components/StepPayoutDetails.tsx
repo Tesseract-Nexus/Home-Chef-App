@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Banknote, Smartphone } from 'lucide-react';
 import { apiClient } from '@/shared/services/api-client';
 import { toast } from 'sonner';
+import { getCachedFormData, setCachedFormData, clearStepCache } from '@/shared/utils/form-cache';
 
 type PayoutMethod = 'bank_transfer' | 'upi';
 
@@ -20,14 +21,21 @@ interface StepPayoutDetailsProps {
 }
 
 export function StepPayoutDetails({ initialData, onComplete, onBack }: StepPayoutDetailsProps) {
+  const cached = getCachedFormData('payout');
+
   const [form, setForm] = useState<PayoutData>({
-    payoutMethod: (initialData?.payoutMethod as PayoutMethod) ?? 'bank_transfer',
-    bankAccountNumber: initialData?.bankAccountNumber ?? '',
-    bankIFSC: initialData?.bankIFSC ?? '',
-    bankAccountName: initialData?.bankAccountName ?? '',
-    upiId: initialData?.upiId ?? '',
+    payoutMethod: (cached?.payoutMethod ?? initialData?.payoutMethod ?? 'bank_transfer') as PayoutMethod,
+    bankAccountNumber: cached?.bankAccountNumber ?? initialData?.bankAccountNumber ?? '',
+    bankIFSC: cached?.bankIFSC ?? initialData?.bankIFSC ?? '',
+    bankAccountName: cached?.bankAccountName ?? initialData?.bankAccountName ?? '',
+    upiId: cached?.upiId ?? initialData?.upiId ?? '',
   });
   const [submitting, setSubmitting] = useState(false);
+
+  // Cache form data on every change
+  useEffect(() => {
+    setCachedFormData('payout', form as unknown as Record<string, string>);
+  }, [form]);
 
   const updateField = (field: keyof PayoutData, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -55,6 +63,7 @@ export function StepPayoutDetails({ initialData, onComplete, onBack }: StepPayou
         bankAccountName: form.payoutMethod === 'bank_transfer' ? form.bankAccountName : undefined,
         upiId: form.payoutMethod === 'upi' ? form.upiId : undefined,
       });
+      clearStepCache('payout');
       toast.success('Payout details saved');
       onComplete();
     } catch {

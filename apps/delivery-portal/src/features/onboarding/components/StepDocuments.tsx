@@ -10,13 +10,20 @@ interface DocumentSlot {
   required: boolean;
 }
 
-const documentSlots: DocumentSlot[] = [
+const motorVehicleDocSlots: DocumentSlot[] = [
   { type: 'driving_license', label: 'Driving License', required: true },
   { type: 'vehicle_rc', label: 'Vehicle RC', required: true },
   { type: 'insurance', label: 'Insurance', required: true },
   { type: 'aadhaar', label: 'Aadhaar Card', required: true },
   { type: 'pan_card', label: 'PAN Card', required: false },
   { type: 'photo', label: 'Profile Photo', required: true },
+  { type: 'police_verification', label: 'Police Verification', required: false },
+];
+
+const bicycleDocSlots: DocumentSlot[] = [
+  { type: 'aadhaar', label: 'Aadhaar Card', required: true },
+  { type: 'photo', label: 'Profile Photo', required: true },
+  { type: 'pan_card', label: 'PAN Card', required: false },
   { type: 'police_verification', label: 'Police Verification', required: false },
 ];
 
@@ -28,11 +35,15 @@ interface UploadedDoc {
 }
 
 interface StepDocumentsProps {
+  vehicleType?: string;
   onComplete: () => void;
   onBack: () => void;
 }
 
-export function StepDocuments({ onComplete, onBack }: StepDocumentsProps) {
+export function StepDocuments({ vehicleType, onComplete, onBack }: StepDocumentsProps) {
+  const isBicycle = vehicleType === 'bicycle';
+  const documentSlots = isBicycle ? bicycleDocSlots : motorVehicleDocSlots;
+
   const [docs, setDocs] = useState<UploadedDoc[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState<string | null>(null);
@@ -119,6 +130,11 @@ export function StepDocuments({ onComplete, onBack }: StepDocumentsProps) {
         <p className="mt-1 text-sm text-muted-foreground">
           Upload required documents for verification
         </p>
+        {isBicycle && (
+          <p className="mt-1 text-xs text-muted-foreground">
+            Since you're using a bicycle, driving license and vehicle RC are not required.
+          </p>
+        )}
       </div>
 
       <div className="space-y-3">

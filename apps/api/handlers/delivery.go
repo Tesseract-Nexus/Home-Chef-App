@@ -336,7 +336,7 @@ func (h *DeliveryHandler) GetAvailableDeliveries(c *gin.Context) {
 			PickupAddress: order.Chef.AddressLine1 + ", " + order.Chef.City,
 			DropoffAddress: order.DeliveryAddressLine1 + ", " + order.DeliveryAddressCity,
 			Distance:        distance,
-			EstimatedPayout: order.DeliveryFee * 0.8, // 80% of delivery fee goes to partner
+			EstimatedPayout: order.DeliveryFee + order.Tip, // 100% — subscription model, no platform cut
 			CreatedAt:       order.CreatedAt,
 		})
 	}
@@ -427,7 +427,7 @@ func (h *DeliveryHandler) AcceptDelivery(c *gin.Context) {
 		EstimatedDuration:   estimatedDuration,
 		DeliveryFee:         order.DeliveryFee,
 		Tip:                 order.Tip,
-		TotalPayout:         order.DeliveryFee*0.8 + order.Tip,
+		TotalPayout:         order.DeliveryFee + order.Tip, // 100% to driver — subscription model
 	}
 
 	if err := tx.Create(&delivery).Error; err != nil {
@@ -1166,7 +1166,7 @@ func (h *DeliveryHandler) ManualAssignDelivery(c *gin.Context) {
 		EstimatedDuration:   estimatedDuration,
 		DeliveryFee:         order.DeliveryFee,
 		Tip:                 order.Tip,
-		TotalPayout:         order.DeliveryFee*0.8 + order.Tip,
+		TotalPayout:         order.DeliveryFee + order.Tip, // 100% to driver — subscription model
 	}
 
 	if err := tx.Create(&delivery).Error; err != nil {

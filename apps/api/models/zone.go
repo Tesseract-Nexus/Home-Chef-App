@@ -36,8 +36,8 @@ type DeliveryZone struct {
 	DefaultTipPercent float64 `gorm:"default:10" json:"defaultTipPercent"` // Suggested tip %
 	MaxTipAmount     float64 `gorm:"default:0" json:"maxTipAmount"`       // 0 = no cap
 
-	// Driver payout share
-	DriverPayoutPercent float64 `gorm:"default:80" json:"driverPayoutPercent"` // % of delivery fee to driver
+	// Driver payout share — 100% (subscription model, no platform commission)
+	DriverPayoutPercent float64 `gorm:"default:100" json:"driverPayoutPercent"` // % of delivery fee to driver
 
 	IsActive  bool           `gorm:"default:true" json:"isActive"`
 	CreatedAt time.Time      `gorm:"autoCreateTime" json:"createdAt"`

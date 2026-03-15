@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"math"
@@ -817,24 +818,6 @@ func (h *ChefHandler) SavePayoutDetails(c *gin.Context) {
 	}
 
 	vendorID := chef.ID.String()
-	ctx := c.Request.Context()
-
-	// Store sensitive fields in GCP Secret Manager
-	secretFields := map[string]string{
-		"bank-account-number": req.BankAccountNumber,
-		"bank-account-name":   req.BankAccountName,
-		"bank-ifsc":           req.BankIFSC,
-		"upi-id":              req.UpiID,
-	}
-
-	for field, value := range secretFields {
-		if value != "" {
-			if err := services.StoreVendorSecret(ctx, vendorID, field, value); err != nil {
-				log.Printf("Warning: failed to store secret %s for vendor %s: %v", field, vendorID, err)
-				// Don't fail the request — secrets are a security layer, payout still works
-			}
-		}
-	}
 
 	// DB stores ONLY the payout method (non-sensitive selector).
 	// All sensitive fields (account number, IFSC, name, UPI) live exclusively in Secret Manager.
@@ -851,13 +834,34 @@ func (h *ChefHandler) SavePayoutDetails(c *gin.Context) {
 
 	log.Printf("Payout details saved for vendor %s (method: %s)", vendorID, req.PayoutMethod)
 
-	// Create Razorpay Route linked account if not already created
-	razorpayConnected := chef.RazorpayAccountID != ""
-	var razorpayError string
+	// Store sensitive fields in GCP Secret Manager asynchronously
+	// (Secret Manager creation can take several seconds on first call)
+	go func() {
+		ctx := context.Background()
+		secretFields := map[string]string{
+			"bank-account-number": req.BankAccountNumber,
+			"bank-account-name":   req.BankAccountName,
+			"bank-ifsc":           req.BankIFSC,
+			"upi-id":              req.UpiID,
+		}
+		for field, value := range secretFields {
+			if value != "" {
+				if err := services.StoreVendorSecret(ctx, vendorID, field, value); err != nil {
+					log.Printf("Warning: failed to store secret %s for vendor %s: %v", field, vendorID, err)
+				}
+			}
+		}
+		log.Printf("Secrets stored in Secret Manager for vendor %s", vendorID)
+	}()
 
+	// Create Razorpay Route linked account asynchronously if not already created
+	razorpayConnected := chef.RazorpayAccountID != ""
 	if !razorpayConnected {
-		rz := services.GetRazorpay()
-		if rz != nil {
+		go func() {
+			rz := services.GetRazorpay()
+			if rz == nil {
+				return
+			}
 			contactName := chef.User.FirstName + " " + chef.User.LastName
 			linkedAcct, err := rz.CreateLinkedAccount(&services.LinkedAccountRequest{
 				Email:        chef.User.Email,
@@ -868,16 +872,11 @@ func (h *ChefHandler) SavePayoutDetails(c *gin.Context) {
 			})
 			if err != nil {
 				log.Printf("Failed to create Razorpay linked account for vendor %s", vendorID)
-				razorpayError = "Payout details saved, but Razorpay account creation failed. Please try again."
-			} else {
-				chef.RazorpayAccountID = linkedAcct.ID
-				database.DB.Model(&chef).Update("razorpay_account_id", linkedAcct.ID)
-				razorpayConnected = true
-				log.Printf("Created Razorpay linked account for vendor %s", vendorID)
+				return
 			}
-		} else {
-			razorpayError = "Payout details saved. Payment gateway not configured yet."
-		}
+			database.DB.Model(&models.ChefProfile{}).Where("id = ?", chef.ID).Update("razorpay_account_id", linkedAcct.ID)
+			log.Printf("Created Razorpay linked account for vendor %s", vendorID)
+		}()
 	}
 
 	resp := gin.H{
@@ -889,9 +888,6 @@ func (h *ChefHandler) SavePayoutDetails(c *gin.Context) {
 		"upiId":             maskEmail(req.UpiID),
 		"razorpayConnected": razorpayConnected,
 		"razorpayAccountId": maskID(chef.RazorpayAccountID),
-	}
-	if razorpayError != "" {
-		resp["razorpayError"] = razorpayError
 	}
 
 	c.JSON(http.StatusOK, resp)

@@ -93,6 +93,8 @@ func Migrate() error {
 		// Delivery
 		&models.DeliveryPartner{},
 		&models.Delivery{},
+		&models.DeliveryPartnerDocument{},
+		&models.DeliveryZone{},
 
 		// Reviews
 		&models.Review{},

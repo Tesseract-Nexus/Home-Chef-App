@@ -53,6 +53,8 @@ const (
 	SPAssignDeliveries       StaffPermission = "deliveries:assign"
 	SPViewDeliveryAnalytics  StaffPermission = "delivery_analytics:view"
 	SPViewDeliveryEarnings   StaffPermission = "delivery_earnings:view"
+	SPManageZones            StaffPermission = "zones:manage"
+	SPViewZones              StaffPermission = "zones:view"
 )
 
 // DefaultStaffPermissions defines what each staff role can do
@@ -70,6 +72,7 @@ var DefaultStaffPermissions = map[StaffRole][]StaffPermission{
 		SPManageDeliveryPartners, SPVerifyDeliveryPartners, SPViewDeliveryPartners,
 		SPViewDeliveryOrders, SPAssignDeliveries,
 		SPViewDeliveryAnalytics, SPViewDeliveryEarnings,
+		SPManageZones, SPViewZones,
 	},
 	StaffRoleAdmin: {
 		SPViewDashboard, SPManageUsers, SPViewUsers,
@@ -86,6 +89,7 @@ var DefaultStaffPermissions = map[StaffRole][]StaffPermission{
 		SPViewDeliveryOrders, SPAssignDeliveries,
 		SPViewDeliveryAnalytics, SPViewDeliveryEarnings,
 		SPInviteStaff, SPViewStaff,
+		SPManageZones, SPViewZones,
 	},
 	StaffRoleDeliveryOps: {
 		SPViewDeliveryDashboard, SPViewFleet,

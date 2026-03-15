@@ -31,6 +31,10 @@ const DeliveryHistoryPage = lazyWithRetry(() => import('@/features/deliveries/pa
 const EarningsPage = lazyWithRetry(() => import('@/features/earnings/pages/EarningsPage'));
 const ProfilePage = lazyWithRetry(() => import('@/features/profile/pages/ProfilePage'));
 const SettingsPage = lazyWithRetry(() => import('@/features/settings/pages/SettingsPage'));
+const StaffPage = lazyWithRetry(() => import('@/features/staff/pages/StaffPage'));
+const FleetOverviewPage = lazyWithRetry(() => import('@/features/fleet/pages/FleetOverviewPage'));
+const PartnersPage = lazyWithRetry(() => import('@/features/fleet/pages/PartnersPage'));
+const PartnerDetailPage = lazyWithRetry(() => import('@/features/fleet/pages/PartnerDetailPage'));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isLoading, isAuthenticated } = useAuth();
@@ -81,6 +85,10 @@ export function AppRoutes() {
           <Route path="available" element={<AvailableDeliveriesPage />} />
           <Route path="history" element={<DeliveryHistoryPage />} />
           <Route path="earnings" element={<EarningsPage />} />
+          <Route path="staff" element={<StaffPage />} />
+          <Route path="fleet" element={<FleetOverviewPage />} />
+          <Route path="fleet/partners" element={<PartnersPage />} />
+          <Route path="fleet/partners/:id" element={<PartnerDetailPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>

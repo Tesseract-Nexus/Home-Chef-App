@@ -6,6 +6,8 @@ import {
   History,
   DollarSign,
   User,
+  UserCog,
+  Users,
   Settings,
   Menu,
   X,
@@ -14,13 +16,22 @@ import {
   ChevronDown,
   Truck,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/app/providers/AuthProvider';
+import { apiClient } from '@/shared/services/api-client';
 import { useIsMobile, useOnlineStatus } from '@/shared/hooks/useMobile';
 import { ErrorBoundary } from '@/shared/components/ErrorBoundary';
 import { DeliveryBottomNav } from '@/shared/components/navigation/DeliveryBottomNav';
 
-const navigation = [
+interface StaffProfile {
+  id: string;
+  staffRole: string;
+  permissions: string[];
+  isActive: boolean;
+}
+
+const partnerNavigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Active Delivery', href: '/active', icon: Navigation },
   { name: 'Available', href: '/available', icon: Package },
@@ -28,6 +39,11 @@ const navigation = [
   { name: 'Earnings', href: '/earnings', icon: DollarSign },
   { name: 'Profile', href: '/profile', icon: User },
   { name: 'Settings', href: '/settings', icon: Settings },
+];
+
+const staffNavItems = [
+  { name: 'Staff', href: '/staff', icon: UserCog, permission: 'staff:view' },
+  { name: 'Fleet', href: '/fleet', icon: Users, permission: 'fleet:view' },
 ];
 
 export function DeliveryLayout() {
@@ -38,10 +54,39 @@ export function DeliveryLayout() {
   const isMobile = useIsMobile('lg');
   const isOnline = useOnlineStatus();
 
+  // Fetch staff profile to determine if user is a staff member (fleet_manager, delivery_ops, super_admin)
+  const { data: staffProfile } = useQuery({
+    queryKey: ['delivery-staff-me'],
+    queryFn: () => apiClient.get<StaffProfile>('/delivery/staff/me'),
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const isStaff = !!staffProfile?.id;
+  const staffPermissions = staffProfile?.permissions ?? [];
+
+  const navigation = useMemo(() => {
+    if (!isStaff) return partnerNavigation;
+
+    // Staff members get the base nav plus staff/fleet items they have permission for
+    const allowedStaffItems = staffNavItems.filter(
+      (item) => staffPermissions.includes(item.permission)
+    );
+
+    // Insert staff items after Earnings, before Profile
+    const earningsIdx = partnerNavigation.findIndex((n) => n.name === 'Earnings');
+    const nav = [...partnerNavigation];
+    nav.splice(earningsIdx + 1, 0, ...allowedStaffItems);
+    return nav;
+  }, [isStaff, staffPermissions]);
+
   const isActive = (href: string) =>
     location.pathname === href || location.pathname.startsWith(href + '/');
 
   const displayName = user?.name || [user?.firstName, user?.lastName].filter(Boolean).join(' ') || user?.email || 'Driver';
+  const roleLabel = isStaff
+    ? (staffProfile?.staffRole ?? '').split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+    : '{roleLabel}';
 
   return (
     <div className="flex h-screen bg-background">
@@ -88,7 +133,7 @@ export function DeliveryLayout() {
               </div>
               <div className="flex-1 text-left">
                 <p className="text-sm font-medium text-foreground truncate">{displayName}</p>
-                <p className="text-xs text-muted-foreground">Delivery Partner</p>
+                <p className="text-xs text-muted-foreground">{roleLabel}</p>
               </div>
               <ChevronDown className="h-4 w-4 text-muted-foreground" />
             </button>

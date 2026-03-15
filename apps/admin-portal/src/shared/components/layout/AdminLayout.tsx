@@ -6,6 +6,7 @@ import {
   ShoppingBag,
   ClipboardCheck,
   Truck,
+  UserCog,
   BarChart3,
   Settings,
   Shield,
@@ -29,6 +30,7 @@ const navigation = [
   { name: 'Orders', href: '/orders', icon: ShoppingBag },
   { name: 'Reviews', href: '/approvals', icon: ClipboardCheck },
   { name: 'Delivery', href: '/delivery', icon: Truck },
+  { name: 'Staff', href: '/staff', icon: UserCog },
   { name: 'Analytics', href: '/analytics', icon: BarChart3 },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];

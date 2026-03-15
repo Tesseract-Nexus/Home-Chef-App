@@ -33,6 +33,8 @@ const SettingsPage = lazyWithRetry(() => import('@/features/settings/pages/Setti
 const UserDetailPage = lazyWithRetry(() => import('@/features/users/pages/UserDetailPage'));
 const ApprovalsPage = lazyWithRetry(() => import('@/features/approvals/pages/ApprovalsPage'));
 const ApprovalDetailPage = lazyWithRetry(() => import('@/features/approvals/pages/ApprovalDetailPage'));
+const StaffPage = lazyWithRetry(() => import('@/features/staff/pages/StaffPage'));
+const StaffDetailPage = lazyWithRetry(() => import('@/features/staff/pages/StaffDetailPage'));
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isLoading, isAuthenticated } = useAuth();
@@ -86,6 +88,8 @@ export function AppRoutes() {
           <Route path="approvals" element={<ApprovalsPage />} />
           <Route path="approvals/:id" element={<ApprovalDetailPage />} />
           <Route path="delivery" element={<DashboardPage />} />
+          <Route path="staff" element={<StaffPage />} />
+          <Route path="staff/:id" element={<StaffDetailPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="settings" element={<SettingsPage />} />
         </Route>

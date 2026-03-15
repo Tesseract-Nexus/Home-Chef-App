@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"log"
 	"math"
 	"net/http"
@@ -497,9 +498,13 @@ func (h *DeliveryHandler) UpdateDeliveryStatus(c *gin.Context) {
 
 	// Validate status transitions
 	validTransitions := map[models.DeliveryStatus][]models.DeliveryStatus{
-		models.DeliveryAssigned:  {models.DeliveryPickedUp, models.DeliveryCancelled},
+		models.DeliveryPending:   {models.DeliveryAssigned, models.DeliveryCancelled},
+		models.DeliveryAssigned:  {models.DeliveryAtPickup, models.DeliveryPickedUp, models.DeliveryCancelled},
+		models.DeliveryAtPickup:  {models.DeliveryPickedUp, models.DeliveryCancelled},
 		models.DeliveryPickedUp:  {models.DeliveryInTransit, models.DeliveryCancelled},
-		models.DeliveryInTransit: {models.DeliveryDelivered, models.DeliveryCancelled},
+		models.DeliveryInTransit: {models.DeliveryAtDropoff, models.DeliveryDelivered, models.DeliveryCancelled},
+		models.DeliveryAtDropoff: {models.DeliveryDelivered, models.DeliveryFailed, models.DeliveryCancelled},
+		models.DeliveryFailed:    {models.DeliveryReturned},
 	}
 
 	allowed, exists := validTransitions[delivery.Status]
@@ -1001,4 +1006,460 @@ func safeDiv(a, b float64) float64 {
 		return 0
 	}
 	return math.Round(a/b*100) / 100
+}
+
+// --- Fleet Management endpoints (for fleet managers via delivery portal) ---
+
+// FleetOverview returns online/offline counts, active deliveries, and unassigned queue depth
+func (h *DeliveryHandler) FleetOverview(c *gin.Context) {
+	var totalPartners int64
+	var onlinePartners int64
+	var offlinePartners int64
+	var activeDeliveries int64
+	var unassignedOrders int64
+	var verifiedPartners int64
+	var pendingVerification int64
+
+	database.DB.Model(&models.DeliveryPartner{}).Where("is_active = ?", true).Count(&totalPartners)
+	database.DB.Model(&models.DeliveryPartner{}).Where("is_online = ? AND is_active = ?", true, true).Count(&onlinePartners)
+	database.DB.Model(&models.DeliveryPartner{}).Where("is_online = ? AND is_active = ?", false, true).Count(&offlinePartners)
+	database.DB.Model(&models.DeliveryPartner{}).Where("is_verified = ? AND is_active = ?", true, true).Count(&verifiedPartners)
+	database.DB.Model(&models.DeliveryPartner{}).Where("verification_status = ?", models.VerificationPending).Count(&pendingVerification)
+
+	database.DB.Model(&models.Delivery{}).
+		Where("status IN ?", []models.DeliveryStatus{
+			models.DeliveryAssigned, models.DeliveryAtPickup, models.DeliveryPickedUp,
+			models.DeliveryInTransit, models.DeliveryAtDropoff,
+		}).Count(&activeDeliveries)
+
+	database.DB.Model(&models.Order{}).
+		Where("status = ? AND delivery_id IS NULL", models.OrderStatusReady).
+		Count(&unassignedOrders)
+
+	// Today's completed
+	today := time.Now().Truncate(24 * time.Hour)
+	var todayCompleted int64
+	var todayEarnings float64
+	database.DB.Model(&models.Delivery{}).
+		Where("status = ? AND delivered_at >= ?", models.DeliveryDelivered, today).
+		Count(&todayCompleted)
+	database.DB.Model(&models.Delivery{}).
+		Where("status = ? AND delivered_at >= ?", models.DeliveryDelivered, today).
+		Select("COALESCE(SUM(total_payout), 0)").Scan(&todayEarnings)
+
+	c.JSON(http.StatusOK, gin.H{
+		"totalPartners":       totalPartners,
+		"onlinePartners":      onlinePartners,
+		"offlinePartners":     offlinePartners,
+		"verifiedPartners":    verifiedPartners,
+		"pendingVerification": pendingVerification,
+		"activeDeliveries":    activeDeliveries,
+		"unassignedOrders":    unassignedOrders,
+		"todayCompleted":      todayCompleted,
+		"todayEarnings":       todayEarnings,
+	})
+}
+
+// GetPartnerDetail returns full detail for a delivery partner including documents and metrics
+func (h *DeliveryHandler) GetPartnerDetail(c *gin.Context) {
+	partnerID := c.Param("id")
+
+	var partner models.DeliveryPartner
+	if err := database.DB.Preload("User").Preload("Documents").
+		Where("id = ?", partnerID).First(&partner).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Delivery partner not found"})
+		return
+	}
+
+	// Get active delivery count
+	var activeCount int64
+	database.DB.Model(&models.Delivery{}).
+		Where("delivery_partner_id = ? AND status IN ?", partner.ID,
+			[]models.DeliveryStatus{models.DeliveryAssigned, models.DeliveryAtPickup, models.DeliveryPickedUp, models.DeliveryInTransit, models.DeliveryAtDropoff}).
+		Count(&activeCount)
+
+	resp := partner.ToDetailResponse()
+	c.JSON(http.StatusOK, gin.H{
+		"partner":          resp,
+		"activeDeliveries": activeCount,
+	})
+}
+
+// ManualAssignDelivery allows a fleet manager to manually assign an order to a partner
+func (h *DeliveryHandler) ManualAssignDelivery(c *gin.Context) {
+	userID, _ := middleware.GetUserID(c)
+	partnerID := c.Param("id")
+
+	var req struct {
+		OrderID string `json:"orderId" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	orderUUID, err := uuid.Parse(req.OrderID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid order ID"})
+		return
+	}
+
+	var partner models.DeliveryPartner
+	if err := database.DB.Where("id = ?", partnerID).First(&partner).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Delivery partner not found"})
+		return
+	}
+
+	if !partner.IsVerified || !partner.IsActive {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Partner is not verified or active"})
+		return
+	}
+
+	// Check concurrent delivery limit
+	var activeCount int64
+	database.DB.Model(&models.Delivery{}).
+		Where("delivery_partner_id = ? AND status IN ?", partner.ID,
+			[]models.DeliveryStatus{models.DeliveryAssigned, models.DeliveryAtPickup, models.DeliveryPickedUp, models.DeliveryInTransit, models.DeliveryAtDropoff}).
+		Count(&activeCount)
+
+	if int(activeCount) >= partner.MaxConcurrent {
+		c.JSON(http.StatusConflict, gin.H{"error": "Partner has reached maximum concurrent deliveries"})
+		return
+	}
+
+	tx := database.DB.Begin()
+
+	var order models.Order
+	if err := tx.Preload("Chef").
+		Where("id = ? AND status = ? AND delivery_id IS NULL", orderUUID, models.OrderStatusReady).
+		First(&order).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusNotFound, gin.H{"error": "Order not available for delivery"})
+		return
+	}
+
+	distance := haversine(
+		order.Chef.Latitude, order.Chef.Longitude,
+		order.DeliveryLatitude, order.DeliveryLongitude,
+	)
+	estimatedDuration := int(math.Ceil(distance / 0.5))
+	if estimatedDuration < 10 {
+		estimatedDuration = 10
+	}
+
+	delivery := models.Delivery{
+		OrderID:            order.ID,
+		DeliveryPartnerID:  partner.ID,
+		Status:             models.DeliveryAssigned,
+		AssignmentType:     models.AssignmentManual,
+		AssignedByID:       &userID,
+		PickupAddressLine1: order.Chef.AddressLine1,
+		PickupAddressCity:  order.Chef.City,
+		PickupLatitude:     order.Chef.Latitude,
+		PickupLongitude:    order.Chef.Longitude,
+		DropoffAddressLine1: order.DeliveryAddressLine1,
+		DropoffAddressCity:  order.DeliveryAddressCity,
+		DropoffLatitude:     order.DeliveryLatitude,
+		DropoffLongitude:    order.DeliveryLongitude,
+		Distance:            distance,
+		EstimatedDuration:   estimatedDuration,
+		DeliveryFee:         order.DeliveryFee,
+		Tip:                 order.Tip,
+		TotalPayout:         order.DeliveryFee*0.8 + order.Tip,
+	}
+
+	if err := tx.Create(&delivery).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create delivery"})
+		return
+	}
+
+	order.DeliveryID = &delivery.ID
+	order.Status = models.OrderStatusPickedUp
+	now := time.Now()
+	order.PickedUpAt = &now
+	order.EstimatedDeliveryTime = estimatedDuration
+
+	if err := tx.Save(&order).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update order"})
+		return
+	}
+
+	tx.Commit()
+
+	go func() {
+		if err := services.PublishEvent(services.SubjectDeliveryAssigned, "delivery.manual_assigned", partner.UserID, map[string]interface{}{
+			"delivery_id":  delivery.ID.String(),
+			"order_id":     order.ID.String(),
+			"partner_id":   partner.ID.String(),
+			"assigned_by":  userID.String(),
+		}); err != nil {
+			log.Printf("Failed to publish manual assign event: %v", err)
+		}
+	}()
+
+	c.JSON(http.StatusOK, gin.H{
+		"delivery": delivery.ToResponse(),
+		"message":  "Delivery manually assigned",
+	})
+}
+
+// --- Partner document endpoints ---
+
+// UploadPartnerDocument handles document upload for delivery partner verification
+func (h *DeliveryHandler) UploadPartnerDocument(c *gin.Context) {
+	userID, _ := middleware.GetUserID(c)
+
+	var partner models.DeliveryPartner
+	if err := database.DB.Where("user_id = ?", userID).First(&partner).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Delivery partner profile not found"})
+		return
+	}
+
+	docType := models.PartnerDocType(c.PostForm("type"))
+	validTypes := map[models.PartnerDocType]bool{
+		models.PartnerDocDrivingLicense: true,
+		models.PartnerDocVehicleRC:      true,
+		models.PartnerDocInsurance:      true,
+		models.PartnerDocAadhaar:        true,
+		models.PartnerDocPanCard:        true,
+		models.PartnerDocPhoto:          true,
+	}
+	if !validTypes[docType] {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid document type"})
+		return
+	}
+
+	file, header, err := c.Request.FormFile("file")
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "File is required"})
+		return
+	}
+	defer file.Close()
+
+	// Check file size (10MB max)
+	if header.Size > 10*1024*1024 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "File too large (max 10MB)"})
+		return
+	}
+
+	contentType := header.Header.Get("Content-Type")
+	validContent := map[string]bool{
+		"image/jpeg":      true,
+		"image/png":       true,
+		"image/webp":      true,
+		"application/pdf": true,
+	}
+	if !validContent[contentType] {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file type. Allowed: JPEG, PNG, WebP, PDF"})
+		return
+	}
+
+	// Upload to storage
+	bucket := "homechef-private-docs"
+	filePath := fmt.Sprintf("delivery-partners/%s/%s/%s", partner.ID, docType, header.Filename)
+
+	uploadedPath, err := services.UploadFile(c.Request.Context(), bucket, filePath, file, contentType)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to upload file"})
+		return
+	}
+
+	// Upsert: replace existing doc of same type
+	var existingDoc models.DeliveryPartnerDocument
+	if err := database.DB.Where("partner_id = ? AND type = ?", partner.ID, docType).First(&existingDoc).Error; err == nil {
+		existingDoc.FileName = header.Filename
+		existingDoc.FilePath = uploadedPath
+		existingDoc.Bucket = bucket
+		existingDoc.ContentType = contentType
+		existingDoc.FileSize = header.Size
+		existingDoc.Status = models.DocStatusPending
+		existingDoc.RejectionReason = ""
+		database.DB.Save(&existingDoc)
+		c.JSON(http.StatusOK, existingDoc.ToResponse())
+		return
+	}
+
+	doc := models.DeliveryPartnerDocument{
+		PartnerID:   partner.ID,
+		Type:        docType,
+		FileName:    header.Filename,
+		FilePath:    uploadedPath,
+		Bucket:      bucket,
+		ContentType: contentType,
+		FileSize:    header.Size,
+		Status:      models.DocStatusPending,
+	}
+
+	if err := database.DB.Create(&doc).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save document"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, doc.ToResponse())
+}
+
+// GetPartnerDocuments returns the authenticated partner's documents
+func (h *DeliveryHandler) GetPartnerDocuments(c *gin.Context) {
+	userID, _ := middleware.GetUserID(c)
+
+	var partner models.DeliveryPartner
+	if err := database.DB.Where("user_id = ?", userID).First(&partner).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Delivery partner profile not found"})
+		return
+	}
+
+	var docs []models.DeliveryPartnerDocument
+	database.DB.Where("partner_id = ?", partner.ID).Order("created_at DESC").Find(&docs)
+
+	responses := make([]models.PartnerDocumentResponse, len(docs))
+	for i, d := range docs {
+		responses[i] = d.ToResponse()
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": responses})
+}
+
+// --- Zone CRUD endpoints ---
+
+// ListZones returns all delivery zones
+func (h *DeliveryHandler) ListZones(c *gin.Context) {
+	city := c.Query("city")
+	activeOnly := c.DefaultQuery("active", "true")
+
+	query := database.DB.Model(&models.DeliveryZone{})
+	if city != "" {
+		query = query.Where("city ILIKE ?", "%"+city+"%")
+	}
+	if activeOnly == "true" {
+		query = query.Where("is_active = ?", true)
+	}
+
+	var zones []models.DeliveryZone
+	if err := query.Order("city, name").Find(&zones).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch zones"})
+		return
+	}
+
+	responses := make([]models.DeliveryZoneResponse, len(zones))
+	for i, z := range zones {
+		responses[i] = z.ToResponse()
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": responses})
+}
+
+// CreateZone creates a new delivery zone
+func (h *DeliveryHandler) CreateZone(c *gin.Context) {
+	var req struct {
+		Name         string  `json:"name" binding:"required"`
+		City         string  `json:"city" binding:"required"`
+		State        string  `json:"state"`
+		MinLatitude  float64 `json:"minLatitude"`
+		MaxLatitude  float64 `json:"maxLatitude"`
+		MinLongitude float64 `json:"minLongitude"`
+		MaxLongitude float64 `json:"maxLongitude"`
+		Boundary     string  `json:"boundary"`
+		BaseFare     float64 `json:"baseFare"`
+		PerKmRate    float64 `json:"perKmRate"`
+		MinimumFare  float64 `json:"minimumFare"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	zone := models.DeliveryZone{
+		Name:            req.Name,
+		City:            req.City,
+		State:           req.State,
+		MinLatitude:     req.MinLatitude,
+		MaxLatitude:     req.MaxLatitude,
+		MinLongitude:    req.MinLongitude,
+		MaxLongitude:    req.MaxLongitude,
+		Boundary:        req.Boundary,
+		BaseFare:        req.BaseFare,
+		PerKmRate:       req.PerKmRate,
+		MinimumFare:     req.MinimumFare,
+		SurgeMultiplier: 1.0,
+		IsActive:        true,
+	}
+
+	if err := database.DB.Create(&zone).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create zone"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, zone.ToResponse())
+}
+
+// UpdateZone updates a delivery zone
+func (h *DeliveryHandler) UpdateZone(c *gin.Context) {
+	zoneID := c.Param("id")
+
+	var zone models.DeliveryZone
+	if err := database.DB.Where("id = ?", zoneID).First(&zone).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Zone not found"})
+		return
+	}
+
+	var req struct {
+		Name            *string  `json:"name"`
+		City            *string  `json:"city"`
+		State           *string  `json:"state"`
+		MinLatitude     *float64 `json:"minLatitude"`
+		MaxLatitude     *float64 `json:"maxLatitude"`
+		MinLongitude    *float64 `json:"minLongitude"`
+		MaxLongitude    *float64 `json:"maxLongitude"`
+		Boundary        *string  `json:"boundary"`
+		BaseFare        *float64 `json:"baseFare"`
+		PerKmRate       *float64 `json:"perKmRate"`
+		MinimumFare     *float64 `json:"minimumFare"`
+		SurgeMultiplier *float64 `json:"surgeMultiplier"`
+		IsActive        *bool    `json:"isActive"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if req.Name != nil { zone.Name = *req.Name }
+	if req.City != nil { zone.City = *req.City }
+	if req.State != nil { zone.State = *req.State }
+	if req.MinLatitude != nil { zone.MinLatitude = *req.MinLatitude }
+	if req.MaxLatitude != nil { zone.MaxLatitude = *req.MaxLatitude }
+	if req.MinLongitude != nil { zone.MinLongitude = *req.MinLongitude }
+	if req.MaxLongitude != nil { zone.MaxLongitude = *req.MaxLongitude }
+	if req.Boundary != nil { zone.Boundary = *req.Boundary }
+	if req.BaseFare != nil { zone.BaseFare = *req.BaseFare }
+	if req.PerKmRate != nil { zone.PerKmRate = *req.PerKmRate }
+	if req.MinimumFare != nil { zone.MinimumFare = *req.MinimumFare }
+	if req.SurgeMultiplier != nil { zone.SurgeMultiplier = *req.SurgeMultiplier }
+	if req.IsActive != nil { zone.IsActive = *req.IsActive }
+
+	if err := database.DB.Save(&zone).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update zone"})
+		return
+	}
+
+	c.JSON(http.StatusOK, zone.ToResponse())
+}
+
+// DeleteZone soft-deletes a delivery zone
+func (h *DeliveryHandler) DeleteZone(c *gin.Context) {
+	zoneID := c.Param("id")
+
+	var zone models.DeliveryZone
+	if err := database.DB.Where("id = ?", zoneID).First(&zone).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Zone not found"})
+		return
+	}
+
+	if err := database.DB.Delete(&zone).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete zone"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Zone deleted"})
 }

@@ -9,11 +9,41 @@ import (
 type DeliveryStatus string
 
 const (
+	DeliveryPending    DeliveryStatus = "pending"
 	DeliveryAssigned   DeliveryStatus = "assigned"
+	DeliveryAtPickup   DeliveryStatus = "at_pickup"
 	DeliveryPickedUp   DeliveryStatus = "picked_up"
 	DeliveryInTransit  DeliveryStatus = "in_transit"
+	DeliveryAtDropoff  DeliveryStatus = "at_dropoff"
 	DeliveryDelivered  DeliveryStatus = "delivered"
+	DeliveryFailed     DeliveryStatus = "failed"
+	DeliveryReturned   DeliveryStatus = "returned"
 	DeliveryCancelled  DeliveryStatus = "cancelled"
+)
+
+type AgentType string
+
+const (
+	AgentInternal   AgentType = "internal"
+	AgentFreelance  AgentType = "freelance"
+	AgentThirdParty AgentType = "third_party"
+)
+
+type VerificationStatus string
+
+const (
+	VerificationPending  VerificationStatus = "pending"
+	VerificationInReview VerificationStatus = "in_review"
+	VerificationApproved VerificationStatus = "approved"
+	VerificationRejected VerificationStatus = "rejected"
+)
+
+type AssignmentType string
+
+const (
+	AssignmentManual     AssignmentType = "manual"
+	AssignmentAuto       AssignmentType = "auto"
+	AssignmentThirdParty AssignmentType = "third_party"
 )
 
 type DeliveryPartner struct {
@@ -32,6 +62,30 @@ type DeliveryPartner struct {
 	TotalDeliveries int        `gorm:"default:0" json:"totalDeliveries"`
 	TotalReviews    int        `gorm:"default:0" json:"totalReviews"`
 
+	// Agent classification
+	AgentType  AgentType `gorm:"type:varchar(20);default:'freelance'" json:"agentType"`
+	EmployeeID string    `gorm:"" json:"employeeId,omitempty"` // For internal agents
+
+	// Shift management
+	ShiftStart *time.Time `gorm:"" json:"shiftStart,omitempty"`
+	ShiftEnd   *time.Time `gorm:"" json:"shiftEnd,omitempty"`
+
+	// Capacity
+	MaxConcurrent int `gorm:"default:1" json:"maxConcurrent"`
+
+	// Performance metrics
+	AcceptanceRate float64 `gorm:"default:0" json:"acceptanceRate"`
+	OnTimeRate     float64 `gorm:"default:0" json:"onTimeRate"`
+	CSATScore      float64 `gorm:"default:0" json:"csatScore"`
+	OfferedCount   int     `gorm:"default:0" json:"offeredCount"`
+	AcceptedCount  int     `gorm:"default:0" json:"acceptedCount"`
+	CompletedOnTime int    `gorm:"default:0" json:"completedOnTime"`
+
+	// Verification
+	VerificationStatus VerificationStatus `gorm:"type:varchar(20);default:'pending'" json:"verificationStatus"`
+	VerifiedByID       *uuid.UUID         `gorm:"type:uuid" json:"verifiedById,omitempty"`
+	RejectionReason    string             `gorm:"" json:"rejectionReason,omitempty"`
+
 	// Bank/Payout Info
 	StripeAccountID string `gorm:"" json:"-"`
 
@@ -41,13 +95,67 @@ type DeliveryPartner struct {
 	// Relationships
 	User       User       `gorm:"foreignKey:UserID" json:"user,omitempty"`
 	Deliveries []Delivery `gorm:"foreignKey:DeliveryPartnerID" json:"deliveries,omitempty"`
+	Documents  []DeliveryPartnerDocument `gorm:"foreignKey:PartnerID" json:"documents,omitempty"`
+	VerifiedBy *User      `gorm:"foreignKey:VerifiedByID" json:"verifiedBy,omitempty"`
+}
+
+// DeliveryPartnerDocument stores verification documents uploaded by delivery partners
+type DeliveryPartnerDocument struct {
+	ID              uuid.UUID      `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
+	PartnerID       uuid.UUID      `gorm:"type:uuid;not null;index" json:"partnerId"`
+	Type            PartnerDocType `gorm:"type:varchar(50);not null;index" json:"type"`
+	FileName        string         `gorm:"not null" json:"fileName"`
+	FilePath        string         `gorm:"not null" json:"-"`
+	FileURL         string         `gorm:"-" json:"fileUrl,omitempty"`
+	Bucket          string         `gorm:"not null" json:"-"`
+	ContentType     string         `gorm:"" json:"contentType"`
+	FileSize        int64          `gorm:"" json:"fileSize"`
+	Status          DocumentStatus `gorm:"type:varchar(20);default:'pending'" json:"status"`
+	RejectionReason string         `gorm:"" json:"rejectionReason,omitempty"`
+	CreatedAt       time.Time      `gorm:"autoCreateTime" json:"createdAt"`
+	UpdatedAt       time.Time      `gorm:"autoUpdateTime" json:"updatedAt"`
+
+	Partner DeliveryPartner `gorm:"foreignKey:PartnerID" json:"-"`
+}
+
+type PartnerDocType string
+
+const (
+	PartnerDocDrivingLicense PartnerDocType = "driving_license"
+	PartnerDocVehicleRC      PartnerDocType = "vehicle_rc"
+	PartnerDocInsurance      PartnerDocType = "insurance"
+	PartnerDocAadhaar        PartnerDocType = "aadhaar"
+	PartnerDocPanCard        PartnerDocType = "pan_card"
+	PartnerDocPhoto          PartnerDocType = "photo"
+)
+
+type PartnerDocumentResponse struct {
+	ID              uuid.UUID      `json:"id"`
+	Type            PartnerDocType `json:"type"`
+	FileName        string         `json:"fileName"`
+	FileURL         string         `json:"fileUrl,omitempty"`
+	Status          DocumentStatus `json:"status"`
+	RejectionReason string         `json:"rejectionReason,omitempty"`
+	CreatedAt       time.Time      `json:"createdAt"`
+}
+
+func (d *DeliveryPartnerDocument) ToResponse() PartnerDocumentResponse {
+	return PartnerDocumentResponse{
+		ID:              d.ID,
+		Type:            d.Type,
+		FileName:        d.FileName,
+		FileURL:         d.FileURL,
+		Status:          d.Status,
+		RejectionReason: d.RejectionReason,
+		CreatedAt:       d.CreatedAt,
+	}
 }
 
 type Delivery struct {
 	ID                uuid.UUID      `gorm:"type:uuid;primaryKey;default:gen_random_uuid()" json:"id"`
 	OrderID           uuid.UUID      `gorm:"type:uuid;uniqueIndex;not null" json:"orderId"`
 	DeliveryPartnerID uuid.UUID      `gorm:"type:uuid;not null;index" json:"deliveryPartnerId"`
-	Status            DeliveryStatus `gorm:"type:varchar(20);default:'assigned'" json:"status"`
+	Status            DeliveryStatus `gorm:"type:varchar(20);default:'pending'" json:"status"`
 
 	// Pickup Location (Chef)
 	PickupAddressLine1 string  `gorm:"" json:"pickupAddressLine1"`
@@ -66,6 +174,16 @@ type Delivery struct {
 	EstimatedDuration int     `gorm:"" json:"estimatedDuration"` // in minutes
 	ActualDuration    int     `gorm:"" json:"actualDuration"`
 
+	// Retry / failure tracking
+	AttemptNumber int    `gorm:"default:1" json:"attemptNumber"`
+	MaxAttempts   int    `gorm:"default:3" json:"maxAttempts"`
+	FailureReason string `gorm:"" json:"failureReason,omitempty"` // customer_unavailable, wrong_address, refused, etc.
+
+	// Assignment tracking
+	AssignmentType AssignmentType `gorm:"type:varchar(20);default:'manual'" json:"assignmentType"`
+	AssignedByID   *uuid.UUID     `gorm:"type:uuid" json:"assignedById,omitempty"`
+	OfferExpiresAt *time.Time     `gorm:"" json:"offerExpiresAt,omitempty"`
+
 	// Earnings
 	DeliveryFee float64 `gorm:"default:0" json:"deliveryFee"`
 	Tip         float64 `gorm:"default:0" json:"tip"`
@@ -81,6 +199,7 @@ type Delivery struct {
 	// Relationships
 	Order           Order           `gorm:"foreignKey:OrderID" json:"order,omitempty"`
 	DeliveryPartner DeliveryPartner `gorm:"foreignKey:DeliveryPartnerID" json:"deliveryPartner,omitempty"`
+	AssignedBy      *User           `gorm:"foreignKey:AssignedByID" json:"assignedBy,omitempty"`
 }
 
 // DTOs
@@ -92,6 +211,8 @@ type DeliveryPartnerResponse struct {
 	IsOnline        bool      `json:"isOnline"`
 	Rating          float64   `json:"rating"`
 	TotalDeliveries int       `json:"totalDeliveries"`
+	AgentType       AgentType `json:"agentType"`
+	VerificationStatus VerificationStatus `json:"verificationStatus"`
 }
 
 type DeliveryResponse struct {
@@ -147,31 +268,62 @@ type DeliveryPartnerDetailResponse struct {
 	Email            string     `json:"email,omitempty"`
 	Phone            string     `json:"phone,omitempty"`
 	Avatar           string     `json:"avatar,omitempty"`
+
+	// Extended fields
+	AgentType          AgentType          `json:"agentType"`
+	EmployeeID         string             `json:"employeeId,omitempty"`
+	MaxConcurrent      int                `json:"maxConcurrent"`
+	AcceptanceRate     float64            `json:"acceptanceRate"`
+	OnTimeRate         float64            `json:"onTimeRate"`
+	CSATScore          float64            `json:"csatScore"`
+	OfferedCount       int                `json:"offeredCount"`
+	AcceptedCount      int                `json:"acceptedCount"`
+	CompletedOnTime    int                `json:"completedOnTime"`
+	VerificationStatus VerificationStatus `json:"verificationStatus"`
+	RejectionReason    string             `json:"rejectionReason,omitempty"`
+	Documents          []PartnerDocumentResponse `json:"documents,omitempty"`
 }
 
 func (p *DeliveryPartner) ToDetailResponse() DeliveryPartnerDetailResponse {
 	resp := DeliveryPartnerDetailResponse{
-		ID:               p.ID,
-		UserID:           p.UserID,
-		VehicleType:      p.VehicleType,
-		VehicleNumber:    p.VehicleNumber,
-		LicenseNumber:    p.LicenseNumber,
-		IsVerified:       p.IsVerified,
-		VerifiedAt:       p.VerifiedAt,
-		IsActive:         p.IsActive,
-		IsOnline:         p.IsOnline,
-		CurrentLatitude:  p.CurrentLatitude,
-		CurrentLongitude: p.CurrentLongitude,
-		Rating:           p.Rating,
-		TotalDeliveries:  p.TotalDeliveries,
-		TotalReviews:     p.TotalReviews,
-		CreatedAt:        p.CreatedAt,
+		ID:                 p.ID,
+		UserID:             p.UserID,
+		VehicleType:        p.VehicleType,
+		VehicleNumber:      p.VehicleNumber,
+		LicenseNumber:      p.LicenseNumber,
+		IsVerified:         p.IsVerified,
+		VerifiedAt:         p.VerifiedAt,
+		IsActive:           p.IsActive,
+		IsOnline:           p.IsOnline,
+		CurrentLatitude:    p.CurrentLatitude,
+		CurrentLongitude:   p.CurrentLongitude,
+		Rating:             p.Rating,
+		TotalDeliveries:    p.TotalDeliveries,
+		TotalReviews:       p.TotalReviews,
+		CreatedAt:          p.CreatedAt,
+		AgentType:          p.AgentType,
+		EmployeeID:         p.EmployeeID,
+		MaxConcurrent:      p.MaxConcurrent,
+		AcceptanceRate:     p.AcceptanceRate,
+		OnTimeRate:         p.OnTimeRate,
+		CSATScore:          p.CSATScore,
+		OfferedCount:       p.OfferedCount,
+		AcceptedCount:      p.AcceptedCount,
+		CompletedOnTime:    p.CompletedOnTime,
+		VerificationStatus: p.VerificationStatus,
+		RejectionReason:    p.RejectionReason,
 	}
 	if p.User.ID != uuid.Nil {
 		resp.Name = p.User.FirstName + " " + p.User.LastName
 		resp.Email = p.User.Email
 		resp.Phone = p.User.Phone
 		resp.Avatar = p.User.Avatar
+	}
+	if len(p.Documents) > 0 {
+		resp.Documents = make([]PartnerDocumentResponse, len(p.Documents))
+		for i, doc := range p.Documents {
+			resp.Documents[i] = doc.ToResponse()
+		}
 	}
 	return resp
 }

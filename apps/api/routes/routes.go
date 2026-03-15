@@ -263,6 +263,14 @@ func SetupRouter() *gin.Engine {
 			deliveryStaff.GET("/invitations", staffHandler.ListInvitations)
 			deliveryStaff.PUT("/invitations/:id/revoke", staffHandler.RevokeInvitation)
 			deliveryStaff.PUT("/invitations/:id/resend", staffHandler.ResendInvitation)
+
+			// Fleet management
+			deliveryStaff.GET("/fleet/overview", deliveryHandler.FleetOverview)
+			deliveryStaff.GET("/fleet/partners", deliveryHandler.AdminGetDeliveryPartners)
+			deliveryStaff.GET("/fleet/partners/:id", deliveryHandler.GetPartnerDetail)
+			deliveryStaff.PUT("/fleet/partners/:id/verify", deliveryHandler.AdminVerifyPartner)
+			deliveryStaff.PUT("/fleet/partners/:id/suspend", deliveryHandler.AdminSuspendPartner)
+			deliveryStaff.POST("/fleet/partners/:id/assign", deliveryHandler.ManualAssignDelivery)
 		}
 
 		// Delivery partner routes (delivery role required)
@@ -280,6 +288,8 @@ func SetupRouter() *gin.Engine {
 			delivery.PUT("/:id/status", deliveryHandler.UpdateDeliveryStatus)
 			delivery.GET("/orders", deliveryHandler.GetDeliveryHistory)
 			delivery.GET("/earnings", deliveryHandler.GetEarnings)
+			delivery.POST("/documents", deliveryHandler.UploadPartnerDocument)
+			delivery.GET("/documents", deliveryHandler.GetPartnerDocuments)
 		}
 
 		// Admin routes
@@ -310,8 +320,15 @@ func SetupRouter() *gin.Engine {
 			// Delivery management
 			admin.GET("/delivery/stats", deliveryHandler.AdminGetDeliveryStats)
 			admin.GET("/delivery/partners", deliveryHandler.AdminGetDeliveryPartners)
+			admin.GET("/delivery/partners/:id", deliveryHandler.GetPartnerDetail)
 			admin.PUT("/delivery/partners/:id/verify", deliveryHandler.AdminVerifyPartner)
 			admin.PUT("/delivery/partners/:id/suspend", deliveryHandler.AdminSuspendPartner)
+
+			// Delivery zone management
+			admin.GET("/delivery/zones", deliveryHandler.ListZones)
+			admin.POST("/delivery/zones", deliveryHandler.CreateZone)
+			admin.PUT("/delivery/zones/:id", deliveryHandler.UpdateZone)
+			admin.DELETE("/delivery/zones/:id", deliveryHandler.DeleteZone)
 
 			// Staff management
 			admin.GET("/staff/me", staffHandler.GetMyStaffProfile)

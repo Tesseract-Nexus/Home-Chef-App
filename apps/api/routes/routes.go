@@ -289,29 +289,29 @@ func SetupRouter() *gin.Engine {
 			driverReferral.GET("/stats", driverHandler.GetReferralStats)
 		}
 
-		// Delivery staff routes (accessible by fleet managers via delivery portal)
+		// Delivery staff routes — enforced with granular staff permissions
 		deliveryStaff := v1.Group("/delivery/staff")
 		deliveryStaff.Use(middleware.AuthMiddleware(), middleware.RequireDelivery())
 		{
-			deliveryStaff.GET("/me", staffHandler.GetMyStaffProfile)
-			deliveryStaff.GET("", staffHandler.ListStaff)
-			deliveryStaff.GET("/roles", staffHandler.GetStaffRoles)
-			deliveryStaff.POST("/invitations", staffHandler.CreateInvitation)
-			deliveryStaff.GET("/invitations", staffHandler.ListInvitations)
-			deliveryStaff.PUT("/invitations/:id/revoke", staffHandler.RevokeInvitation)
-			deliveryStaff.PUT("/invitations/:id/resend", staffHandler.ResendInvitation)
+			deliveryStaff.GET("/me", staffHandler.GetMyStaffProfile)   // No permission needed — own profile
+			deliveryStaff.GET("/roles", staffHandler.GetStaffRoles)    // No permission needed — role definitions
+			deliveryStaff.GET("", middleware.RequireStaffPermission(models.SPViewStaff), staffHandler.ListStaff)
+			deliveryStaff.POST("/invitations", middleware.RequireStaffPermission(models.SPInviteStaff), staffHandler.CreateInvitation)
+			deliveryStaff.GET("/invitations", middleware.RequireStaffPermission(models.SPViewStaff), staffHandler.ListInvitations)
+			deliveryStaff.PUT("/invitations/:id/revoke", middleware.RequireStaffPermission(models.SPManageStaff), staffHandler.RevokeInvitation)
+			deliveryStaff.PUT("/invitations/:id/resend", middleware.RequireStaffPermission(models.SPManageStaff), staffHandler.ResendInvitation)
 
 			// Fleet management — third-party providers
-			deliveryStaff.GET("/fleet/providers", providerHandler.ListProviders)
-			deliveryStaff.GET("/fleet/providers/:id", providerHandler.GetProvider)
+			deliveryStaff.GET("/fleet/providers", middleware.RequireStaffPermission(models.SPViewFleet), providerHandler.ListProviders)
+			deliveryStaff.GET("/fleet/providers/:id", middleware.RequireStaffPermission(models.SPViewFleet), providerHandler.GetProvider)
 
 			// Fleet management
-			deliveryStaff.GET("/fleet/overview", deliveryHandler.FleetOverview)
-			deliveryStaff.GET("/fleet/partners", deliveryHandler.AdminGetDeliveryPartners)
-			deliveryStaff.GET("/fleet/partners/:id", deliveryHandler.GetPartnerDetail)
-			deliveryStaff.PUT("/fleet/partners/:id/verify", deliveryHandler.AdminVerifyPartner)
-			deliveryStaff.PUT("/fleet/partners/:id/suspend", deliveryHandler.AdminSuspendPartner)
-			deliveryStaff.POST("/fleet/partners/:id/assign", deliveryHandler.ManualAssignDelivery)
+			deliveryStaff.GET("/fleet/overview", middleware.RequireStaffPermission(models.SPViewFleet), deliveryHandler.FleetOverview)
+			deliveryStaff.GET("/fleet/partners", middleware.RequireStaffPermission(models.SPViewDeliveryPartners), deliveryHandler.AdminGetDeliveryPartners)
+			deliveryStaff.GET("/fleet/partners/:id", middleware.RequireStaffPermission(models.SPViewDeliveryPartners), deliveryHandler.GetPartnerDetail)
+			deliveryStaff.PUT("/fleet/partners/:id/verify", middleware.RequireStaffPermission(models.SPVerifyDeliveryPartners), deliveryHandler.AdminVerifyPartner)
+			deliveryStaff.PUT("/fleet/partners/:id/suspend", middleware.RequireStaffPermission(models.SPManageDeliveryPartners), deliveryHandler.AdminSuspendPartner)
+			deliveryStaff.POST("/fleet/partners/:id/assign", middleware.RequireStaffPermission(models.SPAssignDeliveries), deliveryHandler.ManualAssignDelivery)
 		}
 
 		// Delivery partner routes (delivery role required)
@@ -433,18 +433,18 @@ func SetupRouter() *gin.Engine {
 			admin.PUT("/delivery/zones/:id", deliveryHandler.UpdateZone)
 			admin.DELETE("/delivery/zones/:id", deliveryHandler.DeleteZone)
 
-			// Staff management
-			admin.GET("/staff/me", staffHandler.GetMyStaffProfile)
-			admin.GET("/staff", staffHandler.ListStaff)
-			admin.GET("/staff/roles", staffHandler.GetStaffRoles)
-			admin.GET("/staff/:id", staffHandler.GetStaffMember)
-			admin.PUT("/staff/:id/role", staffHandler.UpdateStaffRole)
-			admin.PUT("/staff/:id/deactivate", staffHandler.DeactivateStaff)
-			admin.PUT("/staff/:id/reactivate", staffHandler.ReactivateStaff)
-			admin.POST("/staff/invitations", staffHandler.CreateInvitation)
-			admin.GET("/staff/invitations", staffHandler.ListInvitations)
-			admin.PUT("/staff/invitations/:id/revoke", staffHandler.RevokeInvitation)
-			admin.PUT("/staff/invitations/:id/resend", staffHandler.ResendInvitation)
+			// Staff management — enforced with granular staff permissions
+			admin.GET("/staff/me", staffHandler.GetMyStaffProfile) // No permission needed — own profile
+			admin.GET("/staff/roles", staffHandler.GetStaffRoles)  // No permission needed — role definitions
+			admin.GET("/staff", middleware.RequireStaffPermission(models.SPViewStaff), staffHandler.ListStaff)
+			admin.GET("/staff/:id", middleware.RequireStaffPermission(models.SPViewStaff), staffHandler.GetStaffMember)
+			admin.PUT("/staff/:id/role", middleware.RequireStaffPermission(models.SPManageStaff), staffHandler.UpdateStaffRole)
+			admin.PUT("/staff/:id/deactivate", middleware.RequireStaffPermission(models.SPManageStaff), staffHandler.DeactivateStaff)
+			admin.PUT("/staff/:id/reactivate", middleware.RequireStaffPermission(models.SPManageStaff), staffHandler.ReactivateStaff)
+			admin.POST("/staff/invitations", middleware.RequireStaffPermission(models.SPInviteStaff), staffHandler.CreateInvitation)
+			admin.GET("/staff/invitations", middleware.RequireStaffPermission(models.SPViewStaff), staffHandler.ListInvitations)
+			admin.PUT("/staff/invitations/:id/revoke", middleware.RequireStaffPermission(models.SPManageStaff), staffHandler.RevokeInvitation)
+			admin.PUT("/staff/invitations/:id/resend", middleware.RequireStaffPermission(models.SPManageStaff), staffHandler.ResendInvitation)
 
 			// Settings
 			admin.GET("/settings", adminHandler.GetSettings)

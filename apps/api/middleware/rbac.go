@@ -4,8 +4,15 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"github.com/homechef/api/database"
 	"github.com/homechef/api/models"
+	"gorm.io/gorm"
 )
+
+// staffDB returns the database instance for staff queries
+func staffDB() *gorm.DB {
+	return database.DB
+}
 
 // Permission represents a specific action that can be performed
 type Permission string
@@ -173,6 +180,61 @@ func RequirePermission(permission Permission) gin.HandlerFunc {
 			return
 		}
 
+		c.Next()
+	}
+}
+
+// RequireStaffPermission checks that the authenticated user has a StaffMember
+// record with the given permission. This enforces granular staff RBAC beyond
+// basic role checks. The StaffMember is loaded from the DB and cached on the
+// gin context as "staffMember" for downstream handlers.
+func RequireStaffPermission(permission models.StaffPermission) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID, exists := GetUserID(c)
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			c.Abort()
+			return
+		}
+
+		// Check if already loaded (avoid duplicate DB queries in a chain)
+		if cached, ok := c.Get("staffMember"); ok {
+			if staff, ok := cached.(*models.StaffMember); ok && staff != nil {
+				if !staff.HasPermission(permission) {
+					c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to perform this action"})
+					c.Abort()
+					return
+				}
+				c.Next()
+				return
+			}
+		}
+
+		// Load from DB
+		var staff models.StaffMember
+		if err := staffDB().Where("user_id = ? AND is_active = ?", userID, true).First(&staff).Error; err != nil {
+			// Auto-provision for default super admins
+			user, userExists := GetUser(c)
+			if userExists && models.IsSuperAdminEmail(user.Email) {
+				staff = models.StaffMember{
+					UserID:    userID,
+					StaffRole: models.StaffRoleSuperAdmin,
+					IsActive:  true,
+				}
+			} else {
+				c.JSON(http.StatusForbidden, gin.H{"error": "Staff access required"})
+				c.Abort()
+				return
+			}
+		}
+
+		if !staff.HasPermission(permission) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "You don't have permission to perform this action"})
+			c.Abort()
+			return
+		}
+
+		c.Set("staffMember", &staff)
 		c.Next()
 	}
 }

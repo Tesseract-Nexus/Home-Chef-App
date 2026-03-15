@@ -125,3 +125,53 @@ func (d *Delivery) ToResponse() DeliveryResponse {
 		DeliveredAt:       d.DeliveredAt,
 	}
 }
+
+// DeliveryPartnerDetailResponse includes more info than the basic response
+type DeliveryPartnerDetailResponse struct {
+	ID               uuid.UUID  `json:"id"`
+	UserID           uuid.UUID  `json:"userId"`
+	VehicleType      string     `json:"vehicleType"`
+	VehicleNumber    string     `json:"vehicleNumber"`
+	LicenseNumber    string     `json:"licenseNumber"`
+	IsVerified       bool       `json:"verified"`
+	VerifiedAt       *time.Time `json:"verifiedAt,omitempty"`
+	IsActive         bool       `json:"isActive"`
+	IsOnline         bool       `json:"isOnline"`
+	CurrentLatitude  float64    `json:"currentLatitude"`
+	CurrentLongitude float64    `json:"currentLongitude"`
+	Rating           float64    `json:"rating"`
+	TotalDeliveries  int        `json:"totalDeliveries"`
+	TotalReviews     int        `json:"totalReviews"`
+	CreatedAt        time.Time  `json:"createdAt"`
+	Name             string     `json:"name,omitempty"`
+	Email            string     `json:"email,omitempty"`
+	Phone            string     `json:"phone,omitempty"`
+	Avatar           string     `json:"avatar,omitempty"`
+}
+
+func (p *DeliveryPartner) ToDetailResponse() DeliveryPartnerDetailResponse {
+	resp := DeliveryPartnerDetailResponse{
+		ID:               p.ID,
+		UserID:           p.UserID,
+		VehicleType:      p.VehicleType,
+		VehicleNumber:    p.VehicleNumber,
+		LicenseNumber:    p.LicenseNumber,
+		IsVerified:       p.IsVerified,
+		VerifiedAt:       p.VerifiedAt,
+		IsActive:         p.IsActive,
+		IsOnline:         p.IsOnline,
+		CurrentLatitude:  p.CurrentLatitude,
+		CurrentLongitude: p.CurrentLongitude,
+		Rating:           p.Rating,
+		TotalDeliveries:  p.TotalDeliveries,
+		TotalReviews:     p.TotalReviews,
+		CreatedAt:        p.CreatedAt,
+	}
+	if p.User.ID != uuid.Nil {
+		resp.Name = p.User.FirstName + " " + p.User.LastName
+		resp.Email = p.User.Email
+		resp.Phone = p.User.Phone
+		resp.Avatar = p.User.Avatar
+	}
+	return resp
+}

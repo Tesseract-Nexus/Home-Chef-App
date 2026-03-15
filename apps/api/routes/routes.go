@@ -56,6 +56,7 @@ func SetupRouter() *gin.Engine {
 	adminHandler := handlers.NewAdminHandler()
 	approvalHandler := handlers.NewApprovalHandler()
 	notificationHandler := handlers.NewNotificationHandler()
+	deliveryHandler := handlers.NewDeliveryHandler()
 
 	// Health check endpoints
 	r.GET("/health", healthHandler.Health)
@@ -232,17 +233,29 @@ func SetupRouter() *gin.Engine {
 			// chefCatering.GET("/quotes", cateringHandler.GetChefQuotes)
 		}
 
-		// Delivery partner routes
+		// Delivery partner onboarding (authenticated, no delivery role required)
+		deliveryOnboarding := v1.Group("/delivery")
+		deliveryOnboarding.Use(middleware.AuthMiddleware())
+		{
+			deliveryOnboarding.GET("/onboarding/status", deliveryHandler.GetOnboardingStatus)
+			deliveryOnboarding.POST("/onboarding", deliveryHandler.Onboarding)
+		}
+
+		// Delivery partner routes (delivery role required)
 		delivery := v1.Group("/delivery")
 		delivery.Use(middleware.AuthMiddleware(), middleware.RequireDelivery())
 		{
-			// delivery.GET("/stats", deliveryHandler.GetStats)
-			// delivery.GET("/current", deliveryHandler.GetCurrentDelivery)
-			// delivery.GET("/available", deliveryHandler.GetAvailableDeliveries)
-			// delivery.POST("/:id/accept", deliveryHandler.AcceptDelivery)
-			// delivery.PUT("/:id/status", deliveryHandler.UpdateDeliveryStatus)
-			// delivery.GET("/orders", deliveryHandler.GetDeliveryHistory)
-			// delivery.GET("/earnings", deliveryHandler.GetEarnings)
+			delivery.GET("/stats", deliveryHandler.GetStats)
+			delivery.GET("/profile", deliveryHandler.GetProfile)
+			delivery.PUT("/profile", deliveryHandler.UpdateProfile)
+			delivery.PUT("/online", deliveryHandler.ToggleOnline)
+			delivery.PUT("/location", deliveryHandler.UpdateLocation)
+			delivery.GET("/current", deliveryHandler.GetCurrentDelivery)
+			delivery.GET("/available", deliveryHandler.GetAvailableDeliveries)
+			delivery.POST("/:id/accept", deliveryHandler.AcceptDelivery)
+			delivery.PUT("/:id/status", deliveryHandler.UpdateDeliveryStatus)
+			delivery.GET("/orders", deliveryHandler.GetDeliveryHistory)
+			delivery.GET("/earnings", deliveryHandler.GetEarnings)
 		}
 
 		// Admin routes
@@ -269,6 +282,12 @@ func SetupRouter() *gin.Engine {
 			// Order management
 			admin.GET("/orders", adminHandler.GetAllOrders)
 			admin.GET("/orders/:id", adminHandler.GetOrderDetails)
+
+			// Delivery management
+			admin.GET("/delivery/stats", deliveryHandler.AdminGetDeliveryStats)
+			admin.GET("/delivery/partners", deliveryHandler.AdminGetDeliveryPartners)
+			admin.PUT("/delivery/partners/:id/verify", deliveryHandler.AdminVerifyPartner)
+			admin.PUT("/delivery/partners/:id/suspend", deliveryHandler.AdminSuspendPartner)
 
 			// Settings
 			admin.GET("/settings", adminHandler.GetSettings)

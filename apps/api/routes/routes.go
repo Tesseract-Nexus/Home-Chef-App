@@ -192,6 +192,7 @@ func SetupRouter() *gin.Engine {
 			orders.GET("/:id", orderHandler.GetOrder)
 			orders.POST("/:id/cancel", orderHandler.CancelOrder)
 			orders.GET("/:id/track", orderHandler.TrackOrder)
+			orders.GET("/:id/invoice", orderHandler.GetOrderInvoice)
 		}
 
 		// Cart routes
@@ -412,6 +413,7 @@ func SetupRouter() *gin.Engine {
 			admin.GET("/subscriptions", subscriptionHandler.AdminGetSubscriptions)
 			admin.GET("/subscriptions/stats", subscriptionHandler.AdminGetSubscriptionStats)
 			admin.GET("/subscriptions/:id", subscriptionHandler.AdminGetSubscription)
+			admin.GET("/invoices", subscriptionHandler.AdminListInvoices)
 		}
 
 		// Addresses

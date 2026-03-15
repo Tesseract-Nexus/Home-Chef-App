@@ -151,6 +151,9 @@ func Migrate() error {
 		&models.Subscription{},
 		&models.SubscriptionInvoice{},
 		&models.EarningsLedger{},
+
+		// Invoices
+		&models.OrderInvoice{},
 	)
 
 	if err != nil {

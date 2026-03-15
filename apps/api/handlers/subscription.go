@@ -526,6 +526,60 @@ func (h *SubscriptionHandler) AdminGetSubscription(c *gin.Context) {
 	})
 }
 
+// AdminListInvoices returns a paginated list of all subscription invoices
+func (h *SubscriptionHandler) AdminListInvoices(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+	offset := (page - 1) * limit
+	status := c.Query("status")
+
+	query := database.DB.Model(&models.SubscriptionInvoice{})
+
+	if status != "" {
+		query = query.Where("status = ?", status)
+	}
+
+	var total int64
+	query.Count(&total)
+
+	var invoices []models.SubscriptionInvoice
+	if err := query.Preload("Subscription").Preload("Subscription.User").
+		Order("created_at DESC").
+		Offset(offset).Limit(limit).
+		Find(&invoices).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch invoices"})
+		return
+	}
+
+	responses := make([]gin.H, len(invoices))
+	for i, inv := range invoices {
+		resp := gin.H{
+			"invoice": inv.ToResponse(),
+		}
+		if inv.Subscription.User.ID != uuid.Nil {
+			resp["user"] = gin.H{
+				"id":        inv.Subscription.User.ID,
+				"email":     inv.Subscription.User.Email,
+				"firstName": inv.Subscription.User.FirstName,
+				"lastName":  inv.Subscription.User.LastName,
+			}
+		}
+		responses[i] = resp
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"data": responses,
+		"pagination": gin.H{
+			"page":       page,
+			"limit":      limit,
+			"total":      total,
+			"totalPages": (total + int64(limit) - 1) / int64(limit),
+			"hasNext":    int64(offset+limit) < total,
+			"hasPrev":    page > 1,
+		},
+	})
+}
+
 // ---------- Helpers ----------
 
 // resolveSubscriberType detects chef vs driver from the route prefix

@@ -375,6 +375,34 @@ func (h *OrderHandler) TrackOrder(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// GetOrderInvoice returns the invoice for an order, generating it on the fly if needed
+func (h *OrderHandler) GetOrderInvoice(c *gin.Context) {
+	userID, _ := middleware.GetUserID(c)
+	orderID := c.Param("id")
+
+	orderUUID, err := uuid.Parse(orderID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid order ID"})
+		return
+	}
+
+	// Verify the order belongs to this user
+	var order models.Order
+	if err := database.DB.Where("id = ? AND customer_id = ?", orderUUID, userID).
+		First(&order).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Order not found"})
+		return
+	}
+
+	invoice, err := services.GetOrderInvoiceByOrderID(orderUUID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, invoice.ToResponse())
+}
+
 // Helper to generate order number
 func generateOrderNumber() string {
 	timestamp := time.Now().Format("0601021504")

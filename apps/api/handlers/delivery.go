@@ -592,6 +592,17 @@ func (h *DeliveryHandler) UpdateDeliveryStatus(c *gin.Context) {
 			}
 		}()
 
+		// Generate order invoice for the customer
+		go func() {
+			var fullOrder models.Order
+			if err := database.DB.Preload("Items").Preload("Chef").Preload("Customer").
+				First(&fullOrder, delivery.OrderID).Error; err == nil {
+				if _, err := services.GenerateOrderInvoice(&fullOrder); err != nil {
+					log.Printf("Failed to generate order invoice for order %s: %v", delivery.OrderID, err)
+				}
+			}
+		}()
+
 	case models.DeliveryCancelled:
 		delivery.CancelledAt = &now
 		delivery.CancelReason = req.CancelReason

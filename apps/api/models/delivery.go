@@ -112,7 +112,7 @@ type DeliveryPartner struct {
 	TermsAcceptedAt    *time.Time `gorm:"" json:"termsAcceptedAt,omitempty"`
 
 	// Referral
-	ReferralCode string     `gorm:"uniqueIndex" json:"referralCode,omitempty"`
+	ReferralCode string     `gorm:"" json:"referralCode,omitempty"`
 	ReferredByID *uuid.UUID `gorm:"type:uuid" json:"referredById,omitempty"`
 
 	// Bank/Payout Info

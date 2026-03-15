@@ -115,8 +115,9 @@ type DeliveryPartner struct {
 	ReferralCode string     `gorm:"" json:"referralCode,omitempty"`
 	ReferredByID *uuid.UUID `gorm:"type:uuid" json:"referredById,omitempty"`
 
-	// Bank/Payout Info
-	StripeAccountID string `gorm:"" json:"-"`
+	// Payment gateway linked accounts
+	StripeAccountID    string `gorm:"" json:"-"`
+	RazorpayAccountID  string `gorm:"" json:"-"` // Razorpay Route linked account ID
 
 	CreatedAt time.Time `gorm:"autoCreateTime" json:"createdAt"`
 	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updatedAt"`

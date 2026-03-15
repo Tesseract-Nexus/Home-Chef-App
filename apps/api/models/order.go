@@ -45,7 +45,9 @@ type Order struct {
 	DeliveryFee float64 `gorm:"default:0" json:"deliveryFee"`
 	ServiceFee  float64 `gorm:"default:0" json:"serviceFee"`
 	Tax         float64 `gorm:"default:0" json:"tax"`
-	Tip         float64 `gorm:"default:0" json:"tip"`
+	Tip         float64 `gorm:"default:0" json:"tip"`         // Legacy: total tip (kept for backward compat)
+	ChefTip     float64 `gorm:"default:0" json:"chefTip"`     // Tip for the chef/kitchen
+	DriverTip   float64 `gorm:"default:0" json:"driverTip"`   // Tip for the delivery driver
 	Discount    float64 `gorm:"default:0" json:"discount"`
 	Total       float64 `gorm:"not null" json:"total"`
 	PromoCode   string  `gorm:"" json:"promoCode,omitempty"`
@@ -74,8 +76,15 @@ type Order struct {
 	// Special Instructions
 	SpecialInstructions string `gorm:"type:text" json:"specialInstructions"`
 
-	// Stripe
-	StripePaymentIntentID string `gorm:"" json:"-"`
+	// Payment gateway
+	StripePaymentIntentID string `gorm:"" json:"-"`          // Legacy Stripe
+	RazorpayOrderID       string `gorm:"" json:"-"`          // Razorpay order ID
+	RazorpayPaymentID     string `gorm:"" json:"-"`          // Razorpay payment ID
+	RefundID              string `gorm:"" json:"-"`          // Razorpay refund ID (if refunded)
+	RefundedAt            *time.Time `gorm:"" json:"refundedAt,omitempty"`
+	RefundAmount          float64 `gorm:"default:0" json:"refundAmount"`
+	RefundReason          string  `gorm:"" json:"refundReason,omitempty"`
+	RefundInitiatedBy     string  `gorm:"type:varchar(20)" json:"refundInitiatedBy,omitempty"` // chef, admin, system
 
 	CreatedAt time.Time      `gorm:"autoCreateTime" json:"createdAt"`
 	UpdatedAt time.Time      `gorm:"autoUpdateTime" json:"updatedAt"`

@@ -41,10 +41,15 @@ type Config struct {
 	GCSPublicBucket  string
 	GCSPrivateBucket string
 
-	// Stripe
+	// Stripe (legacy)
 	StripeSecretKey      string
 	StripeWebhookSecret  string
 	StripePublishableKey string
+
+	// Razorpay
+	RazorpayKeyID        string
+	RazorpayKeySecret    string
+	RazorpayWebhookSecret string
 
 	// SendGrid
 	SendGridAPIKey   string
@@ -115,10 +120,15 @@ func Load() {
 		GCSPublicBucket:  getEnv("GCS_PUBLIC_BUCKET", "homechef-prod-assets-in"),
 		GCSPrivateBucket: getEnv("GCS_PRIVATE_BUCKET", "homechef-prod-docs-in"),
 
-		// Stripe
+		// Stripe (legacy)
 		StripeSecretKey:      getEnv("STRIPE_SECRET_KEY", ""),
 		StripeWebhookSecret:  getEnv("STRIPE_WEBHOOK_SECRET", ""),
 		StripePublishableKey: getEnv("STRIPE_PUBLISHABLE_KEY", ""),
+
+		// Razorpay
+		RazorpayKeyID:         getEnv("RAZORPAY_KEY_ID", ""),
+		RazorpayKeySecret:     getEnv("RAZORPAY_KEY_SECRET", ""),
+		RazorpayWebhookSecret: getEnv("RAZORPAY_WEBHOOK_SECRET", ""),
 
 		// SendGrid
 		SendGridAPIKey: getEnv("SENDGRID_API_KEY", ""),

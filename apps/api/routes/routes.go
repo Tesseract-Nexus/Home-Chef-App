@@ -60,6 +60,7 @@ func SetupRouter() *gin.Engine {
 	driverHandler := handlers.NewDriverOnboardingHandler()
 	staffHandler := handlers.NewStaffHandler()
 	subscriptionHandler := handlers.NewSubscriptionHandler()
+	paymentHandler := handlers.NewPaymentHandler()
 
 	// Health check endpoints
 	r.GET("/health", healthHandler.Health)
@@ -69,6 +70,9 @@ func SetupRouter() *gin.Engine {
 
 	// Prometheus metrics endpoint
 	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
+
+	// Razorpay webhook (no auth — uses HMAC signature verification)
+	r.POST("/webhooks/razorpay", paymentHandler.RazorpayWebhook)
 
 	// API v1 routes
 	v1 := r.Group("/api/v1")
@@ -341,6 +345,15 @@ func SetupRouter() *gin.Engine {
 			driverSubscription.PUT("/change-plan", subscriptionHandler.ChangePlan)
 			driverSubscription.GET("/invoices", subscriptionHandler.GetInvoices)
 			driverSubscription.GET("/earnings", subscriptionHandler.GetEarningsSummary)
+		}
+
+		// Payment routes (authenticated)
+		orderPayments := v1.Group("/payments")
+		orderPayments.Use(middleware.AuthMiddleware())
+		{
+			orderPayments.POST("/order/:orderId/create", paymentHandler.CreateOrderPayment)
+			orderPayments.POST("/order/:orderId/verify", paymentHandler.VerifyPayment)
+			orderPayments.POST("/order/:orderId/refund", paymentHandler.InitiateRefund)
 		}
 
 		// Admin routes

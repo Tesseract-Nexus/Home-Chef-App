@@ -38,8 +38,9 @@ type ChefProfile struct {
 	Latitude     float64 `gorm:"" json:"latitude"`
 	Longitude    float64 `gorm:"" json:"longitude"`
 
-	// Bank/Payout Info
-	StripeAccountID string `gorm:"" json:"-"`
+	// Payment gateway linked accounts
+	StripeAccountID    string `gorm:"" json:"-"`
+	RazorpayAccountID  string `gorm:"" json:"-"` // Razorpay Route linked account ID
 
 	CreatedAt time.Time `gorm:"autoCreateTime" json:"createdAt"`
 	UpdatedAt time.Time `gorm:"autoUpdateTime" json:"updatedAt"`

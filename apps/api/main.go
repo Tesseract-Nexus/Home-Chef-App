@@ -39,6 +39,9 @@ func main() {
 		defer services.CloseStorage()
 	}
 
+	// Initialize Razorpay
+	services.InitRazorpay()
+
 	// Connect to Redis
 	redisClient := services.GetRedisClient()
 	if err := redisClient.Connect(); err != nil {

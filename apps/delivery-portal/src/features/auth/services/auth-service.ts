@@ -1,36 +1,43 @@
 import type { SessionResponse } from '@/shared/types/auth';
 
 /**
- * Delivery portal auth service — uses same-origin /bff/ proxy to the auth BFF.
- * In production, Istio VirtualService on delivery.fe3dr.com routes /bff/* to the
- * auth-bff service with x-auth-context: admin, which makes the BFF use the
- * internal Keycloak realm (tesserix-internal) for authentication.
- * This limits access to the same 3 users as the admin portal.
+ * Delivery portal auth service — supports dual auth:
+ * - Staff: /bff/* → auth-bff with x-auth-context: admin → internal Keycloak realm
+ * - Driver: /driver-bff/* → auth-bff without x-auth-context → customer Keycloak realm
  */
-const BFF_URL = (() => {
+function getBffUrl(mode: 'staff' | 'driver' = 'staff'): string {
+  if (mode === 'driver') {
+    const env = import.meta.env.VITE_DRIVER_BFF_URL;
+    if (env) return env;
+    if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+      return `${window.location.origin}/driver-bff`;
+    }
+    return '/driver-bff';
+  }
+
   const env = import.meta.env.VITE_BFF_URL;
   if (env) return env;
-  // In production, use same-origin /bff/ proxy
   if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
     return `${window.location.origin}/bff`;
   }
-  // In development, proxy through vite dev server
   return '/bff';
-})();
+}
 
 export const authService = {
-  getLoginUrl(options?: { provider?: 'google' | 'facebook'; returnTo?: string }): string {
+  getLoginUrl(mode: 'staff' | 'driver' = 'staff', options?: { provider?: 'google' | 'facebook'; returnTo?: string }): string {
+    const bffUrl = getBffUrl(mode);
     const params = new URLSearchParams();
     params.set('returnTo', options?.returnTo || `${window.location.origin}/dashboard`);
     if (options?.provider) {
       params.set('kc_idp_hint', options.provider);
     }
-    return `${BFF_URL}/auth/login?${params.toString()}`;
+    return `${bffUrl}/auth/login?${params.toString()}`;
   },
 
-  async getSession(): Promise<SessionResponse | null> {
+  async getSession(mode: 'staff' | 'driver' = 'staff'): Promise<SessionResponse | null> {
     try {
-      const res = await fetch(`${BFF_URL}/auth/session`, {
+      const bffUrl = getBffUrl(mode);
+      const res = await fetch(`${bffUrl}/auth/session`, {
         credentials: 'include',
       });
       if (!res.ok) return null;
@@ -40,9 +47,10 @@ export const authService = {
     }
   },
 
-  async refreshSession(): Promise<boolean> {
+  async refreshSession(mode: 'staff' | 'driver' = 'staff'): Promise<boolean> {
     try {
-      const res = await fetch(`${BFF_URL}/auth/refresh`, {
+      const bffUrl = getBffUrl(mode);
+      const res = await fetch(`${bffUrl}/auth/refresh`, {
         method: 'POST',
         credentials: 'include',
       });
@@ -52,9 +60,10 @@ export const authService = {
     }
   },
 
-  async logout(): Promise<void> {
+  async logout(mode: 'staff' | 'driver' = 'staff'): Promise<void> {
     try {
-      await fetch(`${BFF_URL}/auth/logout`, {
+      const bffUrl = getBffUrl(mode);
+      await fetch(`${bffUrl}/auth/logout`, {
         method: 'POST',
         credentials: 'include',
       });
@@ -63,9 +72,10 @@ export const authService = {
     }
   },
 
-  async getCsrfToken(): Promise<string | null> {
+  async getCsrfToken(mode: 'staff' | 'driver' = 'staff'): Promise<string | null> {
     try {
-      const res = await fetch(`${BFF_URL}/auth/csrf`, {
+      const bffUrl = getBffUrl(mode);
+      const res = await fetch(`${bffUrl}/auth/csrf`, {
         credentials: 'include',
       });
       if (!res.ok) return null;

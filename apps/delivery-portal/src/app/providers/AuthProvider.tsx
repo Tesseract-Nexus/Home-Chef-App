@@ -9,9 +9,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/auth-store';
 import type { SessionUser } from '@/shared/types/auth';
 
-// Same-origin /bff/ proxy — Istio routes /bff/* to auth-bff with x-auth-context: admin
-// This uses the internal Keycloak realm (tesserix-internal) — same users as admin portal
-const BFF_URL = (() => {
+// Staff BFF — internal Keycloak realm (tesserix-internal) via x-auth-context: admin
+const STAFF_BFF_URL = (() => {
   const env = import.meta.env.VITE_BFF_URL;
   if (env) return env;
   if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
@@ -20,12 +19,24 @@ const BFF_URL = (() => {
   return '/bff';
 })();
 
+// Driver BFF — customer Keycloak realm (homechef) via /driver-bff (no x-auth-context)
+const DRIVER_BFF_URL = (() => {
+  const env = import.meta.env.VITE_DRIVER_BFF_URL;
+  if (env) return env;
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    return `${window.location.origin}/driver-bff`;
+  }
+  return '/driver-bff';
+})();
+
 interface AuthContextValue {
   user: SessionUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   csrfToken: string | null;
-  login: (provider?: 'google' | 'facebook') => void;
+  authMode: 'staff' | 'driver' | null;
+  loginStaff: (provider?: 'google' | 'facebook') => void;
+  loginDriver: (provider?: 'google' | 'facebook') => void;
   logout: () => Promise<void>;
 }
 
@@ -38,6 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated,
     isLoading,
     csrfToken,
+    authMode,
     clearAuth,
     initialize,
   } = useAuthStore();
@@ -46,34 +58,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initialize();
   }, [initialize]);
 
-  const login = useCallback((provider?: 'google' | 'facebook') => {
+  const loginStaff = useCallback((provider?: 'google' | 'facebook') => {
+    localStorage.setItem('fe3dr-auth-mode', 'staff');
     const params = new URLSearchParams();
     params.set('returnTo', `${window.location.origin}/dashboard`);
     if (provider) {
       params.set('kc_idp_hint', provider);
     }
-    window.location.href = `${BFF_URL}/auth/login?${params.toString()}`;
+    window.location.href = `${STAFF_BFF_URL}/auth/login?${params.toString()}`;
+  }, []);
+
+  const loginDriver = useCallback((provider?: 'google' | 'facebook') => {
+    localStorage.setItem('fe3dr-auth-mode', 'driver');
+    const params = new URLSearchParams();
+    params.set('returnTo', `${window.location.origin}/dashboard`);
+    if (provider) {
+      params.set('kc_idp_hint', provider);
+    }
+    window.location.href = `${DRIVER_BFF_URL}/auth/login?${params.toString()}`;
   }, []);
 
   const logout = useCallback(async () => {
+    const bffUrl = authMode === 'driver' ? DRIVER_BFF_URL : STAFF_BFF_URL;
     try {
-      await fetch(`${BFF_URL}/auth/logout`, {
+      await fetch(`${bffUrl}/auth/logout`, {
         method: 'POST',
         credentials: 'include',
       });
     } catch {
       // Ignore - clear local state regardless
     }
+    localStorage.removeItem('fe3dr-auth-mode');
     clearAuth();
     navigate('/login');
-  }, [clearAuth, navigate]);
+  }, [authMode, clearAuth, navigate]);
 
   const value: AuthContextValue = {
     user,
     isAuthenticated,
     isLoading,
     csrfToken,
-    login,
+    authMode,
+    loginStaff,
+    loginDriver,
     logout,
   };
 

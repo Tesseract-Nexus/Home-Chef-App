@@ -1,25 +1,27 @@
 import type { ApiError } from '@/shared/types';
 
-// Same-origin /bff/ proxy — matches auth-service pattern (internal Keycloak realm)
-const BFF_URL = (() => {
-  const env = import.meta.env.VITE_BFF_URL;
-  if (env) return env;
+// API calls go through whichever BFF the user authenticated with.
+// Staff uses /bff (internal realm), drivers use /driver-bff (customer realm).
+// Both proxy API requests to the same backend.
+function getApiUrl(): string {
+  const mode = typeof localStorage !== 'undefined' ? localStorage.getItem('fe3dr-auth-mode') : null;
+  const bffPath = mode === 'driver' ? '/driver-bff' : '/bff';
+  const env = mode === 'driver' ? import.meta.env.VITE_DRIVER_BFF_URL : import.meta.env.VITE_BFF_URL;
+  if (env) return `${env}/api/v1`;
   if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
-    return `${window.location.origin}/bff`;
+    return `${window.location.origin}${bffPath}/api/v1`;
   }
-  return '/bff';
-})();
-const API_URL = `${BFF_URL}/api/v1`;
+  return `${bffPath}/api/v1`;
+}
+// API_URL is resolved dynamically per request via getApiUrl()
 
 interface RequestOptions extends RequestInit {
   params?: Record<string, string | number | boolean | undefined>;
 }
 
 class ApiClient {
-  private baseUrl: string;
-
-  constructor(baseUrl: string) {
-    this.baseUrl = baseUrl;
+  private getBaseUrl(): string {
+    return getApiUrl();
   }
 
   private async getCsrfToken(): Promise<string | null> {
@@ -28,7 +30,7 @@ class ApiClient {
   }
 
   private buildUrl(endpoint: string, params?: RequestOptions['params']): string {
-    const url = new URL(`${this.baseUrl}${endpoint}`);
+    const url = new URL(`${this.getBaseUrl()}${endpoint}`);
     if (params) {
       Object.entries(params).forEach(([key, value]) => {
         if (value !== undefined) {
@@ -115,4 +117,4 @@ class ApiClient {
   }
 }
 
-export const apiClient = new ApiClient(API_URL);
+export const apiClient = new ApiClient();

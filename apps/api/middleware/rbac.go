@@ -80,6 +80,14 @@ var RolePermissions = map[models.UserRole][]Permission{
 		PermUpdateDelivery,
 		PermViewDeliveryEarnings,
 	},
+	models.RoleFleetManager: {
+		PermViewDeliveries,
+		PermAcceptDelivery,
+		PermUpdateDelivery,
+		PermViewDeliveryEarnings,
+		PermViewAllOrders,
+		PermViewAnalytics,
+	},
 	models.RoleAdmin: {
 		// Admin has all permissions
 		PermBrowseChefs,
@@ -181,5 +189,5 @@ func RequireChef() gin.HandlerFunc {
 
 // RequireDelivery is a shorthand for RequireRole(RoleDelivery)
 func RequireDelivery() gin.HandlerFunc {
-	return RequireRole(models.RoleDelivery, models.RoleAdmin)
+	return RequireRole(models.RoleDelivery, models.RoleFleetManager, models.RoleAdmin)
 }

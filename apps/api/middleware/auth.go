@@ -201,8 +201,17 @@ func AuthMiddleware() gin.HandlerFunc {
 							effectiveRole = models.RoleAdmin
 							break
 						}
+						if r == "fleet_manager" {
+							effectiveRole = models.RoleFleetManager
+							// Don't break — admin/super_admin takes precedence
+						}
 					}
 				}
+			}
+
+			// Auto-provision super admin staff profile for default emails
+			if models.IsSuperAdminEmail(user.Email) && effectiveRole != models.RoleAdmin {
+				effectiveRole = models.RoleAdmin
 			}
 			c.Set("userRole", effectiveRole)
 			c.Set("user", &user)

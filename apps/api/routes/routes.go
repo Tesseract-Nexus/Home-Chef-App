@@ -57,6 +57,7 @@ func SetupRouter() *gin.Engine {
 	approvalHandler := handlers.NewApprovalHandler()
 	notificationHandler := handlers.NewNotificationHandler()
 	deliveryHandler := handlers.NewDeliveryHandler()
+	staffHandler := handlers.NewStaffHandler()
 
 	// Health check endpoints
 	r.GET("/health", healthHandler.Health)
@@ -100,6 +101,16 @@ func SetupRouter() *gin.Engine {
 			auth.POST("/refresh", authHandler.RefreshToken)
 			auth.POST("/logout", authHandler.Logout)
 			auth.POST("/forgot-password", authHandler.ForgotPassword)
+		}
+
+		// Staff invitation routes (public - token validates)
+		v1.GET("/staff/invitations/validate", staffHandler.ValidateInvitation)
+
+		// Staff invitation acceptance (requires auth via OptionalAuth for info, Auth for accept)
+		staffInvite := v1.Group("/staff/invitations")
+		staffInvite.Use(middleware.OptionalAuthMiddleware())
+		{
+			staffInvite.POST("/accept", staffHandler.AcceptInvitation)
 		}
 
 		// Profile routes (authenticated)
@@ -241,6 +252,19 @@ func SetupRouter() *gin.Engine {
 			deliveryOnboarding.POST("/onboarding", deliveryHandler.Onboarding)
 		}
 
+		// Delivery staff routes (accessible by fleet managers via delivery portal)
+		deliveryStaff := v1.Group("/delivery/staff")
+		deliveryStaff.Use(middleware.AuthMiddleware(), middleware.RequireDelivery())
+		{
+			deliveryStaff.GET("/me", staffHandler.GetMyStaffProfile)
+			deliveryStaff.GET("", staffHandler.ListStaff)
+			deliveryStaff.GET("/roles", staffHandler.GetStaffRoles)
+			deliveryStaff.POST("/invitations", staffHandler.CreateInvitation)
+			deliveryStaff.GET("/invitations", staffHandler.ListInvitations)
+			deliveryStaff.PUT("/invitations/:id/revoke", staffHandler.RevokeInvitation)
+			deliveryStaff.PUT("/invitations/:id/resend", staffHandler.ResendInvitation)
+		}
+
 		// Delivery partner routes (delivery role required)
 		delivery := v1.Group("/delivery")
 		delivery.Use(middleware.AuthMiddleware(), middleware.RequireDelivery())
@@ -288,6 +312,19 @@ func SetupRouter() *gin.Engine {
 			admin.GET("/delivery/partners", deliveryHandler.AdminGetDeliveryPartners)
 			admin.PUT("/delivery/partners/:id/verify", deliveryHandler.AdminVerifyPartner)
 			admin.PUT("/delivery/partners/:id/suspend", deliveryHandler.AdminSuspendPartner)
+
+			// Staff management
+			admin.GET("/staff/me", staffHandler.GetMyStaffProfile)
+			admin.GET("/staff", staffHandler.ListStaff)
+			admin.GET("/staff/roles", staffHandler.GetStaffRoles)
+			admin.GET("/staff/:id", staffHandler.GetStaffMember)
+			admin.PUT("/staff/:id/role", staffHandler.UpdateStaffRole)
+			admin.PUT("/staff/:id/deactivate", staffHandler.DeactivateStaff)
+			admin.PUT("/staff/:id/reactivate", staffHandler.ReactivateStaff)
+			admin.POST("/staff/invitations", staffHandler.CreateInvitation)
+			admin.GET("/staff/invitations", staffHandler.ListInvitations)
+			admin.PUT("/staff/invitations/:id/revoke", staffHandler.RevokeInvitation)
+			admin.PUT("/staff/invitations/:id/resend", staffHandler.ResendInvitation)
 
 			// Settings
 			admin.GET("/settings", adminHandler.GetSettings)

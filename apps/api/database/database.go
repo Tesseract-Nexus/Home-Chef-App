@@ -139,6 +139,10 @@ func Migrate() error {
 		// Approvals
 		&models.ApprovalRequest{},
 		&models.ApprovalRequestHistory{},
+
+		// Staff & Invitations
+		&models.StaffMember{},
+		&models.StaffInvitation{},
 	)
 
 	if err != nil {

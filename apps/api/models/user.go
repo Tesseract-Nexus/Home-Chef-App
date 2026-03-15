@@ -10,10 +10,11 @@ import (
 type UserRole string
 
 const (
-	RoleCustomer UserRole = "customer"
-	RoleChef     UserRole = "chef"
-	RoleDelivery UserRole = "delivery"
-	RoleAdmin    UserRole = "admin"
+	RoleCustomer     UserRole = "customer"
+	RoleChef         UserRole = "chef"
+	RoleDelivery     UserRole = "delivery"
+	RoleAdmin        UserRole = "admin"
+	RoleFleetManager UserRole = "fleet_manager"
 )
 
 type AuthProvider string

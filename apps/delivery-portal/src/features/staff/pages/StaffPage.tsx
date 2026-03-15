@@ -268,7 +268,14 @@ export default function StaffPage() {
                   >
                     {roles.length > 0 ? (
                       roles
-                        .filter((r) => ['fleet_manager', 'delivery_ops'].includes(r.role))
+                        .filter((r) => {
+                          const deliveryRoles = ['fleet_manager', 'delivery_ops'];
+                          // Super admins can also invite super_admins
+                          if (myProfile?.staffRole === 'super_admin') {
+                            return [...deliveryRoles, 'super_admin'].includes(r.role);
+                          }
+                          return deliveryRoles.includes(r.role);
+                        })
                         .map((r) => (
                           <option key={r.role} value={r.role}>
                             {roleLabel(r.role)} — {r.description}
@@ -278,6 +285,9 @@ export default function StaffPage() {
                       <>
                         <option value="delivery_ops">Delivery Ops</option>
                         <option value="fleet_manager">Fleet Manager</option>
+                        {myProfile?.staffRole === 'super_admin' && (
+                          <option value="super_admin">Super Admin</option>
+                        )}
                       </>
                     )}
                   </select>

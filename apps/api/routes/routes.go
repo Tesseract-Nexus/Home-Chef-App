@@ -349,14 +349,14 @@ func SetupRouter() *gin.Engine {
 			chefSubscription.GET("/earnings", subscriptionHandler.GetEarningsSummary)
 		}
 
-		// Driver subscription routes (delivery role required)
+		// Driver subscription routes (delivery role required — post-onboarding management)
+		// Note: /plans and /plan are registered in the onboarding group above (auth-only)
+		// to allow plan selection during onboarding before delivery role is assigned
 		driverSubscription := v1.Group("/driver/subscription")
 		driverSubscription.Use(middleware.AuthMiddleware(), middleware.RequireDelivery())
 		{
 			driverSubscription.GET("", subscriptionHandler.GetSubscription)
-			driverSubscription.GET("/plans", subscriptionHandler.GetAvailablePlans)
 			driverSubscription.POST("/choose-plan", subscriptionHandler.ChoosePlan)
-			driverSubscription.POST("/plan", subscriptionHandler.ChoosePlan) // Alias used by delivery portal
 			driverSubscription.POST("/cancel", subscriptionHandler.CancelSubscription)
 			driverSubscription.PUT("/change-plan", subscriptionHandler.ChangePlan)
 			driverSubscription.GET("/invoices", subscriptionHandler.GetInvoices)

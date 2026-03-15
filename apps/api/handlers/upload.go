@@ -519,8 +519,16 @@ func (h *UploadHandler) Onboarding(c *gin.Context) {
 	// Seed default menu categories for the new chef
 	h.seedDefaultCategories(chef.ID)
 
-	// Create approval request for admin review
-	submittedData, _ := json.Marshal(req)
+	// Create approval request for admin review (mask PII in submitted data)
+	submittedData, _ := json.Marshal(map[string]interface{}{
+		"businessName": req.BusinessName,
+		"fullName":     req.FullName,
+		"phone":        maskPhone(req.Phone),
+		"city":         req.KitchenAddress.City,
+		"cuisines":     req.Cuisines,
+		"panNumber":    maskPAN(req.PanNumber),
+		"fssaiNumber":  maskID(req.FSSAINumber),
+	})
 	approvalReq := models.ApprovalRequest{
 		Type:          models.ApprovalKitchenOnboarding,
 		Status:        models.ApprovalPending,
@@ -607,8 +615,16 @@ func (h *UploadHandler) updateOnboarding(c *gin.Context, chef *models.ChefProfil
 	database.DB.Where("chef_id = ?", chef.ID).Delete(&models.ChefSchedule{})
 	h.createSchedules(chef, req.OperatingHours)
 
-	// Create approval request for admin review
-	submittedData, _ := json.Marshal(req)
+	// Create approval request for admin review (mask PII in submitted data)
+	submittedData, _ := json.Marshal(map[string]interface{}{
+		"businessName": req.BusinessName,
+		"fullName":     req.FullName,
+		"phone":        maskPhone(req.Phone),
+		"city":         req.KitchenAddress.City,
+		"cuisines":     req.Cuisines,
+		"panNumber":    maskPAN(req.PanNumber),
+		"fssaiNumber":  maskID(req.FSSAINumber),
+	})
 	approvalReq := models.ApprovalRequest{
 		Type:          models.ApprovalKitchenOnboarding,
 		Status:        models.ApprovalPending,

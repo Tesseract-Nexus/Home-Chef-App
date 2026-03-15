@@ -358,7 +358,7 @@ func (h *PaymentHandler) RazorpayWebhook(c *gin.Context) {
 	case "refund.processed":
 		h.handleRefundProcessed(event.Payload)
 	case "transfer.processed":
-		log.Printf("Transfer processed: %s", string(event.Payload))
+		log.Printf("Transfer processed event received")
 	case "subscription.charged":
 		h.handleSubscriptionCharged(event.Payload)
 	case "subscription.halted":

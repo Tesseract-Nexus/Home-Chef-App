@@ -781,19 +781,19 @@ func (s *NotificationService) handleApprovalCreated(event Event) {
 // Notification dispatch methods
 
 func (s *NotificationService) sendEmailNotification(notif NotificationEvent) {
-	log.Printf("Sending email notification to user #%d: %s", notif.UserID, notif.Title)
+	log.Printf("Sending email notification to user %s: %s", notif.UserID.String(), notif.Title)
 	// TODO: Implement actual email sending via SendGrid
 	// For now, just log it
 }
 
 func (s *NotificationService) sendPushNotification(notif NotificationEvent) {
-	log.Printf("Sending push notification to user #%d: %s", notif.UserID, notif.Title)
+	log.Printf("Sending push notification to user %s: %s", notif.UserID.String(), notif.Title)
 	// TODO: Implement actual push notification via FCM/APNS
 	// For now, just log it
 }
 
 func (s *NotificationService) sendSMSNotification(notif NotificationEvent) {
-	log.Printf("Sending SMS notification to user #%d: %s", notif.UserID, notif.Message)
+	log.Printf("Sending SMS notification to user #%s: %s", notif.UserID.String(), notif.Title)
 	// TODO: Implement actual SMS sending via Twilio
 	// For now, just log it
 }

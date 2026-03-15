@@ -652,6 +652,60 @@ func (h *AdminHandler) GetPaymentGatewayStatus(c *gin.Context) {
 	})
 }
 
+// UpdatePaymentGatewayKeys saves Razorpay API keys to GCP Secret Manager
+// and re-initializes the Razorpay client. Only super admins should call this.
+func (h *AdminHandler) UpdatePaymentGatewayKeys(c *gin.Context) {
+	var req struct {
+		KeyID         string `json:"keyId"`
+		KeySecret     string `json:"keySecret"`
+		WebhookSecret string `json:"webhookSecret"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if req.KeyID == "" && req.KeySecret == "" && req.WebhookSecret == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "At least one field is required"})
+		return
+	}
+
+	ctx := c.Request.Context()
+
+	// Store each non-empty key in GCP Secret Manager
+	secretMap := map[string]string{
+		"prod-razorpay-key-id":         req.KeyID,
+		"prod-razorpay-key-secret":     req.KeySecret,
+		"prod-razorpay-webhook-secret": req.WebhookSecret,
+	}
+
+	for secretName, value := range secretMap {
+		if value == "" {
+			continue
+		}
+		if err := services.StorePlatformSecret(ctx, secretName, value); err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to store %s: %v", secretName, err)})
+			return
+		}
+	}
+
+	// Update in-memory config so the API uses the new keys immediately
+	if req.KeyID != "" {
+		config.AppConfig.RazorpayKeyID = req.KeyID
+	}
+	if req.KeySecret != "" {
+		config.AppConfig.RazorpayKeySecret = req.KeySecret
+	}
+	if req.WebhookSecret != "" {
+		config.AppConfig.RazorpayWebhookSecret = req.WebhookSecret
+	}
+
+	// Re-initialize Razorpay client with new keys
+	services.InitRazorpay()
+
+	c.JSON(http.StatusOK, gin.H{"message": "Payment gateway keys updated"})
+}
+
 // UpdateSettings updates platform settings
 func (h *AdminHandler) UpdateSettings(c *gin.Context) {
 	var req struct {

@@ -450,6 +450,7 @@ func SetupRouter() *gin.Engine {
 
 			// Payment gateway
 			admin.GET("/payment-gateway/status", adminHandler.GetPaymentGatewayStatus)
+			admin.PUT("/payment-gateway/keys", adminHandler.UpdatePaymentGatewayKeys)
 
 			// Settings
 			admin.GET("/settings", adminHandler.GetSettings)

@@ -145,6 +145,55 @@ func GetDriverSecret(ctx context.Context, driverID, field string) (string, error
 	return getSecret(ctx, driverSecretID(driverID, field))
 }
 
+// StorePlatformSecret stores a platform-level secret (e.g. Razorpay API keys).
+// The secretName is the full GCP Secret Manager secret ID (e.g. "prod-razorpay-key-id").
+func StorePlatformSecret(ctx context.Context, secretName, value string) error {
+	if secretClient == nil {
+		return fmt.Errorf("secret manager not initialized")
+	}
+	if value == "" {
+		return nil
+	}
+
+	projectID := config.AppConfig.GCSProjectID
+	parent := fmt.Sprintf("projects/%s", projectID)
+	secretPath := fmt.Sprintf("projects/%s/secrets/%s", projectID, secretName)
+
+	// Create secret if it doesn't exist
+	_, err := secretClient.CreateSecret(ctx, &secretmanagerpb.CreateSecretRequest{
+		Parent:   parent,
+		SecretId: secretName,
+		Secret: &secretmanagerpb.Secret{
+			Replication: &secretmanagerpb.Replication{
+				Replication: &secretmanagerpb.Replication_Automatic_{
+					Automatic: &secretmanagerpb.Replication_Automatic{},
+				},
+			},
+			Labels: map[string]string{
+				"app":  "homechef",
+				"type": "platform",
+			},
+		},
+	})
+	if err != nil && !isAlreadyExists(err) {
+		return fmt.Errorf("failed to create secret %s: %w", secretName, err)
+	}
+
+	// Add new version
+	_, err = secretClient.AddSecretVersion(ctx, &secretmanagerpb.AddSecretVersionRequest{
+		Parent: secretPath,
+		Payload: &secretmanagerpb.SecretPayload{
+			Data: []byte(value),
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to add version for %s: %w", secretName, err)
+	}
+
+	log.Printf("Platform secret %s updated", secretName)
+	return nil
+}
+
 // DeleteVendorSecret destroys all versions of a vendor payment secret.
 func DeleteVendorSecret(ctx context.Context, vendorID, field string) error {
 	if secretClient == nil {

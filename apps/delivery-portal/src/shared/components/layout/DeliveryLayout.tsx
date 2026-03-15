@@ -15,6 +15,7 @@ import {
   Bell,
   ChevronDown,
   Truck,
+  MapPin,
 } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -31,6 +32,7 @@ interface StaffProfile {
   isActive: boolean;
 }
 
+// Navigation for delivery partners (drivers)
 const partnerNavigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Active Delivery', href: '/active', icon: Navigation },
@@ -41,9 +43,14 @@ const partnerNavigation = [
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
-const staffNavItems = [
-  { name: 'Staff', href: '/staff', icon: UserCog, permission: 'staff:view' },
-  { name: 'Fleet', href: '/fleet', icon: Users, permission: 'fleet:view' },
+// Navigation for staff members (fleet managers, delivery ops, super admins)
+const staffNavigation = [
+  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { name: 'Fleet', href: '/fleet', icon: Truck },
+  { name: 'Partners', href: '/fleet/partners', icon: Users },
+  { name: 'Staff', href: '/staff', icon: UserCog },
+  { name: 'Zones', href: '/fleet/zones', icon: MapPin },
+  { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
 export function DeliveryLayout() {
@@ -54,7 +61,7 @@ export function DeliveryLayout() {
   const isMobile = useIsMobile('lg');
   const isOnline = useOnlineStatus();
 
-  // Fetch staff profile to determine if user is a staff member (fleet_manager, delivery_ops, super_admin)
+  // Fetch staff profile to determine if user is a staff member
   const { data: staffProfile } = useQuery({
     queryKey: ['delivery-staff-me'],
     queryFn: () => apiClient.get<StaffProfile>('/delivery/staff/me'),
@@ -68,16 +75,20 @@ export function DeliveryLayout() {
   const navigation = useMemo(() => {
     if (!isStaff) return partnerNavigation;
 
-    // Staff members get the base nav plus staff/fleet items they have permission for
-    const allowedStaffItems = staffNavItems.filter(
-      (item) => staffPermissions.includes(item.permission)
-    );
-
-    // Insert staff items after Earnings, before Profile
-    const earningsIdx = partnerNavigation.findIndex((n) => n.name === 'Earnings');
-    const nav = [...partnerNavigation];
-    nav.splice(earningsIdx + 1, 0, ...allowedStaffItems);
-    return nav;
+    // Staff get a completely separate nav — filter by permissions
+    return staffNavigation.filter((item) => {
+      if (item.href === '/dashboard' || item.href === '/settings') return true;
+      if (item.href === '/fleet' || item.href === '/fleet/partners') {
+        return staffPermissions.includes('fleet:view');
+      }
+      if (item.href === '/staff') {
+        return staffPermissions.includes('staff:view');
+      }
+      if (item.href === '/fleet/zones') {
+        return staffPermissions.includes('zones:view');
+      }
+      return true;
+    });
   }, [isStaff, staffPermissions]);
 
   const isActive = (href: string) =>
@@ -86,7 +97,7 @@ export function DeliveryLayout() {
   const displayName = user?.name || [user?.firstName, user?.lastName].filter(Boolean).join(' ') || user?.email || 'Driver';
   const roleLabel = isStaff
     ? (staffProfile?.staffRole ?? '').split('_').map((w: string) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
-    : '{roleLabel}';
+    : 'Delivery Partner';
 
   return (
     <div className="flex h-screen bg-background">
@@ -207,20 +218,23 @@ export function DeliveryLayout() {
             <Menu className="h-5 w-5" />
           </button>
           <div className="ml-auto flex items-center gap-2">
-            <Link to="/available" className="relative rounded-lg p-2 hover:bg-secondary">
-              <Bell className="h-5 w-5 text-muted-foreground" />
-            </Link>
+            {!isStaff && (
+              <Link to="/available" className="relative rounded-lg p-2 hover:bg-secondary">
+                <Bell className="h-5 w-5 text-muted-foreground" />
+              </Link>
+            )}
           </div>
         </header>
 
-        <main className={`flex-1 overflow-y-auto p-4 lg:p-8 ${isMobile ? 'pb-20' : ''}`}>
+        <main className={`flex-1 overflow-y-auto p-4 lg:p-8 ${isMobile && !isStaff ? 'pb-20' : ''}`}>
           <ErrorBoundary>
             <Outlet />
           </ErrorBoundary>
         </main>
       </div>
 
-      {isMobile && <DeliveryBottomNav />}
+      {/* Bottom nav only for delivery partners on mobile */}
+      {isMobile && !isStaff && <DeliveryBottomNav />}
 
       {!isOnline && (
         <div className="fixed inset-x-0 top-0 z-50 bg-warning px-4 py-2 text-center text-sm font-medium text-warning-foreground safe-top">

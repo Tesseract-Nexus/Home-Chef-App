@@ -43,11 +43,15 @@ export function clearStepCache(step: string) {
     if (!entry) return;
     delete entry.data[step];
     localStorage.setItem(CACHE_KEY, JSON.stringify(entry));
-  } catch {}
+  } catch {
+    // localStorage unavailable
+  }
 }
 
 export function clearAllFormCache() {
   try {
     localStorage.removeItem(CACHE_KEY);
-  } catch {}
+  } catch {
+    // localStorage unavailable
+  }
 }

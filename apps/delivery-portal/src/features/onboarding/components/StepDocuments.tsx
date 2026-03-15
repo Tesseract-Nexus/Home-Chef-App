@@ -51,8 +51,9 @@ export function StepDocuments({ vehicleType, onComplete, onBack }: StepDocuments
 
   const fetchDocs = async () => {
     try {
-      const result = await apiClient.get<UploadedDoc[]>('/driver/onboarding/documents');
-      setDocs(result ?? []);
+      const result = await apiClient.get<{ data: UploadedDoc[] }>('/driver/onboarding/documents');
+      const docsArray = Array.isArray(result) ? result : (result?.data ?? []);
+      setDocs(docsArray);
     } catch {
       // No docs uploaded yet
       setDocs([]);
@@ -78,8 +79,10 @@ export function StepDocuments({ vehicleType, onComplete, onBack }: StepDocuments
         headers['X-CSRF-Token'] = csrfToken;
       }
 
+      const authMode = localStorage.getItem('fe3dr-auth-mode');
+      const bffPath = authMode === 'driver' ? '/driver-bff' : '/bff';
       const response = await fetch(
-        `${window.location.origin}/bff/api/v1/driver/onboarding/documents`,
+        `${window.location.origin}${bffPath}/api/v1/driver/onboarding/documents`,
         {
           method: 'POST',
           credentials: 'include',

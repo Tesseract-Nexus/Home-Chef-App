@@ -82,6 +82,11 @@ func (h *DriverOnboardingHandler) GetDriverOnboardingStatus(c *gin.Context) {
 			"vehicleNumber":       partner.VehicleNumber,
 			"licenseNumber":       partner.LicenseNumber,
 			"hasDeliveryBoxSpace": partner.HasDeliveryBoxSpace,
+			"payoutMethod":        partner.PayoutMethod,
+			"bankAccountName":     partner.BankAccountName,
+			"bankAccountNumber":   partner.BankAccountNumber,
+			"bankIFSC":            partner.BankIFSC,
+			"upiId":               partner.UpiID,
 		},
 		"documentCount": docCount,
 		"payoutSet":     payoutSet,
@@ -142,6 +147,13 @@ func (h *DriverOnboardingHandler) DriverOnboardingPersonal(c *gin.Context) {
 	partner.EmergencyPhone = req.EmergencyPhone
 	partner.DateOfBirth = dob
 	partner.VehicleType = req.VehicleType
+
+	// If previously rejected, reset status so driver can resubmit
+	if partner.VerificationStatus == models.VerificationRejected {
+		partner.VerificationStatus = models.VerificationPending
+		partner.RejectionReason = ""
+		partner.OnboardingComplete = false
+	}
 
 	if partner.OnboardingStep < 1 {
 		partner.OnboardingStep = 1
@@ -363,6 +375,18 @@ func (h *DriverOnboardingHandler) DriverOnboardingSubmit(c *gin.Context) {
 	var partner models.DeliveryPartner
 	if err := database.DB.Where("user_id = ?", userID).First(&partner).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Delivery partner profile not found"})
+		return
+	}
+
+	// Prevent re-submission if already approved
+	if partner.VerificationStatus == models.VerificationApproved {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Your application has already been approved"})
+		return
+	}
+
+	// Prevent re-submission if already in review
+	if partner.VerificationStatus == models.VerificationInReview {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Your application is already under review"})
 		return
 	}
 

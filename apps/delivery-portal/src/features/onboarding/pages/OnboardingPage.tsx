@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Truck, Loader2 } from 'lucide-react';
 import { apiClient } from '@/shared/services/api-client';
-import { clearAllFormCache } from '@/shared/utils/form-cache';
+import { clearAllFormCache, clearStepCache } from '@/shared/utils/form-cache';
 import { StepProgress } from '../components/StepProgress';
 import { StepPersonalInfo } from '../components/StepPersonalInfo';
 import { StepVehicleDetails } from '../components/StepVehicleDetails';
@@ -24,6 +24,20 @@ export default function OnboardingPage() {
   const [loading, setLoading] = useState(true);
   const [profileData, setProfileData] = useState<Record<string, unknown>>({});
 
+  const refreshProfile = useCallback(async () => {
+    try {
+      const status = await apiClient.get<OnboardingStatusResponse>(
+        '/driver/onboarding/status'
+      );
+      if (status.profile) {
+        setProfileData(status.profile);
+      }
+      return status;
+    } catch {
+      return null;
+    }
+  }, []);
+
   useEffect(() => {
     const checkStatus = async () => {
       try {
@@ -37,14 +51,18 @@ export default function OnboardingPage() {
           return;
         }
 
-        if (status.status === 'submitted' || status.status === 'in_review' || status.status === 'rejected') {
+        if (status.status === 'submitted' || status.status === 'in_review') {
           clearAllFormCache();
           navigate('/onboarding/status', { replace: true });
           return;
         }
 
-        // Resume from current step
-        if (status.step && status.step > 0) {
+        // Rejected: allow driver to resume editing (don't redirect to status page)
+
+        // Resume from current step (for rejected, let them start from step 1 to fix)
+        if (status.status === 'rejected') {
+          setCurrentStep(1);
+        } else if (status.step && status.step > 0) {
           setCurrentStep(Math.min(status.step, 5));
         }
 
@@ -65,7 +83,16 @@ export default function OnboardingPage() {
     setCurrentStep(step);
   };
 
-  const handleStepComplete = () => {
+  const handleStepComplete = async (stepNumber: number) => {
+    // Refresh profile data from server after each step save
+    // This ensures vehicleType and other fields are up-to-date for subsequent steps
+    await refreshProfile();
+
+    if (stepNumber === 1) {
+      // If vehicle type changed, clear stale vehicle step cache
+      clearStepCache('vehicle');
+    }
+
     if (currentStep < 5) {
       setCurrentStep((prev) => prev + 1);
     }
@@ -113,27 +140,27 @@ export default function OnboardingPage() {
           {currentStep === 1 && (
             <StepPersonalInfo
               initialData={profileData as Record<string, string>}
-              onComplete={handleStepComplete}
+              onComplete={() => handleStepComplete(1)}
             />
           )}
           {currentStep === 2 && (
             <StepVehicleDetails
               initialData={profileData as Record<string, string>}
-              onComplete={handleStepComplete}
+              onComplete={() => handleStepComplete(2)}
               onBack={() => goToStep(1)}
             />
           )}
           {currentStep === 3 && (
             <StepDocuments
               vehicleType={vehicleType}
-              onComplete={handleStepComplete}
+              onComplete={() => handleStepComplete(3)}
               onBack={() => goToStep(2)}
             />
           )}
           {currentStep === 4 && (
             <StepPayoutDetails
               initialData={profileData as Record<string, string>}
-              onComplete={handleStepComplete}
+              onComplete={() => handleStepComplete(4)}
               onBack={() => goToStep(3)}
             />
           )}

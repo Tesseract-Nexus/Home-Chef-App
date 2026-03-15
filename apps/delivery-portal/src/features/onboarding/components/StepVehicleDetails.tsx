@@ -20,6 +20,13 @@ interface StepVehicleDetailsProps {
   onBack: () => void;
 }
 
+function toBoxSpaceString(val: unknown): string {
+  if (val === 'yes' || val === 'no') return val;
+  if (val === true || val === 'true') return 'yes';
+  if (val === false || val === 'false') return 'no';
+  return '';
+}
+
 export function StepVehicleDetails({ initialData, onComplete, onBack }: StepVehicleDetailsProps) {
   const cached = getCachedFormData('vehicle');
   const vehicleType = cached?.vehicleType ?? initialData?.vehicleType ?? '';
@@ -33,7 +40,7 @@ export function StepVehicleDetails({ initialData, onComplete, onBack }: StepVehi
     vehicleColor: cached?.vehicleColor ?? initialData?.vehicleColor ?? '',
     vehicleNumber: cached?.vehicleNumber ?? initialData?.vehicleNumber ?? '',
     licenseNumber: cached?.licenseNumber ?? initialData?.licenseNumber ?? '',
-    hasDeliveryBoxSpace: cached?.hasDeliveryBoxSpace ?? initialData?.hasDeliveryBoxSpace ?? '',
+    hasDeliveryBoxSpace: cached?.hasDeliveryBoxSpace ?? toBoxSpaceString(initialData?.hasDeliveryBoxSpace),
   });
   const [submitting, setSubmitting] = useState(false);
 

@@ -12,7 +12,6 @@ import {
   Clock,
   Users,
   Filter,
-  MoreHorizontal,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { apiClient } from '@/shared/services/api-client';
@@ -80,6 +79,32 @@ export default function MenuPage() {
       toast.error('Failed to delete item');
     },
   });
+
+  // Bulk actions
+  const bulkToggleAvailability = async (available: boolean) => {
+    const ids = Array.from(selectedItems);
+    try {
+      await Promise.all(ids.map(id => apiClient.put(`/chef/menu/items/${id}`, { isAvailable: available })));
+      queryClient.invalidateQueries({ queryKey: ['chef-menu'] });
+      toast.success(`${ids.length} item${ids.length > 1 ? 's' : ''} marked ${available ? 'available' : 'unavailable'}`);
+      clearSelection();
+    } catch {
+      toast.error('Failed to update some items');
+    }
+  };
+
+  const bulkDelete = async () => {
+    const ids = Array.from(selectedItems);
+    if (!confirm(`Delete ${ids.length} item${ids.length > 1 ? 's' : ''}? This cannot be undone.`)) return;
+    try {
+      await Promise.all(ids.map(id => apiClient.delete(`/chef/menu/items/${id}`)));
+      queryClient.invalidateQueries({ queryKey: ['chef-menu'] });
+      toast.success(`${ids.length} item${ids.length > 1 ? 's' : ''} deleted`);
+      clearSelection();
+    } catch {
+      toast.error('Failed to delete some items');
+    }
+  };
 
   // Filter items by search and category
   const filteredItems = useMemo(() => {
@@ -197,8 +222,14 @@ export default function MenuPage() {
             <Button variant="ghost" size="sm" onClick={clearSelection}>
               Clear
             </Button>
-            <Button variant="outline" size="sm" leftIcon={<MoreHorizontal className="h-4 w-4" />}>
-              Bulk Actions
+            <Button variant="success" size="sm" onClick={() => bulkToggleAvailability(true)}>
+              Mark Available
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => bulkToggleAvailability(false)}>
+              Mark Unavailable
+            </Button>
+            <Button variant="danger" size="sm" onClick={bulkDelete}>
+              Delete Selected
             </Button>
           </div>
         </motion.div>

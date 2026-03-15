@@ -81,9 +81,10 @@ export default function SettingsPage() {
   });
 
   const payoutMutation = useMutation({
-    mutationFn: (data: typeof payoutForm) => apiClient.post('/chef/payout', data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['chef-payout'] });
+    mutationFn: (data: typeof payoutForm) => apiClient.post<PayoutData>('/chef/payout', data),
+    onSuccess: (data) => {
+      // Use the response directly — don't refetch, since secrets are stored async
+      queryClient.setQueryData(['chef-payout'], data);
       toast.success('Payout details saved');
       setPayoutEditing(false);
     },

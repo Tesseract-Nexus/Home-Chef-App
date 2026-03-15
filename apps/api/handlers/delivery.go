@@ -871,10 +871,10 @@ func (h *DeliveryHandler) AdminGetDeliveryPartners(c *gin.Context) {
 			"id":              p.ID,
 			"userId":          p.UserID,
 			"name":            p.User.FirstName + " " + p.User.LastName,
-			"email":           p.User.Email,
-			"phone":           p.User.Phone,
+			"email":           maskEmail(p.User.Email),
+			"phone":           maskPhone(p.User.Phone),
 			"vehicleType":     p.VehicleType,
-			"vehicleNumber":   p.VehicleNumber,
+			"vehicleNumber":   maskID(p.VehicleNumber),
 			"isVerified":      p.IsVerified,
 			"isOnline":        p.IsOnline,
 			"isActive":        p.IsActive,
@@ -1046,7 +1046,7 @@ func (h *DeliveryHandler) AdminListDeliveries(c *gin.Context) {
 		}
 		if d.DeliveryPartner.ID != uuid.Nil {
 			resp["driverName"] = d.DeliveryPartner.User.FirstName + " " + d.DeliveryPartner.User.LastName
-			resp["driverPhone"] = d.DeliveryPartner.User.Phone
+			resp["driverPhone"] = maskPhone(d.DeliveryPartner.User.Phone)
 			resp["vehicleType"] = d.DeliveryPartner.VehicleType
 		}
 		responses[i] = resp

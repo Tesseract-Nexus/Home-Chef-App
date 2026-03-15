@@ -263,16 +263,15 @@ type DeliveryPartnerResponse struct {
 	VerificationStatus VerificationStatus `json:"verificationStatus"`
 }
 
+// DeliveryResponse is the customer-facing delivery tracking response.
+// Does NOT include driver earnings (TotalPayout) or driver identity (DeliveryPartnerID).
 type DeliveryResponse struct {
 	ID                uuid.UUID      `json:"id"`
 	OrderID           uuid.UUID      `json:"orderId"`
-	DeliveryPartnerID uuid.UUID      `json:"deliveryPartnerId"`
 	Status            DeliveryStatus `json:"status"`
 	Distance          float64        `json:"distance"`
 	EstimatedDuration int            `json:"estimatedDuration"`
 	DeliveryFee       float64        `json:"deliveryFee"`
-	Tip               float64        `json:"tip"`
-	TotalPayout       float64        `json:"totalPayout"`
 	AssignedAt        time.Time      `json:"assignedAt"`
 	PickedUpAt        *time.Time     `json:"pickedUpAt,omitempty"`
 	DeliveredAt       *time.Time     `json:"deliveredAt,omitempty"`
@@ -282,13 +281,10 @@ func (d *Delivery) ToResponse() DeliveryResponse {
 	return DeliveryResponse{
 		ID:                d.ID,
 		OrderID:           d.OrderID,
-		DeliveryPartnerID: d.DeliveryPartnerID,
 		Status:            d.Status,
 		Distance:          d.Distance,
 		EstimatedDuration: d.EstimatedDuration,
 		DeliveryFee:       d.DeliveryFee,
-		Tip:               d.Tip,
-		TotalPayout:       d.TotalPayout,
 		AssignedAt:        d.AssignedAt,
 		PickedUpAt:        d.PickedUpAt,
 		DeliveredAt:       d.DeliveredAt,

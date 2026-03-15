@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   Truck,
@@ -8,6 +9,7 @@ import {
   IndianRupee,
   Loader2,
   Package,
+  Settings2,
 } from 'lucide-react';
 import { apiClient } from '@/shared/services/api-client';
 
@@ -88,6 +90,7 @@ function timeAgo(dateStr: string) {
 export default function DeliveryPage() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [page, setPage] = useState(1);
+  const navigate = useNavigate();
 
   const { data: stats } = useQuery({
     queryKey: ['admin-delivery-stats'],
@@ -112,9 +115,18 @@ export default function DeliveryPage() {
 
   return (
     <div className="space-y-6">
-      <div className="page-header">
-        <h1 className="page-title">Delivery Management</h1>
-        <p className="page-description">Track deliveries, partners, and payouts</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="page-header">
+          <h1 className="page-title">Delivery Management</h1>
+          <p className="page-description">Track deliveries, partners, and payouts</p>
+        </div>
+        <button
+          onClick={() => navigate('/delivery/providers')}
+          className="inline-flex items-center gap-2 rounded-lg border border-border px-4 py-2.5 text-sm font-medium hover:bg-secondary transition-colors"
+        >
+          <Settings2 className="h-4 w-4" />
+          Manage Providers
+        </button>
       </div>
 
       {/* Stats Cards */}

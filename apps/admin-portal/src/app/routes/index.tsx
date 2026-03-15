@@ -34,6 +34,9 @@ const UserDetailPage = lazyWithRetry(() => import('@/features/users/pages/UserDe
 const ApprovalsPage = lazyWithRetry(() => import('@/features/approvals/pages/ApprovalsPage'));
 const ApprovalDetailPage = lazyWithRetry(() => import('@/features/approvals/pages/ApprovalDetailPage'));
 const DeliveryPage = lazyWithRetry(() => import('@/features/delivery/pages/DeliveryPage'));
+const ProvidersPage = lazyWithRetry(() => import('@/features/delivery/pages/ProvidersPage'));
+const ProviderDetailPage = lazyWithRetry(() => import('@/features/delivery/pages/ProviderDetailPage'));
+const ProviderCreatePage = lazyWithRetry(() => import('@/features/delivery/pages/ProviderCreatePage'));
 const StaffPage = lazyWithRetry(() => import('@/features/staff/pages/StaffPage'));
 const StaffDetailPage = lazyWithRetry(() => import('@/features/staff/pages/StaffDetailPage'));
 
@@ -89,6 +92,9 @@ export function AppRoutes() {
           <Route path="approvals" element={<ApprovalsPage />} />
           <Route path="approvals/:id" element={<ApprovalDetailPage />} />
           <Route path="delivery" element={<DeliveryPage />} />
+          <Route path="delivery/providers" element={<ProvidersPage />} />
+          <Route path="delivery/providers/new" element={<ProviderCreatePage />} />
+          <Route path="delivery/providers/:id" element={<ProviderDetailPage />} />
           <Route path="staff" element={<StaffPage />} />
           <Route path="staff/:id" element={<StaffDetailPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />

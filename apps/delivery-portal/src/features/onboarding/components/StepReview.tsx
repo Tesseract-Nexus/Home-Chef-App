@@ -63,10 +63,11 @@ export function StepReview({ onComplete, onBack, onGoToStep }: StepReviewProps) 
       try {
         const [statusData, docsData] = await Promise.all([
           apiClient.get<OnboardingStatus>('/driver/onboarding/status'),
-          apiClient.get<UploadedDoc[]>('/driver/onboarding/documents').catch(() => [] as UploadedDoc[]),
+          apiClient.get<{ data: UploadedDoc[] } | UploadedDoc[]>('/driver/onboarding/documents').catch(() => [] as UploadedDoc[]),
         ]);
         setStatus(statusData);
-        setDocs(docsData ?? []);
+        const docsArray = Array.isArray(docsData) ? docsData : ((docsData as { data: UploadedDoc[] })?.data ?? []);
+        setDocs(docsArray);
       } catch {
         toast.error('Failed to load review data');
       } finally {

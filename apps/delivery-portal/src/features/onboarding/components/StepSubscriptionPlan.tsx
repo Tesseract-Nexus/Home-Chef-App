@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Crown, Check, Loader2, Shield } from 'lucide-react';
+import { Crown, Check, Loader2, Heart, Shield, Sparkles, IndianRupee } from 'lucide-react';
 import { apiClient } from '@/shared/services/api-client';
 import { toast } from 'sonner';
 
@@ -15,6 +15,7 @@ interface PlansResponse {
   trialDays: number;
   currency: string;
   paymentGateway: string;
+  minEarningsThreshold: number;
 }
 
 interface StepSubscriptionPlanProps {
@@ -34,9 +35,19 @@ const INTERVAL_DESCRIPTIONS: Record<string, string> = {
   yearly: 'Billed once a year',
 };
 
+const GATEWAY_LABELS: Record<string, string> = {
+  razorpay: 'Razorpay',
+  stripe: 'Stripe',
+  esewa: 'eSewa',
+  sslcommerz: 'SSLCommerz',
+  jazzcash: 'JazzCash',
+  payhere: 'PayHere',
+};
+
 function formatCurrency(amount: number, currency: string) {
   try {
-    return new Intl.NumberFormat('en-IN', {
+    const locale = currency === 'AUD' ? 'en-AU' : currency === 'INR' ? 'en-IN' : 'en-US';
+    return new Intl.NumberFormat(locale, {
       style: 'currency',
       currency,
       maximumFractionDigits: 0,
@@ -49,6 +60,9 @@ function formatCurrency(amount: number, currency: string) {
 export function StepSubscriptionPlan({ onComplete, onBack }: StepSubscriptionPlanProps) {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [trialDays, setTrialDays] = useState(0);
+  const [threshold, setThreshold] = useState(0);
+  const [currency, setCurrency] = useState('INR');
+  const [gateway, setGateway] = useState('razorpay');
   const [loading, setLoading] = useState(true);
   const [selectedInterval, setSelectedInterval] = useState('monthly');
   const [submitting, setSubmitting] = useState(false);
@@ -59,6 +73,9 @@ export function StepSubscriptionPlan({ onComplete, onBack }: StepSubscriptionPla
         const data = await apiClient.get<PlansResponse>('/driver/subscription/plans');
         setPlans(data.plans ?? []);
         setTrialDays(data.trialDays ?? 0);
+        setThreshold(data.minEarningsThreshold ?? 0);
+        setCurrency(data.currency ?? 'INR');
+        setGateway(data.paymentGateway ?? 'razorpay');
       } catch {
         toast.error('Failed to load subscription plans');
       } finally {
@@ -71,10 +88,10 @@ export function StepSubscriptionPlan({ onComplete, onBack }: StepSubscriptionPla
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
-      await apiClient.post('/driver/subscription/choose-plan', {
+      await apiClient.post('/driver/subscription/plan', {
         interval: selectedInterval,
       });
-      toast.success('Subscription plan selected');
+      toast.success('Plan selected successfully');
       onComplete();
     } catch {
       toast.error('Failed to select plan. Please try again.');
@@ -92,34 +109,83 @@ export function StepSubscriptionPlan({ onComplete, onBack }: StepSubscriptionPla
   }
 
   const selectedPlan = plans.find((p) => p.interval === selectedInterval);
+  const thresholdFormatted = formatCurrency(threshold, currency);
+  const gatewayLabel = GATEWAY_LABELS[gateway] || gateway;
 
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold text-foreground">Subscription Plan</h2>
+        <h2 className="text-xl font-semibold text-foreground">Choose Your Plan</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Choose your plan — billing starts only after you begin earning
+          A small subscription to keep Fe3dr running — you keep every rupee you earn.
         </p>
       </div>
 
-      {/* Trial Banner */}
-      {trialDays > 0 && (
-        <div className="rounded-xl bg-primary/5 border border-primary/20 p-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-              <Crown className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-foreground">
-                {trialDays}-day free trial included
-              </p>
-              <p className="text-xs text-muted-foreground">
-                No charges during trial. You keep 100% of your earnings.
-              </p>
-            </div>
+      {/* Zero Commission Promise */}
+      <div className="rounded-xl bg-success/5 border border-success/20 p-5">
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-success/10 shrink-0">
+            <Heart className="h-5 w-5 text-success" />
+          </div>
+          <div className="space-y-2">
+            <p className="text-sm font-semibold text-foreground">
+              We don't take any commission from your earnings
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Every delivery fee and every tip goes directly to your account — 100%.
+              We only charge a small subscription fee to keep the platform running and
+              help you get more orders. We're here to help you succeed, not to make
+              profit from your hard work.
+            </p>
           </div>
         </div>
-      )}
+      </div>
+
+      {/* Trial + Threshold Info */}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {trialDays > 0 && (
+          <div className="rounded-xl bg-primary/5 border border-primary/20 p-4">
+            <div className="flex items-center gap-3">
+              <Crown className="h-5 w-5 text-primary shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-foreground">
+                  {trialDays}-day free trial
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Try everything free. No card needed.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {threshold > 0 && (
+          <div className="rounded-xl bg-warning/5 border border-warning/20 p-4">
+            <div className="flex items-center gap-3">
+              <IndianRupee className="h-5 w-5 text-warning shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-foreground">
+                  No charge until you earn {thresholdFormatted}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  We only bill after you start earning well.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* How it works */}
+      <div className="rounded-xl border border-border bg-muted/30 p-4">
+        <p className="text-xs font-medium text-foreground mb-2">How billing works:</p>
+        <ol className="space-y-1.5 text-xs text-muted-foreground list-decimal list-inside">
+          <li>Start with a <span className="font-medium text-foreground">{trialDays}-day free trial</span> — deliver and earn with no charges</li>
+          <li>After the trial, your subscription activates but <span className="font-medium text-foreground">we won't charge you</span> until your earnings cross <span className="font-medium text-foreground">{thresholdFormatted}</span></li>
+          <li>Once you cross the threshold, your subscription fee is deducted — and you <span className="font-medium text-foreground">keep 100% of everything you earn</span> after that</li>
+          <li>Cancel anytime — no lock-in, no hidden fees</li>
+        </ol>
+      </div>
 
       {/* Plan Cards */}
       <div className="space-y-3">
@@ -161,7 +227,8 @@ export function StepSubscriptionPlan({ onComplete, onBack }: StepSubscriptionPla
                   {formatCurrency(plan.amount, plan.currency)}
                 </p>
                 {plan.savingsPercent && plan.savingsPercent > 0 && (
-                  <span className="inline-flex rounded-full bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-xs font-medium text-success">
+                    <Sparkles className="h-3 w-3" />
                     Save {Math.round(plan.savingsPercent)}%
                   </span>
                 )}
@@ -171,19 +238,14 @@ export function StepSubscriptionPlan({ onComplete, onBack }: StepSubscriptionPla
         ))}
       </div>
 
-      {/* Payment Info */}
+      {/* Secure Payment */}
       <div className="rounded-xl border border-border bg-muted/30 p-4">
         <div className="flex items-start gap-3">
           <Shield className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
-          <div className="space-y-1">
-            <p className="text-xs text-muted-foreground">
-              Payments are securely processed via <span className="font-medium text-foreground">Razorpay</span>.
-              Your subscription fee is auto-deducted once you start earning above the minimum threshold.
-            </p>
-            <p className="text-xs text-muted-foreground">
-              You can update your payment method or change plans anytime from your dashboard.
-            </p>
-          </div>
+          <p className="text-xs text-muted-foreground">
+            Payments are securely processed via <span className="font-medium text-foreground">{gatewayLabel}</span>.
+            You can change your plan or cancel anytime from your dashboard.
+          </p>
         </div>
       </div>
 

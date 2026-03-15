@@ -94,11 +94,12 @@ func (h *SubscriptionHandler) GetAvailablePlans(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"plans":         plans,
-		"trialDays":     planCfg.TrialDays,
-		"countryCode":   countryCode,
-		"currency":      planCfg.Currency,
-		"paymentGateway": planCfg.PaymentGateway,
+		"plans":                plans,
+		"trialDays":            planCfg.TrialDays,
+		"countryCode":          countryCode,
+		"currency":             planCfg.Currency,
+		"paymentGateway":       planCfg.PaymentGateway,
+		"minEarningsThreshold": planCfg.MinEarningsThreshold,
 	})
 }
 

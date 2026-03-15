@@ -1347,15 +1347,16 @@ func (h *DeliveryHandler) UploadPartnerDocument(c *gin.Context) {
 
 	docType := models.PartnerDocType(c.PostForm("type"))
 	validTypes := map[models.PartnerDocType]bool{
-		models.PartnerDocDrivingLicense: true,
-		models.PartnerDocVehicleRC:      true,
-		models.PartnerDocInsurance:      true,
-		models.PartnerDocAadhaar:        true,
-		models.PartnerDocPanCard:        true,
-		models.PartnerDocPhoto:          true,
+		models.PartnerDocDrivingLicense:      true,
+		models.PartnerDocVehicleRC:           true,
+		models.PartnerDocInsurance:           true,
+		models.PartnerDocAadhaar:             true,
+		models.PartnerDocPanCard:             true,
+		models.PartnerDocPhoto:               true,
+		models.PartnerDocPoliceVerification:  true,
 	}
 	if !validTypes[docType] {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid document type"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid document type. Allowed: driving_license, vehicle_rc, insurance, aadhaar, pan_card, photo, police_verification"})
 		return
 	}
 
@@ -1366,22 +1367,42 @@ func (h *DeliveryHandler) UploadPartnerDocument(c *gin.Context) {
 	}
 	defer file.Close()
 
-	// Check file size (10MB max)
-	if header.Size > 10*1024*1024 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "File too large (max 10MB)"})
+	isPhoto := docType == models.PartnerDocPhoto
+
+	// File size limits: 5MB for profile photo, 10MB for documents
+	maxSize := int64(10 * 1024 * 1024) // 10MB for documents
+	if isPhoto {
+		maxSize = 5 * 1024 * 1024 // 5MB for profile photo
+	}
+	if header.Size > maxSize {
+		if isPhoto {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Profile photo too large (max 5MB)"})
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "File too large (max 10MB)"})
+		}
 		return
 	}
 
 	contentType := header.Header.Get("Content-Type")
-	validContent := map[string]bool{
-		"image/jpeg":      true,
-		"image/png":       true,
-		"image/webp":      true,
-		"application/pdf": true,
-	}
-	if !validContent[contentType] {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file type. Allowed: JPEG, PNG, WebP, PDF"})
-		return
+
+	// Profile photo: JPEG/PNG only. Documents: JPEG/PNG/WebP/PDF
+	if isPhoto {
+		photoTypes := map[string]bool{"image/jpeg": true, "image/png": true}
+		if !photoTypes[contentType] {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Profile photo must be JPEG or PNG"})
+			return
+		}
+	} else {
+		docContentTypes := map[string]bool{
+			"image/jpeg":      true,
+			"image/png":       true,
+			"image/webp":      true,
+			"application/pdf": true,
+		}
+		if !docContentTypes[contentType] {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid file type. Allowed: JPEG, PNG, WebP, PDF"})
+			return
+		}
 	}
 
 	// Upload to storage — photos go to public bucket, verification docs to private

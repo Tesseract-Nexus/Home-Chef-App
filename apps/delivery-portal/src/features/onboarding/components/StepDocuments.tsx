@@ -8,23 +8,39 @@ interface DocumentSlot {
   type: string;
   label: string;
   required: boolean;
+  accept: string;     // file input accept attribute
+  hint: string;       // helper text
+  maxSizeMB: number;  // max file size in MB
 }
 
+const photoSlot: DocumentSlot = {
+  type: 'photo', label: 'Profile Photo', required: true,
+  accept: 'image/jpeg,image/png,.jpg,.jpeg,.png',
+  hint: 'JPEG or PNG only, max 5MB',
+  maxSizeMB: 5,
+};
+
+const docSlotDefaults = {
+  accept: 'image/jpeg,image/png,image/webp,application/pdf,.jpg,.jpeg,.png,.webp,.pdf',
+  hint: 'JPEG, PNG, WebP, or PDF, max 10MB',
+  maxSizeMB: 10,
+};
+
 const motorVehicleDocSlots: DocumentSlot[] = [
-  { type: 'driving_license', label: 'Driving License', required: true },
-  { type: 'vehicle_rc', label: 'Vehicle RC', required: true },
-  { type: 'insurance', label: 'Insurance', required: true },
-  { type: 'aadhaar', label: 'Aadhaar Card', required: true },
-  { type: 'pan_card', label: 'PAN Card', required: false },
-  { type: 'photo', label: 'Profile Photo', required: true },
-  { type: 'police_verification', label: 'Police Verification', required: false },
+  { type: 'driving_license', label: 'Driving License', required: true, ...docSlotDefaults },
+  { type: 'vehicle_rc', label: 'Vehicle RC', required: true, ...docSlotDefaults },
+  { type: 'insurance', label: 'Insurance', required: true, ...docSlotDefaults },
+  { type: 'aadhaar', label: 'Aadhaar Card', required: true, ...docSlotDefaults },
+  { type: 'pan_card', label: 'PAN Card', required: false, ...docSlotDefaults },
+  photoSlot,
+  { type: 'police_verification', label: 'Police Verification', required: false, ...docSlotDefaults },
 ];
 
 const bicycleDocSlots: DocumentSlot[] = [
-  { type: 'aadhaar', label: 'Aadhaar Card', required: true },
-  { type: 'photo', label: 'Profile Photo', required: true },
-  { type: 'pan_card', label: 'PAN Card', required: false },
-  { type: 'police_verification', label: 'Police Verification', required: false },
+  { type: 'aadhaar', label: 'Aadhaar Card', required: true, ...docSlotDefaults },
+  photoSlot,
+  { type: 'pan_card', label: 'PAN Card', required: false, ...docSlotDefaults },
+  { type: 'police_verification', label: 'Police Verification', required: false, ...docSlotDefaults },
 ];
 
 interface UploadedDoc {
@@ -104,12 +120,18 @@ export function StepDocuments({ vehicleType, onComplete, onBack }: StepDocuments
     }
   };
 
-  const handleFileSelect = (type: string, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (slot: DocumentSlot, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      uploadDocument(type, file);
+      // Client-side size check
+      const maxBytes = slot.maxSizeMB * 1024 * 1024;
+      if (file.size > maxBytes) {
+        toast.error(`File too large. Max ${slot.maxSizeMB}MB for ${slot.label}`);
+        e.target.value = '';
+        return;
+      }
+      uploadDocument(slot.type, file);
     }
-    // Reset input so the same file can be re-selected
     e.target.value = '';
   };
 
@@ -180,9 +202,9 @@ export function StepDocuments({ vehicleType, onComplete, onBack }: StepDocuments
                 <input
                   ref={(el) => { fileInputRefs.current[slot.type] = el; }}
                   type="file"
-                  accept="image/*,.pdf"
+                  accept={slot.accept}
                   className="hidden"
-                  onChange={(e) => handleFileSelect(slot.type, e)}
+                  onChange={(e) => handleFileSelect(slot, e)}
                 />
                 <button
                   type="button"

@@ -39,6 +39,14 @@ func main() {
 		defer services.CloseStorage()
 	}
 
+	// Initialize GCP Secret Manager
+	if err := services.InitSecretManager(); err != nil {
+		log.Printf("Warning: Failed to initialize Secret Manager: %v", err)
+		log.Println("Vendor payment secrets will be unavailable")
+	} else {
+		defer services.CloseSecretManager()
+	}
+
 	// Initialize Razorpay
 	services.InitRazorpay()
 

@@ -335,11 +335,31 @@ func (h *DriverOnboardingHandler) DriverOnboardingPayout(c *gin.Context) {
 		return
 	}
 
+	// Store sensitive payout fields in GCP Secret Manager
+	driverID := partner.ID.String()
+	ctx := c.Request.Context()
+
+	secretFields := map[string]string{
+		"bank-account-number": req.BankAccountNumber,
+		"bank-account-name":   req.BankAccountName,
+		"bank-ifsc":           req.BankIFSC,
+		"upi-id":              req.UpiID,
+	}
+
+	for field, value := range secretFields {
+		if value != "" {
+			if err := services.StoreDriverSecret(ctx, driverID, field, value); err != nil {
+				log.Printf("Warning: failed to store secret %s for driver %s: %v", field, driverID, err)
+			}
+		}
+	}
+
+	// DB stores only payout method + masked values for display
 	partner.PayoutMethod = req.PayoutMethod
-	partner.BankAccountNumber = req.BankAccountNumber
-	partner.BankIFSC = req.BankIFSC
+	partner.BankAccountNumber = maskBankAccount(req.BankAccountNumber)
+	partner.BankIFSC = req.BankIFSC // IFSC is a public routing code
 	partner.BankAccountName = req.BankAccountName
-	partner.UpiID = req.UpiID
+	partner.UpiID = maskEmail(req.UpiID)
 
 	if partner.OnboardingStep < 4 {
 		partner.OnboardingStep = 4
@@ -349,6 +369,8 @@ func (h *DriverOnboardingHandler) DriverOnboardingPayout(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save payout information"})
 		return
 	}
+
+	log.Printf("Payout details saved for driver %s (method: %s)", driverID, req.PayoutMethod)
 
 	database.DB.Preload("User").Preload("Documents").First(&partner, "id = ?", partner.ID)
 	c.JSON(http.StatusOK, partner.ToDetailResponse())
